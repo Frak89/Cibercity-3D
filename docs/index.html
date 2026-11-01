@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cybercity 3D — salvaschermo</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,"JetBrains Mono",Consolas,monospace;color:#ecfcff}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #hud{position:fixed;left:4vmin;bottom:4vmin;pointer-events:none;text-shadow:0 0 12px var(--a)}
+  #clock{font-size:11vmin;font-weight:700;letter-spacing:.06em;line-height:1;position:relative}
+  #clock span{position:absolute;left:0;top:0;mix-blend-mode:screen}
+  #date{font-size:2.4vmin;letter-spacing:.35em;opacity:.8;margin-top:1.2vmin}
+  #tag{position:fixed;right:4vmin;top:4vmin;font-size:1.8vmin;letter-spacing:.3em;opacity:.65;text-align:right;pointer-events:none}
+  #panel{position:fixed;right:3vmin;bottom:3vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);box-shadow:0 0 24px rgba(0,255,226,.15);
+    padding:14px 16px;font-size:13px;display:none;min-width:250px;backdrop-filter:blur(8px)}
+  #panel.open{display:block}
+  #panel h3{margin:0 0 10px;font-size:13px;letter-spacing:.3em;color:var(--a)}
+  #panel label{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:7px 0}
+  #panel select,#panel input{background:#101d30;color:#ecfcff;border:1px solid #214557;font:inherit}
+  #gear{position:fixed;right:3vmin;bottom:3vmin;width:42px;height:42px;border:1px solid var(--a);background:rgba(7,11,19,.6);color:var(--a);
+    font-size:20px;cursor:pointer;opacity:0;transition:opacity .4s}
+  body.active #gear{opacity:1}
+  body.idle{cursor:none}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;color:#ff6177}
+</style>
+</head>
+<body style="--a:#00ffe2">
+<canvas id="c"></canvas>
+<div id="hud"><div id="clock"></div><div id="date"></div></div>
+<div id="tag">CYBERCITY 3D<br><span id="modeName"></span></div>
+<button id="gear" title="Impostazioni">⚙</button>
+<div id="panel">
+  <h3>// CYBERCITY 3D</h3>
+  <label>Atmosfera <select id="palette"></select></label>
+  <label>Telecamera <select id="mode"></select></label>
+  <label>Velocità <input id="speed" type="range" min="0.3" max="2.5" step="0.1"></label>
+  <label>Pioggia <input id="rain" type="range" min="0" max="1" step="0.05"></label>
+  <label>Traffico volante <input id="traffic" type="checkbox"></label>
+  <label>Scanlines CRT <input id="scanlines" type="checkbox"></label>
+  <label>Orologio glitch <input id="clockOn" type="checkbox"></label>
+  <label>Qualità <select id="quality"><option value="0.6">Batteria</option><option value="0.85">Bilanciata</option><option value="1">Massima</option></select></label>
+  <div style="opacity:.6;margin-top:8px">F = schermo intero · Spazio = cambia telecamera · P = atmosfera</div>
+</div>
+<div id="err"></div>
+<script>const SHADERS={"billboard.frag": "varying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\n\n/* 5x5 symmetric pseudo glyph (kanji / katakana feel) */\nfloat glyph(vec2 cell, vec2 f){\n    vec2 g = floor(f * 5.0);\n    g.x = min(g.x, 4.0 - g.x);\n    float on = step(0.52, h21(cell * 1.37 + g * 0.71));\n    vec2 inner = fract(f * 5.0);\n    return on * step(0.12, inner.x) * step(0.12, inner.y);\n}\n\nvoid main(){\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, ratio = vMisc.z;\n    vec2 uv = vUV;\n    float gt = floor(uTime * 9.0);\n    float glitch = step(0.94, h21(vec2(gt, id)));\n    uv.x += glitch * (h21(vec2(floor(uv.y * 14.0), gt)) - 0.5) * 0.25;\n    vec3 cA = mix(uNeonA, uNeonB, fract(seed * 3.3));\n    vec3 cB = mix(uNeonB, uWinA, fract(seed * 5.7));\n    vec3 col;\n    if (kind < 0.5) {\n        // vertical scrolling glyph column\n        vec2 grid = vec2(2.0, 2.0 * ratio);\n        vec2 q = uv * grid + vec2(0.0, uTime * 0.8 + seed * 10.0);\n        vec2 cell = floor(q);\n        col = mix(cA, cB, uv.y) * glyph(cell + id, fract(q)) * 1.6;\n    } else if (kind < 1.5) {\n        // equalizer bars / ad pulses\n        float bx = floor(uv.x * 12.0);\n        float hgt = 0.25 + 0.7 * abs(sin(uTime * (1.5 + h21(vec2(bx, id)) * 3.0) + bx));\n        float bar = step(uv.y, hgt) * step(0.15, fract(uv.x * 12.0));\n        col = mix(cB, cA, uv.y / max(hgt, 0.01)) * bar * 1.3;\n        col += cA * 0.15;\n    } else {\n        // pulsing ring logo with glyph caption\n        vec2 p = (uv - vec2(0.5, 0.62)) * vec2(1.0, ratio);\n        float r = length(p);\n        float ring = smoothstep(0.03, 0.0, abs(r - 0.28 - 0.03 * sin(uTime * 3.0)));\n        float core = smoothstep(0.13, 0.1, r) * (0.6 + 0.4 * sin(uTime * 5.0 + seed));\n        vec2 q = vec2(uv.x * 6.0, uv.y * 6.0 * ratio);\n        float cap = step(uv.y, 0.25) * glyph(floor(q) + id + floor(uTime * 0.5), fract(q));\n        col = cA * (ring + core) * 1.5 + cB * cap * 1.4;\n    }\n    // frame + scanlines + panel background\n    float fr = 1.0 - step(0.035, uv.x) * step(uv.x, 0.965) * step(0.02, uv.y) * step(uv.y, 0.98);\n    col += cA * fr * 1.2;\n    col += cA * 0.04;\n    col *= 0.82 + 0.18 * sin(vUV.y * 300.0);\n    col *= 1.0 - glitch * 0.5 * step(0.5, h21(vec2(gt, 7.0)));\n    col = applyFog(col, vDist, vY);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "billboard.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * 0.08, uL) - uL * 0.08;\n    vec3 wp = vec3(aCenter.x, 0.0, z) + aPos;\n    vUV = aUV; vMisc = aMisc; vY = wp.y;\n    vDist = length(wp - uEye);\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "building.frag": "varying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, fw = vMisc.z, top = vMisc.w;\n    vec3 base = vec3(0.016, 0.018, 0.028) + uFog * 0.06;\n    vec3 nA = mix(uNeonA, uNeonB, step(0.5, fract(seed * 7.31)));\n    vec3 col;\n    if (vN.y > 0.5) {\n        vec2 g = abs(fract(vUV * 0.2) - 0.5);\n        col = base * 0.7 + nA * 0.06 * step(0.46, max(g.x, g.y));\n        float blink = step(0.82, fract(uTime * 0.6 + seed * 3.1));\n        col += vec3(1.0, 0.12, 0.1) * blink * smoothstep(1.4, 0.0, length(vUV)) * 3.0;\n        if (kind > 0.5) col += nA * 0.22;\n    } else {\n        float density = 0.22 + 0.5 * fract(seed * 3.71);\n        vec2 cs = kind > 1.5 ? vec2(1.25, 1.5) : vec2(1.9, 2.7);\n        vec2 q = vUV / cs;\n        vec2 c = floor(q);\n        vec2 f = fract(q);\n        float m = step(0.16, f.x) * step(f.x, 0.84) * step(0.24, f.y) * step(f.y, 0.80);\n        float r = h21(c * 0.731 + vec2(id * 1.37, floor(dot(vN, vec3(3.0, 0.0, 7.0)) + 0.5) * 11.0));\n        float lit = step(1.0 - density, r);\n        float flick = h21(c + vec2(floor(uTime * 0.08 + r * 20.0), id));\n        lit *= step(0.035, flick);\n        float pal = fract(r * 13.7 + seed);\n        vec3 wc = pal < 0.62 ? uWinA : (pal < 0.86 ? uWinB : uWinC);\n        wc *= 0.5 + 0.9 * fract(r * 91.1);\n        // whole lit floors (offices)\n        float floorLit = step(0.93, h21(vec2(c.y * 1.3, id)));\n        vec3 detail = base + m * max(lit, floorLit) * wc;\n        float lod = smoothstep(55.0, 210.0, vDist);\n        vec3 far = base + wc * density * 0.30;\n        col = mix(detail, far, lod);\n        col *= 0.7 + 0.3 * smoothstep(0.0, top, vWP.y);\n        if (kind > 0.5) {\n            float e = min(vUV.x, fw - vUV.x);\n            float pulse = 0.78 + 0.22 * sin(uTime * 2.0 + seed * 10.0);\n            col += nA * (exp(-e * 2.2) * 0.9 + exp(-max(0.0, top - vWP.y) * 1.1) * 1.5) * pulse;\n            float band = exp(-abs(fract(vWP.y / 23.0 + seed) - 0.5) * 70.0);\n            col += nA * band * 0.7 * step(0.45, fract(seed * 5.1));\n        }\n        // street-level shop glow\n        col += mix(uNeonA, uWinA, fract(seed * 9.0)) * exp(-vWP.y * 0.22) * 0.55;\n    }\n    col = applyFog(col, vDist, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "building.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nvarying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * 0.08, uL) - uL * 0.08;\n    vec3 wp = vec3(aCenter.x, 0.0, z) + aPos;\n    vN = aNorm; vUV = aUV; vMisc = aMisc; vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "car.frag": "varying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    float side = exp(-vC.y * vC.y * 3.5);\n    float along = mix(0.25, 1.0, vC.x);\n    vec3 tailCol = vec3(1.0, 0.12, 0.18);\n    vec3 headCol = mix(vec3(0.85, 0.95, 1.0), uNeonA, step(0.8, fract(vSeed * 13.0)));\n    vec3 col = mix(headCol, tailCol, vAway);\n    col += vec3(1.0) * pow(vC.x, 8.0) * 0.6;\n    float fade = 1.0 - fogAmount(vDist) * 0.85;\n    gl_FragColor = vec4(col * side * along * fade * 1.3, 1.0);\n}\n", "car.vert": "attribute vec4 aLane;   // origin x, y, z, speed (m/s)\nattribute vec4 aDir;    // dir x, dir z, trail length, seed\nattribute vec2 aCorner; // x: 0 = tail, 1 = head ; y: side -1..1\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uL;\nuniform float uWidth;\nvarying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    vec3 d = vec3(aDir.x, 0.0, aDir.y);\n    float p = mod(aDir.w * 977.0 + aLane.w * uTime, 2.0 * uL);\n    vec3 head = aLane.xyz + d * p;\n    head.x = mod(head.x + 210.0, 420.0) - 210.0;\n    head.z = mod(head.z - uCamZ + uL * 0.08, uL) - uL * 0.08;\n    head.y += sin(uTime * 0.7 + aDir.w * 50.0) * 0.4;\n    vec3 tail = head - d * aDir.z;\n    vec3 h = (uV * vec4(head, 1.0)).xyz;\n    vec3 t = (uV * vec4(tail, 1.0)).xyz;\n    vec3 seg = h - t;\n    vec3 P = mix(t, h, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    float sl = length(seg);\n    vec3 sdir = sl > 1e-4 ? seg / sl : vec3(0.0, 1.0, 0.0);\n    float w = uWidth * (1.0 + 0.004 * length(P));\n    P += perp * aCorner.y * w + sdir * (aCorner.x * 2.0 - 1.0) * w;\n    vC = aCorner;\n    vAway = step(0.0, dot(d, head - uEye));\n    vDist = length(head - uEye);\n    vSeed = aDir.w;\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "common.glsl": "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform float uTime;\nuniform float uL;\nuniform float uFogDen;\nuniform vec3 uEye;\nuniform vec3 uFog;\nuniform vec3 uSkyTop;\nuniform vec3 uWinA;\nuniform vec3 uWinB;\nuniform vec3 uWinC;\nuniform vec3 uNeonA;\nuniform vec3 uNeonB;\n\nfloat h21(vec2 p){\n    p = fract(p * vec2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return fract(p.x * p.y);\n}\n\n/* Integer id from an interpolated per-vertex seed: varyings are not bit-exact,\n   so hashing the raw float produces per-pixel noise. */\nfloat sid(float s){ return floor(s * 251.0 + 0.5); }\n\n/* Exponential fog plus a hard fade near the end of the wrapped city chunk,\n   so buildings re-entering at the horizon never pop. */\nfloat fogAmount(float d){\n    float f = 1.0 - exp(-d * uFogDen);\n    return max(f, smoothstep(uL * 0.60, uL * 0.84, d));\n}\nvec3 applyFog(vec3 col, float d, float y){\n    float f = fogAmount(d);\n    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02));\n    return mix(col, fc, f);\n}\n", "ground.frag": "uniform float uCamZ;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float wz = vWP.z + uCamZ;\n    float ax = abs(vWP.x);\n    vec3 col = vec3(0.010, 0.012, 0.018);\n    // dashed lane lines on the avenue\n    float lane = (1.0 - smoothstep(0.05, 0.16, abs(mod(vWP.x + 2.0, 4.0) - 2.0)))\n               * step(ax, 13.0) * step(0.55, fract(wz / 6.0));\n    col += vec3(0.55, 0.58, 0.7) * lane * 0.18;\n    // sidewalk curbs glow\n    col += uNeonA * exp(-abs(ax - 14.5) * 3.0) * 0.35;\n    // cross streets\n    float cz = abs(mod(wz, 84.0) - 7.0);\n    float cross = step(cz, 6.0);\n    col += vec3(0.6, 0.6, 0.7) * cross * step(0.6, fract(vWP.x / 5.0)) * 0.05 * step(ax, 400.0);\n    // wet asphalt: vertical streak reflections of the neon\n    float n = h21(vec2(floor(vWP.x * 0.7), 3.0));\n    float streak = pow(n, 5.0) * (0.55 + 0.45 * sin(wz * 0.045 + n * 40.0 + uTime * 0.3));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.55 * (0.6 + 0.4 * step(13.0, ax));\n    // reflection of the fog / skyline\n    col += uFog * 0.12 * smoothstep(20.0, 300.0, vDist);\n    col = applyFog(col, vDist * 0.7, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "ground.vert": "attribute vec2 aPos;\nuniform mat4 uVP;\nuniform vec3 uEye;\nvarying vec3 vWP;\nvoid main(){\n    vec3 wp = vec3(aPos.x, 0.0, aPos.y);\n    vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "post.frag": "uniform float uFade;\nuniform float uScan;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Vignette, CRT scanlines and fade-to-black (alpha-blended over the frame). */\nvoid main(){\n    vec2 p = vUV - 0.5;\n    float vig = smoothstep(0.35, 0.85, length(p * vec2(1.0, 0.85)));\n    float scan = uScan * 0.18 * step(0.5, fract(vUV.y * uRes.y / 3.0));\n    float a = clamp(max(uFade, vig * 0.75 + scan), 0.0, 1.0);\n    gl_FragColor = vec4(0.0, 0.0, 0.0, a);\n}\n", "post.vert": "attribute vec2 aPos;\nvarying vec2 vUV;\nvoid main(){\n    vUV = aPos * 0.5 + 0.5;\n    gl_Position = vec4(aPos, 0.0, 1.0);\n}\n", "rain.frag": "uniform float uRain;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    float a = (1.0 - abs(vC.y)) * smoothstep(0.0, 0.4, vC.x) * uRain;\n    a *= smoothstep(1.0, 5.0, vDist) * (1.0 - smoothstep(30.0, 70.0, vDist));\n    vec3 col = mix(vec3(0.6, 0.7, 0.85), uFog * 2.2 + uNeonA * 0.2, 0.4);\n    gl_FragColor = vec4(col * a * 0.35, 1.0);\n}\n", "rain.vert": "attribute vec3 aSeed;\nattribute vec2 aCorner;\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uRainSpeed;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    vec3 pos;\n    pos.x = uEye.x + (aSeed.x - 0.5) * 70.0;\n    pos.y = uEye.y - 25.0 + mod(aSeed.y * 60.0 - uTime * uRainSpeed * (0.8 + aSeed.z * 0.4), 60.0);\n    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0;\n    vec3 vel = vec3(-0.08, -1.0, 0.0);\n    vec3 a = (uV * vec4(pos, 1.0)).xyz;\n    vec3 b = (uV * vec4(pos + vel * 0.9, 1.0)).xyz;\n    vec3 seg = b - a;\n    vec3 P = mix(a, b, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    P += perp * aCorner.y * 0.018;\n    vC = aCorner;\n    vDist = length(P);\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "sky.frag": "uniform vec3 uSunDir;\nuniform vec3 uSunCol;\nuniform float uSunStripes;\nvarying vec3 vDir;\n\nvoid main(){\n    vec3 d = normalize(vDir);\n    float y = d.y;\n    vec3 col = mix(uFog * 1.15, uSkyTop, smoothstep(-0.05, 0.55, y));\n    // stars\n    vec2 sp = d.xz / (abs(y) + 0.25) * 260.0;\n    float st = step(0.9965, h21(floor(sp)));\n    col += vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));\n    // moon / sun\n    float dd = distance(d, normalize(uSunDir));\n    float disk = smoothstep(0.075, 0.070, dd);\n    if (uSunStripes > 0.5) {\n        float sy = (d.y - uSunDir.y) / 0.075;\n        float stripe = step(0.0, sin(sy * 26.0 + uTime * 1.5)) + step(0.25, sy);\n        disk *= clamp(stripe, 0.0, 1.0);\n        col += mix(uSunCol, uNeonB, smoothstep(0.07, -0.07, d.y - uSunDir.y)) * disk * 1.4;\n    } else {\n        col += uSunCol * disk * 1.2;\n    }\n    col += uSunCol * 0.35 * exp(-dd * 7.0);\n    // slow haze bands\n    float band = h21(vec2(floor(y * 40.0 + uTime * 0.02), 1.0));\n    col += uFog * 0.06 * band * smoothstep(0.35, 0.0, y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "sky.vert": "attribute vec2 aPos;\nuniform vec3 uFwd;\nuniform vec3 uRight;\nuniform vec3 uUp;\nuniform vec2 uTan;\nvarying vec3 vDir;\nvoid main(){\n    vDir = uFwd + aPos.x * uTan.x * uRight + aPos.y * uTan.y * uUp;\n    gl_Position = vec4(aPos, 0.9999, 1.0);\n}\n"};</script>
+<script>/* Cybercity 3D — web engine (WebGL 1). Same shaders and city generator as the Android DreamService.
+ * SHADERS is injected by tools/build_web.py from app/src/main/assets/shaders. */
+(function () {
+'use strict';
+const L = 420, CELL = 14, ROWS = 30, COLS = 13;
+
+const PALETTES = {
+  neon:      { name: 'NEON TOKYO',    fog: [0.17,0.08,0.26], top: [0.012,0.008,0.035], winA: [1.0,0.72,0.42], winB: [0.35,0.9,1.0], winC: [1.0,0.3,0.82], neonA: [0.0,1.0,0.89], neonB: [1.0,0.23,0.78], sun: [0.9,0.85,1.0], sunDir: [0.25,0.32,1], stripes: 0, fogDen: 0.0062 },
+  blade:     { name: 'BLADE RUNNER',  fog: [0.42,0.19,0.06], top: [0.06,0.025,0.012], winA: [1.0,0.62,0.25], winB: [0.3,0.85,0.85], winC: [1.0,0.85,0.6], neonA: [0.1,0.95,0.9], neonB: [1.0,0.45,0.1], sun: [1.0,0.6,0.25], sunDir: [-0.2,0.18,1], stripes: 0, fogDen: 0.0085 },
+  matrix:    { name: 'MATRIX',        fog: [0.02,0.11,0.05], top: [0.0,0.015,0.005], winA: [0.35,1.0,0.45], winB: [0.6,1.0,0.6], winC: [0.15,0.7,0.3], neonA: [0.2,1.0,0.4], neonB: [0.6,1.0,0.2], sun: [0.5,1.0,0.6], sunDir: [0.3,0.4,1], stripes: 0, fogDen: 0.007 },
+  synthwave: { name: 'SYNTHWAVE',     fog: [0.36,0.08,0.3], top: [0.03,0.01,0.09], winA: [1.0,0.55,0.85], winB: [0.4,0.85,1.0], winC: [1.0,0.85,0.4], neonA: [1.0,0.25,0.8], neonB: [0.25,0.85,1.0], sun: [1.0,0.8,0.25], sunDir: [0,0.1,1], stripes: 1, fogDen: 0.0058 },
+  bloodmoon: { name: 'BLOOD MOON',    fog: [0.2,0.02,0.04], top: [0.025,0.0,0.006], winA: [1.0,0.35,0.3], winB: [1.0,0.7,0.3], winC: [1.0,0.15,0.3], neonA: [1.0,0.17,0.3], neonB: [1.0,0.69,0.0], sun: [1.0,0.15,0.12], sunDir: [-0.3,0.35,1], stripes: 0, fogDen: 0.0068 },
+  glass:     { name: 'FUTURISTIC GLASS', fog: [0.08,0.14,0.26], top: [0.01,0.015,0.05], winA: [0.75,0.9,1.0], winB: [0.6,0.9,1.0], winC: [0.78,0.6,1.0], neonA: [0.6,0.9,1.0], neonB: [0.78,0.59,1.0], sun: [0.85,0.95,1.0], sunDir: [0.2,0.3,1], stripes: 0, fogDen: 0.006 }
+};
+const PAL_KEYS = Object.keys(PALETTES);
+const MODES = ['avenue', 'glide', 'drone', 'skyline'];
+const MODE_NAMES = { avenue: 'VOLO SUL VIALE', glide: 'PLANATA', drone: 'DRONE A BASSA QUOTA', skyline: 'SOPRA I TETTI' };
+
+/* deterministic PRNG identical to the Java one (mulberry32) */
+function rng(seed) {
+  let a = seed | 0;
+  return function () {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- city generation ---------- */
+function buildCity(seed) {
+  const R = rng(seed);
+  const B = { pos: [], center: [], norm: [], uv: [], misc: [], idx: [] };
+  const BB = { pos: [], center: [], uv: [], misc: [], idx: [] };
+  function box(cx, cz, w, d, y0, y1, s, kind) {
+    const hw = w / 2, hd = d / 2;
+    const faces = [
+      // normal, 4 corners (local x,y,z), face width
+      [[1,0,0], [[hw,y0,-hd],[hw,y0,hd],[hw,y1,hd],[hw,y1,-hd]], d],
+      [[-1,0,0], [[-hw,y0,hd],[-hw,y0,-hd],[-hw,y1,-hd],[-hw,y1,hd]], d],
+      [[0,0,1], [[hw,y0,hd],[-hw,y0,hd],[-hw,y1,hd],[hw,y1,hd]], w],
+      [[0,0,-1], [[-hw,y0,-hd],[hw,y0,-hd],[hw,y1,-hd],[-hw,y1,-hd]], w]
+    ];
+    for (const [n, cs, fw] of faces) {
+      const b = B.pos.length / 3;
+      const us = [0, fw, fw, 0];
+      for (let i = 0; i < 4; i++) {
+        B.pos.push(cs[i][0], cs[i][1], cs[i][2]); B.center.push(cx, cz); B.norm.push(n[0], n[1], n[2]);
+        B.uv.push(us[i], cs[i][1]); B.misc.push(s, kind, fw, y1);
+      }
+      B.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+    }
+    const b = B.pos.length / 3;
+    const top = [[-hw,y1,-hd],[hw,y1,-hd],[hw,y1,hd],[-hw,y1,hd]];
+    for (const c of top) { B.pos.push(c[0], c[1], c[2]); B.center.push(cx, cz); B.norm.push(0,1,0); B.uv.push(c[0], c[2]); B.misc.push(s, kind, w, y1); }
+    B.idx.push(b, b + 2, b + 1, b, b + 3, b + 2);
+  }
+  function board(cx, cz, lx, y0, y1, z0, z1, s, kind, facing) {
+    const b = BB.pos.length / 3;
+    const ratio = (y1 - y0) / Math.abs(z1 - z0);
+    const cs = facing > 0 ? [[lx,y0,z1],[lx,y0,z0],[lx,y1,z0],[lx,y1,z1]] : [[lx,y0,z0],[lx,y0,z1],[lx,y1,z1],[lx,y1,z0]];
+    const uvs = [[0,0],[1,0],[1,1],[0,1]];
+    for (let i = 0; i < 4; i++) { BB.pos.push(...cs[i]); BB.center.push(cx, cz); BB.uv.push(...uvs[i]); BB.misc.push(s, kind, ratio, 0); }
+    BB.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+  }
+  for (const side of [-1, 1]) {
+    for (let col = 0; col < COLS; col++) {
+      const cx = side * (16 + CELL / 2 + col * CELL);
+      for (let r = 0; r < ROWS; r++) {
+        if (r % 6 === 0) continue;
+        const cz = r * CELL + CELL / 2;
+        const s = R();
+        const w = 7 + R() * 5, d = 7 + R() * 5;
+        let kind = R() < 0.35 ? 1 : 0;
+        let h = 12 + Math.pow(R(), 2.4) * 105 * (col < 3 ? 1.5 : 1.0);
+        if (col >= 2 && R() < 0.05) { h = 170 + R() * 120; kind = 2; }
+        box(cx, cz, w, d, 0, h, s, kind);
+        if (h > 55 && R() < 0.55) {
+          const h2 = h + h * (0.15 + R() * 0.25);
+          box(cx, cz, w * 0.68, d * 0.68, h, h2, fract(s * 7.7), kind === 2 ? 2 : 1);
+          if (R() < 0.5) box(cx, cz, 0.7, 0.7, h2, h2 + 10 + R() * 25, fract(s * 3.3), 1);
+        }
+        if (col === 0 && R() < 0.6) {
+          const bw = 2.5 + R() * 3, bh = Math.min(h - 6, 6 + R() * 16);
+          if (bh > 4) {
+            const y0 = 5 + R() * Math.max(0, h - bh - 8);
+            const lx = -side * (w / 2 + 0.3);
+            const z0 = -bw / 2, z1 = bw / 2;
+            board(cx, cz, lx, y0, y0 + bh, z0, z1, R(), Math.floor(R() * 3), side);
+          }
+        }
+      }
+    }
+  }
+  // cars
+  const C = { lane: [], dir: [], corner: [], idx: [] };
+  function car(ox, oy, oz, speed, dx, dz, len, s) {
+    const b = C.lane.length / 4;
+    const cs = [[0,-1],[0,1],[1,1],[1,-1]];
+    for (const c of cs) { C.lane.push(ox, oy, oz, speed); C.dir.push(dx, dz, len, s); C.corner.push(c[0], c[1]); }
+    C.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+  }
+  const xl = [-10, -6, 6, 10], yl = [13, 24, 37, 55, 78];
+  for (const x of xl) for (const y of yl) {
+    const dir = x > 0 ? 1 : -1;
+    const n = 6 + Math.floor(R() * 6);
+    for (let i = 0; i < n; i++) car(x + (R() - 0.5), y + (R() - 0.5) * 3, 0, 22 + R() * 25, 0, dir, 4 + R() * 6, R());
+  }
+  for (const x of [-7, -3, 3, 7]) {
+    const n = 10;
+    for (let i = 0; i < n; i++) car(x, 0.7, 0, 12 + R() * 10, 0, x > 0 ? 1 : -1, 2.5 + R() * 2, R());
+  }
+  for (let r = 0; r < ROWS; r += 6) {
+    const cz = r * CELL + CELL / 2;
+    for (const [y, off] of [[0.7, -2.5], [0.7, 2.5], [21, 0], [34, 2]]) {
+      const n = 6;
+      for (let i = 0; i < n; i++) car(0, y, cz + off, 14 + R() * 18, off >= 0 ? 1 : -1, 0, 3 + R() * 5, R());
+    }
+  }
+  for (let i = 0; i < 18; i++) {
+    const x = (R() < 0.5 ? -1 : 1) * (40 + R() * 120), y = 110 + R() * 60;
+    const n = 5;
+    for (let k = 0; k < n; k++) car(x, y, 0, 30 + R() * 20, 0, x > 0 ? 1 : -1, 6 + R() * 8, R());
+  }
+  // rain
+  const RN = { seed: [], corner: [], idx: [] };
+  for (let i = 0; i < 2600; i++) {
+    const b = RN.seed.length / 3, sx = R(), sy = R(), sz = R();
+    for (const c of [[0,-1],[0,1],[1,1],[1,-1]]) { RN.seed.push(sx, sy, sz); RN.corner.push(c[0], c[1]); }
+    RN.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+  }
+  return { B, BB, C, RN };
+}
+function fract(x) { return x - Math.floor(x); }
+
+/* ---------- tiny matrix helpers (column major) ---------- */
+function perspective(fovy, aspect, near, far) {
+  const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+  return new Float32Array([f / aspect,0,0,0, 0,f,0,0, 0,0,(far + near) * nf,-1, 0,0,2 * far * near * nf,0]);
+}
+function lookAt(e, c, up) {
+  let fx = c[0] - e[0], fy = c[1] - e[1], fz = c[2] - e[2];
+  let l = Math.hypot(fx, fy, fz); fx /= l; fy /= l; fz /= l;
+  let sx = fy * up[2] - fz * up[1], sy = fz * up[0] - fx * up[2], sz = fx * up[1] - fy * up[0];
+  l = Math.hypot(sx, sy, sz); sx /= l; sy /= l; sz /= l;
+  const ux = sy * fz - sz * fy, uy = sz * fx - sx * fz, uz = sx * fy - sy * fx;
+  return { m: new Float32Array([sx,ux,-fx,0, sy,uy,-fy,0, sz,uz,-fz,0,
+    -(sx*e[0]+sy*e[1]+sz*e[2]), -(ux*e[0]+uy*e[1]+uz*e[2]), (fx*e[0]+fy*e[1]+fz*e[2]), 1]),
+    f: [fx,fy,fz], r: [sx,sy,sz], u: [ux,uy,uz] };
+}
+function mul(a, b) {
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s;
+  }
+  return o;
+}
+
+/* ---------- camera paths ---------- */
+function cameraFor(mode, t) {
+  // returns eye (x,y), look target offset (x,y,z ahead), roll, speed
+  switch (mode) {
+    case 'glide': {
+      const y = 70 + Math.sin(t * 0.045) * 35;
+      return { eye: [Math.sin(t * 0.06) * 5, y], look: [Math.sin(t * 0.06 + 0.8) * 9, y - 22 - Math.sin(t * 0.03) * 10, 70], roll: Math.sin(t * 0.06) * 0.12, speed: 14 };
+    }
+    case 'drone': {
+      const x = Math.sin(t * 0.21) * 6.5, y = 7 + Math.sin(t * 0.13) * 3.5;
+      return { eye: [x, y], look: [Math.sin(t * 0.21 + 0.6) * 7, y + 2 + Math.sin(t * 0.17) * 3, 40], roll: -Math.cos(t * 0.21) * 0.18, speed: 32 };
+    }
+    case 'skyline': {
+      const y = 215 + Math.sin(t * 0.03) * 25;
+      return { eye: [Math.sin(t * 0.04) * 4, y], look: [Math.sin(t * 0.04 + 1.2) * 40, y - 70, 160], roll: Math.sin(t * 0.04) * 0.05, speed: 20 };
+    }
+    default: {
+      const y = 19 + Math.sin(t * 0.05) * 7;
+      return { eye: [Math.sin(t * 0.07) * 3.5, y], look: [Math.sin(t * 0.07 + 0.5) * 2, y - 2 + Math.sin(t * 0.11) * 3, 60], roll: Math.sin(t * 0.07) * 0.06, speed: 18 };
+    }
+  }
+}
+
+/* ---------- WebGL setup ---------- */
+function Cybercity(canvas, opts) {
+  const gl = canvas.getContext('webgl', { antialias: true, alpha: false, preserveDrawingBuffer: !!opts.preserve });
+  if (!gl) throw new Error('WebGL non disponibile');
+  this.gl = gl; this.canvas = canvas; this.opts = opts;
+  const S = SHADERS;
+  function sh(type, src) {
+    const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) + '\n' + src);
+    return s;
+  }
+  function prog(v, f) {
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, S[v]));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, S['common.glsl'] + '\n' + S[f]));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); }
+    return { p, u };
+  }
+  this.P = {
+    sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground.frag'),
+    board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'), post: prog('post.vert', 'post.frag')
+  };
+  const city = buildCity(opts.seed || 2077);
+  function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
+  function mesh(attrs, idx) { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; }
+  const c = city;
+  if (c.B.pos.length / 3 > 65535) console.warn('too many vertices');
+  this.M = {
+    building: mesh({ aPos: [c.B.pos, 3], aCenter: [c.B.center, 2], aNorm: [c.B.norm, 3], aUV: [c.B.uv, 2], aMisc: [c.B.misc, 4] }, c.B.idx),
+    board: mesh({ aPos: [c.BB.pos, 3], aCenter: [c.BB.center, 2], aUV: [c.BB.uv, 2], aMisc: [c.BB.misc, 4] }, c.BB.idx),
+    car: mesh({ aLane: [c.C.lane, 4], aDir: [c.C.dir, 4], aCorner: [c.C.corner, 2] }, c.C.idx),
+    rain: mesh({ aSeed: [c.RN.seed, 3], aCorner: [c.RN.corner, 2] }, c.RN.idx),
+    ground: mesh({ aPos: [[-420,-40, 420,-40, 420,L, -420,L], 2] }, [0,1,2,0,2,3]),
+    quad: mesh({ aPos: [[-1,-1, 1,-1, 1,1, -1,1], 2] }, [0,1,2,0,2,3])
+  };
+  this.camZ = 0; this.t = 0; this.modeT = 0; this.modeIdx = 0; this.fade = 1;
+  this.stats = { verts: c.B.pos.length / 3, cars: c.C.lane.length / 16 };
+}
+Cybercity.prototype.draw = function (pr, m) {
+  const gl = this.gl; gl.useProgram(pr.p);
+  const used = [];
+  for (const k in m.a) {
+    const loc = gl.getAttribLocation(pr.p, k); if (loc < 0) continue;
+    gl.bindBuffer(gl.ARRAY_BUFFER, m.a[k].b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, m.a[k].s, gl.FLOAT, false, 0, 0); used.push(loc);
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.i); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0);
+  for (const l of used) gl.disableVertexAttribArray(l);
+};
+Cybercity.prototype.frame = function (dt) {
+  const gl = this.gl, o = this.opts, P = this.P;
+  const pal = PALETTES[o.palette] || PALETTES.neon;
+  this.t += dt;
+  const t = this.t;
+  // mode handling
+  let mode = o.mode;
+  if (mode === 'auto') {
+    this.modeT += dt;
+    const period = o.cycle || 45;
+    if (this.modeT > period) { this.modeT = 0; this.modeIdx = (this.modeIdx + 1) % MODES.length; }
+    mode = MODES[this.modeIdx];
+    const edge = Math.min(this.modeT, period - this.modeT);
+    this.fade = Math.max(0, 1 - edge / 1.2);
+  } else this.fade = Math.max(0, this.fade - dt);
+  this.curMode = mode;
+  const cam = cameraFor(mode, t);
+  this.camZ = (this.camZ + cam.speed * (o.speed || 1) * dt) % L;
+  const W = this.canvas.width, H = this.canvas.height;
+  gl.viewport(0, 0, W, H);
+  const eye = [cam.eye[0], cam.eye[1], 0];
+  const tgt = [cam.look[0], cam.look[1], cam.look[2]];
+  const up = [Math.sin(cam.roll), Math.cos(cam.roll), 0];
+  const V = lookAt(eye, tgt, up);
+  const fov = (o.fov || 62) * Math.PI / 180;
+  const Pm = perspective(fov, W / H, 0.3, L * 0.95);
+  const VP = mul(Pm, V.m);
+  const set = (pr) => {
+    const u = pr.u;
+    const v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); };
+    const f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
+    f1('uTime', t % 3600); f1('uL', L); f1('uCamZ', this.camZ); f1('uFogDen', pal.fogDen);
+    v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
+    v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
+    if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP);
+    if (u.uV) gl.uniformMatrix4fv(u.uV, false, V.m);
+    if (u.uP) gl.uniformMatrix4fv(u.uP, false, Pm);
+  };
+  gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  // sky
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
+  const sp = P.sky; gl.useProgram(sp.p); set(sp);
+  gl.uniform3fv(sp.u.uFwd, V.f); gl.uniform3fv(sp.u.uRight, V.r); gl.uniform3fv(sp.u.uUp, V.u);
+  const ty = Math.tan(fov / 2); gl.uniform2f(sp.u.uTan, ty * W / H, ty);
+  gl.uniform3fv(sp.u.uSunDir, pal.sunDir); gl.uniform3fv(sp.u.uSunCol, pal.sun); gl.uniform1f(sp.u.uSunStripes, pal.stripes);
+  this.draw(sp, this.M.quad);
+  // opaque
+  gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
+  gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
+  gl.useProgram(P.building.p); set(P.building); this.draw(P.building, this.M.building);
+  gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
+  // additive lights
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.32 * (o.traffic === 0 ? 0 : 1)); if (o.traffic !== 0) this.draw(P.car, this.M.car);
+  if (o.rain > 0) { gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uRain, o.rain); gl.uniform1f(P.rain.u.uRainSpeed, 28); this.draw(P.rain, this.M.rain); }
+  // post
+  gl.disable(gl.DEPTH_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.useProgram(P.post.p); gl.uniform1f(P.post.u.uFade, this.fade); gl.uniform1f(P.post.u.uScan, o.scanlines ? 1 : 0); gl.uniform2f(P.post.u.uRes, W, H);
+  this.draw(P.post, this.M.quad);
+  gl.depthMask(true); gl.disable(gl.BLEND);
+};
+
+window.Cybercity = Cybercity;
+window.CYBER_PALETTES = PALETTES;
+window.CYBER_MODES = MODES;
+window.CYBER_MODE_NAMES = MODE_NAMES;
+})();
+</script>
+<script>
+(function(){
+  const DEF={palette:'neon',mode:'auto',speed:1,rain:0.55,traffic:true,scanlines:false,clockOn:true,quality:'0.85',seed:2077,cycle:45};
+  let o=Object.assign({},DEF);
+  try{Object.assign(o,JSON.parse(localStorage.getItem('cybercity')||'{}'));}catch(e){}
+  const q=new URLSearchParams(location.search);
+  for(const k of Object.keys(DEF)){ if(q.has(k)){ const v=q.get(k); o[k]=typeof DEF[k]==='number'?parseFloat(v):typeof DEF[k]==='boolean'?v!=='0'&&v!=='false':v; } }
+  const save=()=>{try{localStorage.setItem('cybercity',JSON.stringify(o));}catch(e){}};
+  const cv=document.getElementById('c');
+  let city;
+  try{ city=new Cybercity(cv,{get palette(){return o.palette},get mode(){return o.mode},get speed(){return o.speed},get rain(){return o.rain},
+      get traffic(){return o.traffic?1:0},get scanlines(){return o.scanlines},get cycle(){return o.cycle},seed:o.seed,preserve:q.has('shot')}); }
+  catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore WebGL: '+e.message; console.error(e); return; }
+  window.__city=city;
+  function resize(){ const s=parseFloat(o.quality)*Math.min(window.devicePixelRatio||1,2); cv.width=Math.round(innerWidth*s); cv.height=Math.round(innerHeight*s); }
+  addEventListener('resize',resize); resize();
+  // settings UI
+  const $=id=>document.getElementById(id);
+  for(const k in CYBER_PALETTES){ const op=document.createElement('option'); op.value=k; op.textContent=CYBER_PALETTES[k].name; $('palette').appendChild(op); }
+  const am=document.createElement('option'); am.value='auto'; am.textContent='AUTO (ciclo)'; $('mode').appendChild(am);
+  for(const m of CYBER_MODES){ const op=document.createElement('option'); op.value=m; op.textContent=CYBER_MODE_NAMES[m]; $('mode').appendChild(op); }
+  const bind=(id,prop,kind)=>{ const el=$(id); if(kind==='check') el.checked=!!o[prop]; else el.value=o[prop];
+    el.addEventListener('input',()=>{ o[prop]=kind==='check'?el.checked:kind==='num'?parseFloat(el.value):el.value; save(); if(prop==='quality')resize(); applyAccent(); }); };
+  bind('palette','palette'); bind('mode','mode'); bind('speed','speed','num'); bind('rain','rain','num'); bind('traffic','traffic','check');
+  bind('scanlines','scanlines','check'); bind('clockOn','clockOn','check'); bind('quality','quality');
+  function applyAccent(){ const p=CYBER_PALETTES[o.palette]||CYBER_PALETTES.neon; const c=p.neonA.map(v=>Math.round(v*255)); document.body.style.setProperty('--a','rgb('+c+')');
+    $('hud').style.display=o.clockOn?'block':'none'; }
+  applyAccent();
+  $('gear').onclick=e=>{e.stopPropagation();$('panel').classList.toggle('open');};
+  $('panel').onclick=e=>e.stopPropagation();
+  let idleT; function active(){ document.body.classList.add('active'); document.body.classList.remove('idle'); clearTimeout(idleT);
+    idleT=setTimeout(()=>{document.body.classList.remove('active');document.body.classList.add('idle');},2500); }
+  addEventListener('mousemove',active); addEventListener('touchstart',active);
+  addEventListener('dblclick',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
+  addEventListener('keydown',e=>{
+    if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
+    if(e.key===' '){ const all=['auto',...CYBER_MODES]; o.mode=all[(all.indexOf(o.mode)+1)%all.length]; $('mode').value=o.mode; city.fade=1; save(); }
+    if(e.key==='p'||e.key==='P'){ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; $('palette').value=o.palette; applyAccent(); save(); }
+  });
+  // glitch clock
+  const GL='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*+=<>/|ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ';
+  const ck=$('clock'), dt=$('date'); let last='', lockAt=[], burst=0;
+  const days=['DOMENICA','LUNEDÌ','MARTEDÌ','MERCOLEDÌ','GIOVEDÌ','VENERDÌ','SABATO'];
+  function clockFrame(now){
+    const d=new Date(), s=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    if(s!==last){ last=s; lockAt=[...s].map((_,i)=>now+90*i+Math.random()*250); burst=now+300; }
+    if(Math.random()<0.004) burst=now+120+Math.random()*200;
+    const shown=[...s].map((ch,i)=>ch===':'||now>=lockAt[i]?ch:GL[Math.floor(Math.random()*GL.length)]).join('');
+    const p=CYBER_PALETTES[o.palette]||CYBER_PALETTES.neon, ca='rgb('+p.neonA.map(v=>v*255|0)+')', cb='rgb('+p.neonB.map(v=>v*255|0)+')';
+    const g=now<burst, sp=g?(2+Math.random()*6):1.2;
+    ck.innerHTML='<div style="visibility:hidden">'+s+'</div>'+
+      '<span style="color:'+cb+';transform:translateX(-'+sp+'px);opacity:.7">'+shown+'</span>'+
+      '<span style="color:'+ca+';transform:translateX('+sp+'px);opacity:.7">'+shown+'</span>'+
+      '<span style="color:#ecfcff;'+(g?'clip-path:inset('+(Math.random()*60|0)+'% 0 '+(Math.random()*30|0)+'% 0);transform:translateX('+((Math.random()-.5)*14)+'px)':'')+'">'+shown+'</span>';
+    dt.textContent=days[d.getDay()]+' · '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+  }
+  let prev=performance.now(), shot=q.has('shot');
+  function loop(now){
+    const step=Math.min(0.05,(now-prev)/1000); prev=now;
+    city.frame(shot?1/30:step);
+    $('modeName').textContent=(CYBER_PALETTES[o.palette]||{}).name+' · '+CYBER_MODE_NAMES[city.curMode];
+    if(o.clockOn) clockFrame(now);
+    requestAnimationFrame(loop);
+  }
+  if(q.has('t')) { const T=parseFloat(q.get('t')); for(let i=0;i<T*10;i++) city.frame(0.1); }
+  if(shot){ city.frame(1/30); if(o.clockOn) clockFrame(performance.now()); $('modeName').textContent=(CYBER_PALETTES[o.palette]||{}).name+' · '+CYBER_MODE_NAMES[city.curMode]; window.__done=true; }
+  else requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

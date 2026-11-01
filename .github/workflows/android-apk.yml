@@ -1,0 +1,79 @@
+name: Build Cybercity3D APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, "cybercity-*" ]
+    paths:
+      - 'app/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - 'web/**'
+      - 'tools/**'
+      - '.github/workflows/android-apk.yml'
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          set -e
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then echo "sdkmanager missing"; exit 1; fi
+          (yes | "$SDKMANAGER" --licenses >/dev/null) || true
+          "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Optional stable signing key
+        shell: bash
+        env:
+          KEYSTORE_B64: ${{ secrets.CYBERCITY_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.CYBERCITY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.CYBERCITY_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.CYBERCITY_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/cybercity.jks"
+            echo "CYBERCITY_KEYSTORE_PATH=$RUNNER_TEMP/cybercity.jks" >> "$GITHUB_ENV"
+            echo "CYBERCITY_STORE_PASSWORD=$STORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "CYBERCITY_KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+            echo "CYBERCITY_KEY_PASSWORD=$KEY_PASSWORD" >> "$GITHUB_ENV"
+            echo "Stable signing key loaded"
+          else
+            echo "No signing secrets: using the debug key"
+          fi
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Build APK
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+      - name: Rename APK + web build
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/debug/app-debug.apk out/Cybercity3D.apk
+          python3 tools/build_web.py
+          cp docs/index.html out/Cybercity3D.html
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cybercity3D-APK
+          path: out/Cybercity3D.apk
+          if-no-files-found: error
+      - name: Publish rolling release (download from phone)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest out/Cybercity3D.apk out/Cybercity3D.html \
+            --title "Cybercity3D — ultima build" \
+            --notes "APK compilato automaticamente dal commit ${GITHUB_SHA::7}. Scarica Cybercity3D.apk (salvaschermo Android) oppure Cybercity3D.html (versione browser / PC)." \
+            --prerelease

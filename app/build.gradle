@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'it.ampy.cybercity'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'it.ampy.cybercity'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+    // Stable signing only through GitHub Actions secrets. Never commit a keystore.
+    if (System.getenv('CYBERCITY_KEYSTORE_PATH') != null) {
+        signingConfigs {
+            stable {
+                storeFile file(System.getenv('CYBERCITY_KEYSTORE_PATH'))
+                storePassword System.getenv('CYBERCITY_STORE_PASSWORD')
+                keyAlias System.getenv('CYBERCITY_KEY_ALIAS')
+                keyPassword System.getenv('CYBERCITY_KEY_PASSWORD')
+            }
+        }
+        buildTypes {
+            debug { signingConfig signingConfigs.stable }
+            release { signingConfig signingConfigs.stable; minifyEnabled false }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

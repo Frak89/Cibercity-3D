@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cybercity 3D — salvaschermo</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,"JetBrains Mono",Consolas,monospace;color:#ecfcff}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #hud{position:fixed;left:4vmin;bottom:4vmin;pointer-events:none;text-shadow:0 0 12px var(--a)}
+  #clock{font-size:11vmin;font-weight:700;letter-spacing:.06em;line-height:1;position:relative}
+  #clock span{position:absolute;left:0;top:0;mix-blend-mode:screen}
+  #date{font-size:2.4vmin;letter-spacing:.35em;opacity:.8;margin-top:1.2vmin}
+  #tag{position:fixed;right:4vmin;top:4vmin;font-size:1.8vmin;letter-spacing:.3em;opacity:.65;text-align:right;pointer-events:none}
+  #panel{position:fixed;right:3vmin;bottom:3vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);box-shadow:0 0 24px rgba(0,255,226,.15);
+    padding:14px 16px;font-size:13px;display:none;min-width:250px;backdrop-filter:blur(8px)}
+  #panel.open{display:block}
+  #panel h3{margin:0 0 10px;font-size:13px;letter-spacing:.3em;color:var(--a)}
+  #panel label{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:7px 0}
+  #panel select,#panel input{background:#101d30;color:#ecfcff;border:1px solid #214557;font:inherit}
+  #gear{position:fixed;right:3vmin;bottom:3vmin;width:42px;height:42px;border:1px solid var(--a);background:rgba(7,11,19,.6);color:var(--a);
+    font-size:20px;cursor:pointer;opacity:0;transition:opacity .4s}
+  body.active #gear{opacity:1}
+  body.idle{cursor:none}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;color:#ff6177}
+</style>
+</head>
+<body style="--a:#00ffe2">
+<canvas id="c"></canvas>
+<div id="hud"><div id="clock"></div><div id="date"></div></div>
+<div id="tag">CYBERCITY 3D<br><span id="modeName"></span></div>
+<button id="gear" title="Impostazioni">⚙</button>
+<div id="panel">
+  <h3>// CYBERCITY 3D</h3>
+  <label>Atmosfera <select id="palette"></select></label>
+  <label>Telecamera <select id="mode"></select></label>
+  <label>Velocità <input id="speed" type="range" min="0.3" max="2.5" step="0.1"></label>
+  <label>Pioggia <input id="rain" type="range" min="0" max="1" step="0.05"></label>
+  <label>Traffico volante <input id="traffic" type="checkbox"></label>
+  <label>Scanlines CRT <input id="scanlines" type="checkbox"></label>
+  <label>Orologio glitch <input id="clockOn" type="checkbox"></label>
+  <label>Qualità <select id="quality"><option value="0.6">Batteria</option><option value="0.85">Bilanciata</option><option value="1">Massima</option></select></label>
+  <div style="opacity:.6;margin-top:8px">F = schermo intero · Spazio = cambia telecamera · P = atmosfera</div>
+</div>
+<div id="err"></div>
+<script>/*SHADERS*/</script>
+<script>/*ENGINE*/</script>
+<script>
+(function(){
+  const DEF={palette:'neon',mode:'auto',speed:1,rain:0.55,traffic:true,scanlines:false,clockOn:true,quality:'0.85',seed:2077,cycle:45};
+  let o=Object.assign({},DEF);
+  try{Object.assign(o,JSON.parse(localStorage.getItem('cybercity')||'{}'));}catch(e){}
+  const q=new URLSearchParams(location.search);
+  for(const k of Object.keys(DEF)){ if(q.has(k)){ const v=q.get(k); o[k]=typeof DEF[k]==='number'?parseFloat(v):typeof DEF[k]==='boolean'?v!=='0'&&v!=='false':v; } }
+  const save=()=>{try{localStorage.setItem('cybercity',JSON.stringify(o));}catch(e){}};
+  const cv=document.getElementById('c');
+  let city;
+  try{ city=new Cybercity(cv,{get palette(){return o.palette},get mode(){return o.mode},get speed(){return o.speed},get rain(){return o.rain},
+      get traffic(){return o.traffic?1:0},get scanlines(){return o.scanlines},get cycle(){return o.cycle},seed:o.seed,preserve:q.has('shot')}); }
+  catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore WebGL: '+e.message; console.error(e); return; }
+  window.__city=city;
+  function resize(){ const s=parseFloat(o.quality)*Math.min(window.devicePixelRatio||1,2); cv.width=Math.round(innerWidth*s); cv.height=Math.round(innerHeight*s); }
+  addEventListener('resize',resize); resize();
+  // settings UI
+  const $=id=>document.getElementById(id);
+  for(const k in CYBER_PALETTES){ const op=document.createElement('option'); op.value=k; op.textContent=CYBER_PALETTES[k].name; $('palette').appendChild(op); }
+  const am=document.createElement('option'); am.value='auto'; am.textContent='AUTO (ciclo)'; $('mode').appendChild(am);
+  for(const m of CYBER_MODES){ const op=document.createElement('option'); op.value=m; op.textContent=CYBER_MODE_NAMES[m]; $('mode').appendChild(op); }
+  const bind=(id,prop,kind)=>{ const el=$(id); if(kind==='check') el.checked=!!o[prop]; else el.value=o[prop];
+    el.addEventListener('input',()=>{ o[prop]=kind==='check'?el.checked:kind==='num'?parseFloat(el.value):el.value; save(); if(prop==='quality')resize(); applyAccent(); }); };
+  bind('palette','palette'); bind('mode','mode'); bind('speed','speed','num'); bind('rain','rain','num'); bind('traffic','traffic','check');
+  bind('scanlines','scanlines','check'); bind('clockOn','clockOn','check'); bind('quality','quality');
+  function applyAccent(){ const p=CYBER_PALETTES[o.palette]||CYBER_PALETTES.neon; const c=p.neonA.map(v=>Math.round(v*255)); document.body.style.setProperty('--a','rgb('+c+')');
+    $('hud').style.display=o.clockOn?'block':'none'; }
+  applyAccent();
+  $('gear').onclick=e=>{e.stopPropagation();$('panel').classList.toggle('open');};
+  $('panel').onclick=e=>e.stopPropagation();
+  let idleT; function active(){ document.body.classList.add('active'); document.body.classList.remove('idle'); clearTimeout(idleT);
+    idleT=setTimeout(()=>{document.body.classList.remove('active');document.body.classList.add('idle');},2500); }
+  addEventListener('mousemove',active); addEventListener('touchstart',active);
+  addEventListener('dblclick',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
+  addEventListener('keydown',e=>{
+    if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
+    if(e.key===' '){ const all=['auto',...CYBER_MODES]; o.mode=all[(all.indexOf(o.mode)+1)%all.length]; $('mode').value=o.mode; city.fade=1; save(); }
+    if(e.key==='p'||e.key==='P'){ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; $('palette').value=o.palette; applyAccent(); save(); }
+  });
+  // glitch clock
+  const GL='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*+=<>/|ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ';
+  const ck=$('clock'), dt=$('date'); let last='', lockAt=[], burst=0;
+  const days=['DOMENICA','LUNEDÌ','MARTEDÌ','MERCOLEDÌ','GIOVEDÌ','VENERDÌ','SABATO'];
+  function clockFrame(now){
+    const d=new Date(), s=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    if(s!==last){ last=s; lockAt=[...s].map((_,i)=>now+90*i+Math.random()*250); burst=now+300; }
+    if(Math.random()<0.004) burst=now+120+Math.random()*200;
+    const shown=[...s].map((ch,i)=>ch===':'||now>=lockAt[i]?ch:GL[Math.floor(Math.random()*GL.length)]).join('');
+    const p=CYBER_PALETTES[o.palette]||CYBER_PALETTES.neon, ca='rgb('+p.neonA.map(v=>v*255|0)+')', cb='rgb('+p.neonB.map(v=>v*255|0)+')';
+    const g=now<burst, sp=g?(2+Math.random()*6):1.2;
+    ck.innerHTML='<div style="visibility:hidden">'+s+'</div>'+
+      '<span style="color:'+cb+';transform:translateX(-'+sp+'px);opacity:.7">'+shown+'</span>'+
+      '<span style="color:'+ca+';transform:translateX('+sp+'px);opacity:.7">'+shown+'</span>'+
+      '<span style="color:#ecfcff;'+(g?'clip-path:inset('+(Math.random()*60|0)+'% 0 '+(Math.random()*30|0)+'% 0);transform:translateX('+((Math.random()-.5)*14)+'px)':'')+'">'+shown+'</span>';
+    dt.textContent=days[d.getDay()]+' · '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+  }
+  let prev=performance.now(), shot=q.has('shot');
+  function loop(now){
+    const step=Math.min(0.05,(now-prev)/1000); prev=now;
+    city.frame(shot?1/30:step);
+    $('modeName').textContent=(CYBER_PALETTES[o.palette]||{}).name+' · '+CYBER_MODE_NAMES[city.curMode];
+    if(o.clockOn) clockFrame(now);
+    requestAnimationFrame(loop);
+  }
+  if(q.has('t')) { const T=parseFloat(q.get('t')); for(let i=0;i<T*10;i++) city.frame(0.1); }
+  if(shot){ city.frame(1/30); if(o.clockOn) clockFrame(performance.now()); $('modeName').textContent=(CYBER_PALETTES[o.palette]||{}).name+' · '+CYBER_MODE_NAMES[city.curMode]; window.__done=true; }
+  else requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

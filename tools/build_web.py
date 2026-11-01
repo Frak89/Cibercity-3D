@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Builds docs/index.html (GitHub Pages / desktop browser screensaver) from the
+shared GLSL shaders in app/src/main/assets/shaders and web/cybercity.js."""
+import json, pathlib
+
+root = pathlib.Path(__file__).resolve().parent.parent
+shaders = {p.name: p.read_text() for p in sorted((root / 'app/src/main/assets/shaders').iterdir())}
+tpl = (root / 'web/template.html').read_text()
+engine = (root / 'web/cybercity.js').read_text()
+html = tpl.replace('/*SHADERS*/', 'const SHADERS=' + json.dumps(shaders) + ';').replace('/*ENGINE*/', engine)
+out = root / 'docs/index.html'
+out.parent.mkdir(exist_ok=True)
+out.write_text(html)
+print('wrote', out, len(html), 'bytes')
