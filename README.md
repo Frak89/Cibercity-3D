@@ -11,7 +11,7 @@ più una versione **browser / PC** con lo stesso motore e gli stessi shader.
 
 ## Scarica
 - **Android**: Releases → `latest` → `Cybercity3D.apk` (oppure Actions → ultimo build → artifact `Cybercity3D-APK`).
-- **Browser / PC**: Releases → `Cybercity3D.html`, oppure apri `docs/index.html` (GitHub Pages: https://frak89.github.io/Cibercity-3D/).
+- **Browser / PC**: Releases → `Cybercity3D.html`, oppure apri `docs/index.html`. Per averla online: Settings → Pages → *Deploy from a branch* → `main` / `docs` → https://frak89.github.io/Cibercity-3D/
   Doppio clic = schermo intero, `Spazio` = cambia telecamera, `P` = cambia atmosfera, ⚙ in basso a destra per le opzioni.
 
 ## Attivarlo come salvaschermo (Pixel / Android)
