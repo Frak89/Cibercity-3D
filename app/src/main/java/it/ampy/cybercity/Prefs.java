@@ -28,14 +28,23 @@ public final class Prefs {
     public int seed() { return sp.getInt("seed", 2077); }
 
     // schedule
-    public boolean windowOn() { return sp.getBoolean("windowOn", false); }
-    public int fromMin() { return sp.getInt("fromMin", 22 * 60); }
-    public int toMin() { return sp.getInt("toMin", 7 * 60); }
+    public static final String DEFAULT_SLOTS = "[{\"on\":true,\"name\":\"SERA\",\"from\":1140,\"to\":1380,\"days\":127,\"show\":0,\"palette\":\"neon\",\"mode\":\"\",\"bright\":60},"
+        + "{\"on\":true,\"name\":\"NOTTE\",\"from\":1380,\"to\":420,\"days\":127,\"show\":1,\"palette\":\"bloodmoon\",\"mode\":\"\",\"bright\":8}]";
     public boolean onlyCharging() { return sp.getBoolean("onlyCharging", true); }
     public int delayMin() { return sp.getInt("delayMin", 0); }
     public int runMin() { return sp.getInt("runMin", 0); }      // 0 = always
     public int offMin() { return sp.getInt("offMin", 15); }
-    public int pauseMode() { return sp.getInt("pauseMode", Schedule.PAUSE_CLOCK); }
+    public int pauseMode() { return sp.getInt("pauseMode2", Schedule.SHOW_CLOCK); }
+    public int hiddenMode() { return sp.getInt("hiddenMode", Schedule.SHOW_BLACK); }
+    public int bright() { return sp.getInt("bright", Schedule.BRIGHT_SYSTEM); }   // -1 system, 1..100
+    public int pauseBright() { return sp.getInt("pauseBright", 5); }
+    public boolean workOn() { return sp.getBoolean("workOn", false); }
+    public int workFrom() { return sp.getInt("workFrom", 9 * 60); }
+    public int workTo() { return sp.getInt("workTo", 18 * 60); }
+    public int workDays() { return sp.getInt("workDays", Schedule.WEEKDAYS); }
+    public boolean respectDnd() { return sp.getBoolean("respectDnd", true); }
+    public boolean onlySlots() { return sp.getBoolean("onlySlots", false); }
+    public String slotsJson() { return sp.getString("slots", DEFAULT_SLOTS); }
 
     public SharedPreferences.Editor edit() { return sp.edit(); }
     public void putString(String k, String v) { sp.edit().putString(k, v).apply(); }
@@ -48,6 +57,12 @@ public final class Prefs {
         public final float speed, rain;
         public final boolean traffic, scanlines;
         public final int fps, cycle, fov, seed;
+        private Snapshot(Snapshot o, String palette, String mode) {
+            this.palette = palette; this.mode = mode; speed = o.speed; rain = o.rain; traffic = o.traffic; scanlines = o.scanlines;
+            fps = o.fps; cycle = o.cycle; fov = o.fov; seed = o.seed;
+        }
+        /** Same settings with a time slot's atmosphere / camera. */
+        public Snapshot with(String palette, String mode) { return new Snapshot(this, palette, mode); }
         public Snapshot(Prefs p) {
             palette = p.palette(); mode = p.mode(); speed = p.speedPct() / 100f; rain = p.rainPct() / 100f;
             traffic = p.traffic(); scanlines = p.scanlines(); fps = p.fps(); cycle = p.cycleSec(); fov = p.fov(); seed = p.seed();

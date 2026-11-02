@@ -20,11 +20,14 @@ più una versione **browser / PC** con lo stesso motore e gli stessi shader.
 3. L'ingranaggio accanto a Cybercity 3D nelle impostazioni di sistema apre le opzioni.
 
 ## Programmazione (Impostazioni → PROGRAMMAZIONE)
-- **Solo quando è in carica**: se stacchi il caricatore il salvaschermo si chiude.
-- **Fascia oraria di comparsa**: es. dalle 22:00 alle 07:00 (anche a cavallo della mezzanotte); fuori fascia resta la pausa.
-- **Ritardo dopo la messa in carica**: 0–60 min prima che la città compaia.
-- **Durata animazione** (0 = sempre) e **pausa prima che ricompaia** (1–120 min), in ciclo continuo con dissolvenza.
-- **Durante la pausa**: schermo nero, solo orologio glitch, oppure chiudi il salvaschermo. In pausa il rendering 3D si ferma (zero GPU).
+- **Luminosità personalizzata**: come il sistema oppure 1–100%, più una luminosità separata per pause e momenti nascosti.
+- **Fasce orarie**: quante ne vuoi, ognuna con orari, giorni (L M M G V S D), cosa mostrare
+  (**città 3D**, **solo orologio**, **schermo nero**, **non mostrare**), atmosfera, telecamera e luminosità propria.
+  Esempio predefinito: *SERA* 19:00–23:00 Neon Tokyo al 60%, *NOTTE* 23:00–07:00 solo orologio Blood Moon all'8%.
+  Opzione: fuori dalle fasce non mostrare la città.
+- **Orario di lavoro / non disturbare**: dalle–alle e giorni (predefinito lun–ven 9–18): in quell'orario niente città.
+  **Rispetta il Non disturbare di Android** (anche modalità Focus / Riposo).
+- **Ciclo**: solo in carica, ritardo dopo la messa in carica, durata animazione e pausa prima che ricompaia.
 
 Quando il salvaschermo *parte* lo decide Android (Display → Salvaschermo → *Quando avviarlo*, più il timeout dello schermo):
 il programma di Cybercity regola cosa succede da quel momento.
