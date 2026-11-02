@@ -27,6 +27,16 @@ public final class Prefs {
     public int fov() { return sp.getInt("fov", 62); }                  // 45..90
     public int seed() { return sp.getInt("seed", 2077); }
 
+    // schedule
+    public boolean windowOn() { return sp.getBoolean("windowOn", false); }
+    public int fromMin() { return sp.getInt("fromMin", 22 * 60); }
+    public int toMin() { return sp.getInt("toMin", 7 * 60); }
+    public boolean onlyCharging() { return sp.getBoolean("onlyCharging", true); }
+    public int delayMin() { return sp.getInt("delayMin", 0); }
+    public int runMin() { return sp.getInt("runMin", 0); }      // 0 = always
+    public int offMin() { return sp.getInt("offMin", 15); }
+    public int pauseMode() { return sp.getInt("pauseMode", Schedule.PAUSE_CLOCK); }
+
     public SharedPreferences.Editor edit() { return sp.edit(); }
     public void putString(String k, String v) { sp.edit().putString(k, v).apply(); }
     public void putInt(String k, int v) { sp.edit().putInt(k, v).apply(); }

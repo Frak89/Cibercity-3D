@@ -19,6 +19,16 @@ più una versione **browser / PC** con lo stesso motore e gli stessi shader.
 2. Tocca **IMPOSTA COME SALVASCHERMO** → *Salvaschermo* → scegli **Cybercity 3D** → *Quando avviarlo* (in carica / sul dock).
 3. L'ingranaggio accanto a Cybercity 3D nelle impostazioni di sistema apre le opzioni.
 
+## Programmazione (Impostazioni → PROGRAMMAZIONE)
+- **Solo quando è in carica**: se stacchi il caricatore il salvaschermo si chiude.
+- **Fascia oraria di comparsa**: es. dalle 22:00 alle 07:00 (anche a cavallo della mezzanotte); fuori fascia resta la pausa.
+- **Ritardo dopo la messa in carica**: 0–60 min prima che la città compaia.
+- **Durata animazione** (0 = sempre) e **pausa prima che ricompaia** (1–120 min), in ciclo continuo con dissolvenza.
+- **Durante la pausa**: schermo nero, solo orologio glitch, oppure chiudi il salvaschermo. In pausa il rendering 3D si ferma (zero GPU).
+
+Quando il salvaschermo *parte* lo decide Android (Display → Salvaschermo → *Quando avviarlo*, più il timeout dello schermo):
+il programma di Cybercity regola cosa succede da quel momento.
+
 ## Cosa c'è dentro
 - **Città procedurale infinita**: ~700 grattacieli con piani a gradoni, guglie, megatorri; finestre che si accendono e spengono, piani-ufficio illuminati, bordi e fasce al neon pulsanti, luci aeronautiche sui tetti.
 - **4 telecamere** + modalità AUTO con dissolvenza: *Volo sul viale*, *Planata*, *Drone a bassa quota*, *Sopra i tetti*.

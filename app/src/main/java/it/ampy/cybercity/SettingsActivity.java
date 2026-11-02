@@ -2,6 +2,7 @@ package it.ampy.cybercity;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -93,6 +94,46 @@ public class SettingsActivity extends Activity {
 
     private void rebuild() { list.removeAllViews(); build(); }
 
+    private void timeRow(String title, int min, java.util.function.IntConsumer on) {
+        LinearLayout c = card();
+        c.addView(text(title, 12, MUTED, false));
+        c.addView(text(Schedule.hhmm(min) + "  ▾", 18, ACC, true));
+        c.setOnClickListener(v -> new TimePickerDialog(this, android.R.style.Theme_Material_Dialog_Alert,
+            (tp, h, m) -> { on.accept(h * 60 + m); rebuild(); }, min / 60, min % 60, true).show());
+    }
+    private void section(String s) {
+        TextView t = text("■ " + s, 13, 0xffff3ac8, true);
+        t.setPadding(0, dp(22), 0, dp(2));
+        list.addView(t);
+    }
+
+    private TextView sumView;
+    private void updSum() { if (sumView != null) sumView.setText(new Schedule(p).summary()); }
+
+    private void buildSchedule() {
+        section("PROGRAMMAZIONE");
+        LinearLayout sum = card();
+        sumView = text(new Schedule(p).summary(), 12, FG, false);
+        sum.addView(sumView);
+        toggle("Solo quando è in carica", "Se stacchi il caricatore il salvaschermo si chiude subito", p.onlyCharging(),
+            v -> { p.putBool("onlyCharging", v); rebuild(); });
+        toggle("Fascia oraria di comparsa", "Fuori dalla fascia resta la pausa scelta sotto (o si chiude)", p.windowOn(),
+            v -> { p.putBool("windowOn", v); rebuild(); });
+        if (p.windowOn()) {
+            timeRow("COMPARE DALLE", p.fromMin(), v -> p.putInt("fromMin", v));
+            timeRow("FINO ALLE", p.toMin(), v -> p.putInt("toMin", v));
+        }
+        slider("RITARDO DOPO LA MESSA IN CARICA / AVVIO", 0, 60, p.delayMin(), " min", v -> { p.putInt("delayMin", v); updSum(); });
+        slider("DURATA ANIMAZIONE (0 = sempre accesa)", 0, 120, p.runMin(), " min", v -> { p.putInt("runMin", v); updSum(); });
+        slider("PAUSA PRIMA CHE RICOMPAIA", 1, 120, p.offMin(), " min", v -> { p.putInt("offMin", v); updSum(); });
+        choice("DURANTE LA PAUSA", Schedule.PAUSE_NAMES, p.pauseMode(), i -> p.putInt("pauseMode", i));
+        TextView note = text("Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → "
+            + "\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", 11, MUTED, false);
+        note.setPadding(0, dp(8), 0, 0);
+        list.addView(note);
+        section("GRAFICA");
+    }
+
     private void build() {
         TextView h = text("// CYBERCITY 3D", 22, ACC, true);
         list.addView(h);
@@ -108,6 +149,7 @@ public class SettingsActivity extends Activity {
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(48)); lp.topMargin = dp(14);
         list.addView(set, lp);
+        buildSchedule();
 
         choice("ATMOSFERA", Palette.NAMES, Palette.index(p.palette()), i -> p.putString("palette", Palette.KEYS[i]));
         String[] modeLabels = new String[CityRenderer.MODES.length + 1];
