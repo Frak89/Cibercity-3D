@@ -40,5 +40,14 @@
                 android:name="android.service.dream"
                 android:resource="@xml/dream" />
         </service>
+        <service
+            android:name=".NotifListener"
+            android:exported="true"
+            android:label="Cybercity 3D · icone notifiche"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

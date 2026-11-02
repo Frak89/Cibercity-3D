@@ -4,10 +4,14 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.Icon;
 import android.os.SystemClock;
 import android.view.View;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Random;
 
 /** Glitch clock (same decode effect as AmpyRocket) that drifts slowly to protect OLED screens. */
@@ -36,6 +40,31 @@ public class ClockOverlay extends View {
     public void setPalette(Palette p) { accent = Palette.argb(p.neonA); second = Palette.argb(p.neonB); invalidate(); }
     public void setShowClock(boolean b) { showClock = b; invalidate(); }
     public void setLabel(String s) { label = s; }
+
+    /** Notification icons of the apps with unread notifications: icon only, no count. */
+    private final List<Drawable> icons = new ArrayList<>();
+    public void setNotificationIcons(List<Icon> list) {
+        post(() -> {
+            icons.clear();
+            if (list != null) for (Icon ic : list) {
+                if (icons.size() >= 8) break;
+                try { Drawable d = ic.loadDrawable(getContext()); if (d != null) icons.add(d.mutate()); } catch (Exception ignored) { }
+            }
+            invalidate();
+        });
+    }
+    private float iconX, iconY; private boolean iconPos;
+
+    private void drawIcons(Canvas c, float x, float y, float size) {
+        float gap = size * 0.55f;
+        for (Drawable d : icons) {
+            int l = (int) x, t = (int) (y - size), r = (int) (x + size), b = (int) y;
+            d.setBounds(l - 2, t, r - 2, b); d.setTint(a(second, 170)); d.draw(c);
+            d.setBounds(l + 2, t, r + 2, b); d.setTint(a(accent, 170)); d.draw(c);
+            d.setBounds(l, t, r, b); d.setTint(0xffecfcff); d.draw(c);
+            x += size + gap;
+        }
+    }
 
     private static int a(int c, int alpha) { return (c & 0x00ffffff) | (alpha << 24); }
 
@@ -80,8 +109,12 @@ public class ClockOverlay extends View {
             small.setColor(0xccecfcff);
             c.drawText(DAYS[cal.get(Calendar.DAY_OF_WEEK) - 1] + " · " + String.format("%02d.%02d.%d",
                 cal.get(Calendar.DAY_OF_MONTH), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR)), x + m * 0.005f, y + m * 0.05f, small);
+            if (!icons.isEmpty()) drawIcons(c, x + m * 0.005f, y + m * 0.115f, m * 0.042f);
             if (scrambling || g) postInvalidateOnAnimation(); else postInvalidateDelayed(120);
-        } else postInvalidateDelayed(1000);
+        } else {
+            if (!icons.isEmpty()) drawIcons(c, W * 0.05f + driftX, H * 0.08f + driftY, m * 0.042f);
+            postInvalidateDelayed(1000);
+        }
         if (!label.isEmpty()) {
             small.setTextSize(m * 0.022f);
             small.setColor(a(0xffecfcff, 150));

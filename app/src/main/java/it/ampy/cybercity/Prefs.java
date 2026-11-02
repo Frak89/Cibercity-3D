@@ -44,6 +44,9 @@ public final class Prefs {
     public int workDays() { return sp.getInt("workDays", Schedule.WEEKDAYS); }
     public boolean respectDnd() { return sp.getBoolean("respectDnd", true); }
     public boolean onlySlots() { return sp.getBoolean("onlySlots", false); }
+    public static final String[] FACEDOWN_NAMES = {"SPEGNI (schermo nero, 3D fermo)", "CHIUDI SALVASCHERMO", "IGNORA"};
+    public int faceDown() { return sp.getInt("faceDown", 0); }
+    public boolean notifIcons() { return sp.getBoolean("notifIcons", true); }
     public String slotsJson() { return sp.getString("slots", DEFAULT_SLOTS); }
 
     public SharedPreferences.Editor edit() { return sp.edit(); }

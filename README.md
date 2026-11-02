@@ -29,6 +29,9 @@ più una versione **browser / PC** con lo stesso motore e gli stessi shader.
   **Rispetta il Non disturbare di Android** (anche modalità Focus / Riposo).
 - **Ciclo**: solo in carica, ritardo dopo la messa in carica, durata animazione e pausa prima che ricompaia.
 
+- **Rovescia il telefono** (schermo in giù) per spegnere il salvaschermo: schermo nero e 3D fermo, si riaccende quando lo giri (oppure: chiudi / ignora).
+- **Icone notifiche** sotto l'orologio al posto delle icone di sistema (Wi-Fi ecc.): una per app, senza numeri. Richiede l'accesso alle notifiche.
+
 Quando il salvaschermo *parte* lo decide Android (Display → Salvaschermo → *Quando avviarlo*, più il timeout dello schermo):
 il programma di Cybercity regola cosa succede da quel momento.
 

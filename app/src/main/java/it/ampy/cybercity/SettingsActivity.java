@@ -93,6 +93,7 @@ public class SettingsActivity extends Activity {
     }
 
     private void rebuild() { list.removeAllViews(); build(); }
+    @Override protected void onResume() { super.onResume(); if (list != null && list.getChildCount() > 0) rebuild(); }
 
     private void timeRow(String title, int min, java.util.function.IntConsumer on) {
         LinearLayout c = card();
@@ -191,6 +192,15 @@ public class SettingsActivity extends Activity {
             + "\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", 11, MUTED, false);
         note.setPadding(0, dp(8), 0, 0);
         list.addView(note);
+        section("TELEFONO ROVESCIATO · NOTIFICHE");
+        choice("QUANDO ROVESCI IL TELEFONO (schermo verso il basso)", Prefs.FACEDOWN_NAMES, p.faceDown(), i -> p.putInt("faceDown", i));
+        toggle("Icone notifiche", "Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri", p.notifIcons(), v -> p.putBool("notifIcons", v));
+        if (p.notifIcons() && !NotifListener.granted(this)) {
+            LinearLayout g = card();
+            g.addView(text("CONCEDI ACCESSO ALLE NOTIFICHE  ›", 14, 0xffffd16a, true));
+            g.addView(text("Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", 11, MUTED, false));
+            g.setOnClickListener(v -> { try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); } catch (Exception ignored) { } });
+        }
         section("GRAFICA (GLOBALE)");
     }
 

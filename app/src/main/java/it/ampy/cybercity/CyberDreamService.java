@@ -5,6 +5,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.BatteryManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -22,7 +26,7 @@ import java.util.Calendar;
  * Every few seconds it resolves the schedule: time slot (which screensaver, brightness), work hours / Do Not Disturb,
  * start delay and animation / pause cycle, and switches between city, clock-only and black with a fade.
  */
-public class CyberDreamService extends DreamService {
+public class CyberDreamService extends DreamService implements SensorEventListener {
     private Prefs prefs;
     private CityView city;
     private ClockOverlay clock;
@@ -34,6 +38,9 @@ public class CyberDreamService extends DreamService {
     private String curPalette = "", curMode = "";
     private int curBright = Integer.MIN_VALUE;
     private final Handler h = new Handler(Looper.getMainLooper());
+    private SensorManager sm;
+    private boolean faceDown = false;
+    private long faceDownSince = 0, faceUpSince = 0;
 
     private final Runnable label = new Runnable() {
         @Override public void run() {
@@ -51,6 +58,7 @@ public class CyberDreamService extends DreamService {
             int want = s.show;
             int bright = s.bright;
             if (want == Schedule.SHOW_CITY && !sch.cycleOn(elapsed)) { want = sch.pauseMode; bright = sch.pauseBright; }
+            if (faceDown) { want = Schedule.SHOW_BLACK; bright = 1; }
             if (want == Schedule.SHOW_NONE) { finish(); return; }
             if (!s.palette.equals(curPalette) || !s.mode.equals(curMode)) {
                 curPalette = s.palette; curMode = s.mode;
@@ -123,13 +131,37 @@ public class CyberDreamService extends DreamService {
         curPalette = prefs.palette(); curMode = prefs.mode();
         clock.post(label);
         h.post(tick);
+        faceDown = false;
+        if (prefs.faceDown() != 2) {
+            sm = (SensorManager) getSystemService(SENSOR_SERVICE);
+            Sensor acc = sm == null ? null : sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            if (acc != null) sm.registerListener(this, acc, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+        if (prefs.notifIcons() && NotifListener.granted(this)) NotifListener.setWatcher(clock::setNotificationIcons);
     }
+
+    /** Phone turned face down for ~1 s → screensaver off; face up again → back on. */
+    @Override public void onSensorChanged(SensorEvent e) {
+        float z = e.values[2];
+        long now = SystemClock.elapsedRealtime();
+        boolean down = z < -8.0f && Math.abs(e.values[0]) < 3f && Math.abs(e.values[1]) < 3f;
+        if (down) { faceUpSince = 0; if (faceDownSince == 0) faceDownSince = now; }
+        else if (z > -5f) { faceDownSince = 0; if (faceUpSince == 0) faceUpSince = now; }
+        if (!faceDown && faceDownSince != 0 && now - faceDownSince > 1000) {
+            if (prefs.faceDown() == 1) { finish(); return; }
+            faceDown = true; h.removeCallbacks(tick); h.post(tick);
+        } else if (faceDown && faceUpSince != 0 && now - faceUpSince > 600) {
+            faceDown = false; h.removeCallbacks(tick); h.post(tick);
+        }
+    }
+    @Override public void onAccuracyChanged(Sensor s, int a) { }
 
     /** Fade between city / clock-only / black; the GL thread sleeps unless the city is on screen. */
     private void show(int what) {
         boolean first = shown == -1;
         shown = what;
-        boolean clockOn = prefs.clock() && what != Schedule.SHOW_BLACK;
+        boolean clockOn = (prefs.clock() || prefs.notifIcons()) && what != Schedule.SHOW_BLACK;
+        clock.setShowClock(prefs.clock());
         clock.setVisibility(clockOn ? View.VISIBLE : View.INVISIBLE);
         if (what == Schedule.SHOW_CITY) {
             if (!cityRunning) { city.onResume(); cityRunning = true; }
@@ -145,6 +177,8 @@ public class CyberDreamService extends DreamService {
         started = false;
         h.removeCallbacksAndMessages(null);
         try { unregisterReceiver(unplug); } catch (Exception ignored) { }
+        if (sm != null) { sm.unregisterListener(this); sm = null; }
+        NotifListener.setWatcher(null);
         if (city != null) {
             clock.removeCallbacks(label);
             if (cityRunning) { city.onPause(); cityRunning = false; }

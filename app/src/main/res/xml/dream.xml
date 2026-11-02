@@ -1,3 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- showClockAndComplications=false: no system clock / complications / status icons (Wi-Fi…) over Cybercity -->
 <dream xmlns:android="http://schemas.android.com/apk/res/android"
-    android:settingsActivity="it.ampy.cybercity/.SettingsActivity" />
+    android:settingsActivity="it.ampy.cybercity/.SettingsActivity"
+    android:showClockAndComplications="false" />
