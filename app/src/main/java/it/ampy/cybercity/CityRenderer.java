@@ -31,10 +31,13 @@ public class CityRenderer implements GLSurfaceView.Renderer {
     public volatile String currentMode = "avenue";
     public volatile String currentPalette = "neon";
 
-    private Prog sky, building, ground, board, car, rain, post;
+    private Prog sky, building, ground, board, car, rain, post, mist;
+    private float flash = 0, nextFlash = 3;
+    private final java.util.Random rnd = new java.util.Random();
     private Mesh mBuilding, mBoard, mCar, mRain, mGround, mQuad;
 
     private double camZ = 0;
+    private float fogMul = 1;
     private float t = 0, modeT = 0, fade = 1;
     private int modeIdx = 0, W = 1, H = 1;
     private long last = 0, frameStart = 0;
@@ -123,6 +126,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         car = prog("car.vert", "car.frag", common);
         rain = prog("rain.vert", "rain.frag", common);
         post = prog("post.vert", "post.frag", common);
+        mist = prog("post.vert", "mist.frag", common);
         City c = new City(cfg.seed);
         mBuilding = mesh(new String[]{"aPos", "aCenter", "aNorm", "aUV", "aMisc"},
             new float[][]{c.bPos.arr(), c.bCenter.arr(), c.bNorm.arr(), c.bUV.arr(), c.bMisc.arr()}, new int[]{3, 2, 3, 2, 4}, c.bIdx.arr());
@@ -167,7 +171,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
 
     private void common(Prog p, Palette pal, float[] eye) {
         GLES20.glUseProgram(p.id);
-        f1(p, "uTime", t % 3600f); f1(p, "uL", City.L); f1(p, "uCamZ", (float) camZ); f1(p, "uFogDen", pal.fogDen);
+        f1(p, "uTime", t % 3600f); f1(p, "uL", City.L); f1(p, "uCamZ", (float) camZ); f1(p, "uFogDen", pal.fogDen * fogMul); f1(p, "uFlash", flash);
         v3(p, "uFog", pal.fog); v3(p, "uSkyTop", pal.top); v3(p, "uWinA", pal.winA); v3(p, "uWinB", pal.winB); v3(p, "uWinC", pal.winC);
         v3(p, "uNeonA", pal.neonA); v3(p, "uNeonB", pal.neonB); v3(p, "uEye", eye);
         int l = p.u("uVP"); if (l >= 0) GLES20.glUniformMatrix4fv(l, 1, false, VP, 0);
@@ -192,6 +196,11 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         t += dt;
 
         Palette pal = Palette.of(o.palette);
+        Weather.Fx wx = Weather.fx(o.weather);
+        flash = Math.max(0, flash - dt * 3.5f);
+        if (wx != null && wx.light > 0) { nextFlash -= dt; if (nextFlash <= 0) { flash = 1; nextFlash = rnd.nextFloat() < 0.35f ? 0.15f : 4 + rnd.nextFloat() * 9; } }
+        float rainAmt = wx != null ? wx.rain : o.rain;
+        fogMul = wx != null ? wx.fog : 1;
         currentPalette = pal.name;
         String mode = o.mode;
         if ("auto".equals(mode)) {
@@ -230,6 +239,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform3f(sky.u("uUp"), ux, uy, uz);
         float ty = (float) Math.tan(Math.toRadians(fovDeg) / 2);
         GLES20.glUniform2f(sky.u("uTan"), ty * W / H, ty);
+        f1(sky, "uCloud", wx != null ? wx.cloud : 0);
         v3(sky, "uSunDir", pal.sunDir); v3(sky, "uSunCol", pal.sun); f1(sky, "uSunStripes", pal.stripes);
         draw(sky, mQuad);
 
@@ -242,7 +252,17 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         // additive lights
         GLES20.glEnable(GLES20.GL_BLEND); GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE); GLES20.glDepthMask(false);
         if (o.traffic) { common(car, pal, eye); f1(car, "uWidth", 0.32f); draw(car, mCar); }
-        if (o.rain > 0) { common(rain, pal, eye); f1(rain, "uRain", o.rain); f1(rain, "uRainSpeed", 28f); draw(rain, mRain); }
+        if (rainAmt > 0) {
+            common(rain, pal, eye); f1(rain, "uRain", rainAmt); f1(rain, "uRainSpeed", 28f);
+            f1(rain, "uSnow", wx != null ? wx.snow : 0); f1(rain, "uWind", wx != null ? wx.wind : 0);
+            draw(rain, mRain);
+        }
+        if (wx != null && wx.mist > 0) {
+            GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            common(mist, pal, eye); f1(mist, "uMist", wx.mist); GLES20.glUniform2f(mist.u("uRes"), W, H);
+            draw(mist, mQuad);
+        }
 
         // post: vignette, scanlines, fade
         GLES20.glDisable(GLES20.GL_DEPTH_TEST);

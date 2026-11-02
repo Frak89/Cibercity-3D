@@ -108,6 +108,170 @@ public class SettingsActivity extends Activity {
         list.addView(t);
     }
 
+    /* ============================== METEO ============================== */
+    private void buildWeather() {
+        section("METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE");
+        choice("EFFETTO METEO", Weather.NAMES, Weather.index(p.weatherMode()), i -> p.putString("weather", Weather.KEYS[i]));
+        if ("auto".equals(p.weatherMode())) {
+            LinearLayout st = card();
+            String live = p.liveWeather();
+            st.addView(text(p.city().isEmpty() ? "NESSUNA POSIZIONE IMPOSTATA" : "📍 " + p.city(), 13, ACC, true));
+            st.addView(text(live.isEmpty() ? "Meteo non ancora scaricato" : Weather.line(p) + " · aggiornato "
+                + android.text.format.DateFormat.format("HH:mm", p.weatherTime()), 12, FG, false));
+            st.addView(text("Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", 11, MUTED, false));
+            LinearLayout city = card();
+            city.addView(text("CITTÀ  ›", 14, ACC, true));
+            city.addView(text("Scrivi la città per il meteo", 11, MUTED, false));
+            city.setOnClickListener(v -> {
+                android.widget.EditText e = new android.widget.EditText(this);
+                e.setHint("es. Roma, Milano, Treviso…"); e.setSingleLine(true);
+                new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("CITTÀ").setView(e)
+                    .setPositiveButton("CERCA", (d, w) -> runNet(() -> { Weather.geocode(p, e.getText().toString().trim()); Weather.refresh(this, p); }))
+                    .setNegativeButton("ANNULLA", null).show();
+            });
+            LinearLayout gps = card();
+            gps.addView(text("USA LA POSIZIONE DEL TELEFONO  ›", 14, ACC, true));
+            gps.addView(text("Posizione approssimativa, solo per il meteo", 11, MUTED, false));
+            gps.setOnClickListener(v -> {
+                if (checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                    requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, 11);
+                else useGps();
+            });
+            LinearLayout upd = card();
+            upd.addView(text("AGGIORNA ORA", 14, ACC, true));
+            upd.setOnClickListener(v -> runNet(() -> Weather.refresh(this, p)));
+        }
+        toggle("Meteo sotto l'orologio", "Icona, temperatura e condizione (con meteo automatico)", p.weatherLine(), v -> p.putBool("wLine", v));
+        LinearLayout pv = card();
+        pv.addView(text("▶ ANTEPRIMA METEO", 15, 0xffffd16a, true));
+        pv.addView(text("Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti", 11, MUTED, false));
+        pv.setOnClickListener(v -> {
+            String[] k = java.util.Arrays.copyOfRange(Weather.KEYS, 2, Weather.KEYS.length);
+            String[] n = java.util.Arrays.copyOfRange(Weather.NAMES, 2, Weather.NAMES.length);
+            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("ANTEPRIMA")
+                .setItems(n, (d, i) -> startActivity(new Intent(this, MainActivity.class).putExtra("previewWeather", k[i]))).show();
+        });
+    }
+
+    interface Net { void run() throws Exception; }
+    private void runNet(Net n) {
+        android.widget.Toast.makeText(this, "Aggiorno il meteo…", android.widget.Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String err = null;
+            try { n.run(); } catch (Exception e) { err = e.getMessage(); }
+            String fe = err;
+            runOnUiThread(() -> {
+                if (fe != null) android.widget.Toast.makeText(this, "Meteo: " + fe, android.widget.Toast.LENGTH_LONG).show();
+                rebuild();
+            });
+        }).start();
+    }
+    private void useGps() {
+        p.putBool("wUseGps", true);
+        if (!Weather.fromDevice(this, p)) android.widget.Toast.makeText(this, "Posizione non disponibile: apri Maps una volta o scrivi la città", android.widget.Toast.LENGTH_LONG).show();
+        else runNet(() -> Weather.refresh(this, p));
+        rebuild();
+    }
+    @Override public void onRequestPermissionsResult(int rc, String[] perms, int[] res) {
+        if (rc == 11 && res.length > 0 && res[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) useGps();
+    }
+
+    /* ============================== OROLOGIO ============================== */
+    private void colorPick(String title, int initial, java.util.function.IntConsumer on) {
+        float[] hsv = new float[3]; android.graphics.Color.colorToHSV(initial, hsv);
+        LinearLayout f = new LinearLayout(this); f.setOrientation(LinearLayout.VERTICAL); f.setPadding(dp(18), dp(10), dp(18), dp(4));
+        View sw = new View(this); f.addView(sw, new LinearLayout.LayoutParams(-1, dp(46)));
+        int[] cur = {initial};
+        Runnable paint = () -> { cur[0] = android.graphics.Color.HSVToColor(hsv); GradientDrawable g = new GradientDrawable(); g.setColor(cur[0]); g.setCornerRadius(dp(8)); sw.setBackground(g); };
+        String[] lab = {"TINTA", "SATURAZIONE", "LUMINOSITÀ"}; int[] max = {360, 100, 100};
+        SeekBar[] bars = new SeekBar[3];
+        for (int k = 0; k < 3; k++) {
+            final int kk = k;
+            f.addView(text(lab[k], 11, MUTED, false));
+            SeekBar b = new SeekBar(this); b.setMax(max[k]); b.setProgress((int) (k == 0 ? hsv[0] : hsv[k] * 100));
+            b.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override public void onProgressChanged(SeekBar s, int pr, boolean u) { hsv[kk] = kk == 0 ? pr : pr / 100f; paint.run(); }
+                @Override public void onStartTrackingTouch(SeekBar s) { }
+                @Override public void onStopTrackingTouch(SeekBar s) { }
+            });
+            bars[k] = b; f.addView(b);
+        }
+        int[] presets = {0xffecfcff, 0xff00ffe2, 0xffff3ac8, 0xffffd16a, 0xffff2b4e, 0xff57ff8a, 0xff60a8ff, 0xffc797ff, 0xffff8a3d, 0xff9be7ff};
+        LinearLayout row = new LinearLayout(this); row.setPadding(0, dp(8), 0, 0);
+        for (int pc : presets) {
+            View v = new View(this); GradientDrawable g = new GradientDrawable(); g.setColor(pc); g.setCornerRadius(dp(14)); v.setBackground(g);
+            v.setOnClickListener(x -> { android.graphics.Color.colorToHSV(pc, hsv); bars[0].setProgress((int) hsv[0]); bars[1].setProgress((int) (hsv[1] * 100)); bars[2].setProgress((int) (hsv[2] * 100)); paint.run(); });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(26), dp(26)); lp.rightMargin = dp(5); row.addView(v, lp);
+        }
+        f.addView(row);
+        paint.run();
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(title).setView(f)
+            .setPositiveButton("OK", (d, w) -> { on.accept(cur[0]); rebuild(); }).setNegativeButton("ANNULLA", null).show();
+    }
+    private void colorRow(String title, String key, int def) {
+        LinearLayout c = card();
+        LinearLayout h = new LinearLayout(this); h.setGravity(Gravity.CENTER_VERTICAL);
+        View sw = new View(this); GradientDrawable g = new GradientDrawable(); g.setColor(p.i(key, def)); g.setCornerRadius(dp(12)); sw.setBackground(g);
+        h.addView(sw, new LinearLayout.LayoutParams(dp(24), dp(24)));
+        TextView t = text("  " + title + "  ▾", 14, FG, true); h.addView(t);
+        c.addView(h);
+        c.setOnClickListener(v -> colorPick(title, p.i(key, def), col -> p.putInt(key, col)));
+    }
+
+    private void buildClock() {
+        section("OROLOGIO");
+        android.widget.FrameLayout pf = new android.widget.FrameLayout(this);
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xff05030c, 0xff2a1840});
+        bg.setCornerRadius(dp(8)); pf.setBackground(bg);
+        ClockOverlay preview = new ClockOverlay(this).preview();
+        preview.setPalette(Palette.of(p.palette()));
+        preview.setWeatherLine(p.weatherLine() ? Weather.line(p) : "");
+        pf.addView(preview, new android.widget.FrameLayout.LayoutParams(-1, -1));
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(-1, dp(240)); plp.topMargin = dp(8);
+        list.addView(pf, plp);
+        list.addView(text("Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)", 11, MUTED, false));
+        toggle("Mostra orologio", null, p.clock(), v -> p.putBool("clock", v));
+        toggle("Secondi", null, p.b("clkSec", false), v -> p.putBool("clkSec", v));
+        toggle("Data", null, p.b("clkDate", true), v -> p.putBool("clkDate", v));
+        toggle("Formato 24 ore", null, p.b("clk24", true), v -> p.putBool("clk24", v));
+        slider("DIMENSIONE", 5, 40, p.i("clkSize", 16), " %", v -> p.putInt("clkSize", v));
+        choice("STILE", ClockOverlay.STYLES, p.i("clkStyle", 0), i -> p.putInt("clkStyle", i));
+        int cm = p.i("clkColorMode", 4);
+        choice("COLORI", ClockOverlay.COLOR_MODES, cm, i -> p.putInt("clkColorMode", i));
+        if (cm == 0) colorRow("COLORE", "clkColor", 0xffecfcff);
+        if (cm == 1) {
+            String[] nm = {"1ª CIFRA (decine ore)", "2ª CIFRA (unità ore)", "3ª CIFRA (decine minuti)", "4ª CIFRA (unità minuti)"};
+            int[] dd = {0xff00ffe2, 0xffecfcff, 0xffff3ac8, 0xffffd16a};
+            for (int i = 0; i < 4; i++) colorRow(nm[i], "clkDigit" + i, dd[i]);
+            colorRow("DUE PUNTI  :", "clkColon", 0xffecfcff);
+        }
+        if (cm == 2) {
+            colorRow("SFUMATURA · COLORE A", "clkGradA", 0xff00ffe2);
+            colorRow("SFUMATURA · COLORE B", "clkGradB", 0xffff3ac8);
+        }
+        if (cm == 2 || cm == 3) slider("VELOCITÀ DEI COLORI", 0, 100, p.i("clkGradSpeed", 40), "", v -> p.putInt("clkGradSpeed", v));
+        slider("BAGLIORE NEON", 0, 100, p.i("clkGlow", 60), " %", v -> p.putInt("clkGlow", v));
+        choice("MOVIMENTO", ClockOverlay.MOVES, p.i("clkMove", 0), i -> p.putInt("clkMove", i));
+        if (p.i("clkMove", 0) >= 1) slider("VELOCITÀ MOVIMENTO", 5, 200, p.i("clkMoveSpeed", 50), " %", v -> p.putInt("clkMoveSpeed", v));
+        if (p.i("clkMove", 0) <= 1) choice("POSIZIONE", ClockOverlay.POSITIONS, p.i("clkPos", 0), i -> p.putInt("clkPos", i));
+        LinearLayout fx = card();
+        int mask = p.i("clkFx", 1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ClockOverlay.EFFECTS.length; i++) if ((mask & (1 << i)) != 0) sb.append(sb.length() > 0 ? ", " : "").append(ClockOverlay.EFFECTS[i]);
+        fx.addView(text("EFFETTI GRAFICI CASUALI", 11, MUTED, false));
+        fx.addView(text((sb.length() == 0 ? "NESSUNO" : sb.toString()) + "  ▾", 14, ACC, true));
+        fx.setOnClickListener(v -> {
+            boolean[] ch = new boolean[ClockOverlay.EFFECTS.length];
+            for (int i = 0; i < ch.length; i++) ch[i] = (p.i("clkFx", 1) & (1 << i)) != 0;
+            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("EFFETTI CASUALI")
+                .setMultiChoiceItems(ClockOverlay.EFFECTS, ch, (d, w, on) -> ch[w] = on)
+                .setPositiveButton("OK", (d, w) -> { int m = 0; for (int i = 0; i < ch.length; i++) if (ch[i]) m |= 1 << i; p.putInt("clkFx", m); rebuild(); })
+                .setNeutralButton("TUTTI", (d, w) -> { p.putInt("clkFx", (1 << ClockOverlay.EFFECTS.length) - 1); rebuild(); })
+                .setNegativeButton("ANNULLA", null).show();
+        });
+        slider("FREQUENZA EFFETTI (ogni circa)", 2, 120, p.i("clkFxEvery", 12), " s", v -> p.putInt("clkFxEvery", v));
+    }
+
     private TextView sumView;
     private void updSum() { if (sumView != null) sumView.setText(new Schedule(p).summary()); }
 
@@ -201,6 +365,8 @@ public class SettingsActivity extends Activity {
             g.addView(text("Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", 11, MUTED, false));
             g.setOnClickListener(v -> { try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); } catch (Exception ignored) { } });
         }
+        buildWeather();
+        buildClock();
         section("GRAFICA (GLOBALE)");
     }
 

@@ -14,11 +14,24 @@ uniform vec3 uWinB;
 uniform vec3 uWinC;
 uniform vec3 uNeonA;
 uniform vec3 uNeonB;
+uniform float uFlash;   // lightning
 
 float h21(vec2 p){
     p = fract(p * vec2(123.34, 456.21));
     p += dot(p, p + 45.32);
     return fract(p.x * p.y);
+}
+
+float vnoise(vec2 p){
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = h21(i), b = h21(i + vec2(1.0, 0.0)), c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+float fbm(vec2 p){
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }
+    return v;
 }
 
 /* Integer id from an interpolated per-vertex seed: varyings are not bit-exact,
@@ -33,6 +46,6 @@ float fogAmount(float d){
 }
 vec3 applyFog(vec3 col, float d, float y){
     float f = fogAmount(d);
-    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02));
+    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02)) + vec3(0.55, 0.6, 0.8) * uFlash;
     return mix(col, fc, f);
 }

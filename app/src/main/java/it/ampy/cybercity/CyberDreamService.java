@@ -35,7 +35,7 @@ public class CyberDreamService extends DreamService implements SensorEventListen
     private long dreamStart;
     private boolean cityRunning = false, started = false;
     private int shown = -1;               // Schedule.SHOW_* currently on screen
-    private String curPalette = "", curMode = "";
+    private String curPalette = "", curMode = "", curWeather = "";
     private int curBright = Integer.MIN_VALUE;
     private final Handler h = new Handler(Looper.getMainLooper());
     private SensorManager sm;
@@ -60,8 +60,11 @@ public class CyberDreamService extends DreamService implements SensorEventListen
             if (want == Schedule.SHOW_CITY && !sch.cycleOn(elapsed)) { want = sch.pauseMode; bright = sch.pauseBright; }
             if (faceDown) { want = Schedule.SHOW_BLACK; bright = 1; }
             if (want == Schedule.SHOW_NONE) { finish(); return; }
-            if (!s.palette.equals(curPalette) || !s.mode.equals(curMode)) {
-                curPalette = s.palette; curMode = s.mode;
+            String wNow = Weather.effective(prefs);
+            Weather.refreshIfStale(CyberDreamService.this, prefs, null);
+            if (!s.palette.equals(curPalette) || !s.mode.equals(curMode) || !wNow.equals(curWeather)) {
+                curPalette = s.palette; curMode = s.mode; curWeather = wNow;
+                clock.setWeatherLine(prefs.weatherLine() ? Weather.line(prefs) : "");
                 city.renderer.setConfig(prefs.snapshot().with(s.palette, s.mode));
                 clock.setPalette(Palette.of(s.palette));
             }
@@ -128,7 +131,7 @@ public class CyberDreamService extends DreamService implements SensorEventListen
         dreamStart = SystemClock.elapsedRealtime();
         cityRunning = true;   // GLSurfaceView renders as soon as it is attached
         shown = -1;
-        curPalette = prefs.palette(); curMode = prefs.mode();
+        curPalette = ""; curMode = ""; curWeather = "";
         clock.post(label);
         h.post(tick);
         faceDown = false;

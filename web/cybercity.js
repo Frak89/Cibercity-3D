@@ -13,6 +13,16 @@ const PALETTES = {
   glass:     { name: 'FUTURISTIC GLASS', fog: [0.08,0.14,0.26], top: [0.01,0.015,0.05], winA: [0.75,0.9,1.0], winB: [0.6,0.9,1.0], winC: [0.78,0.6,1.0], neonA: [0.6,0.9,1.0], neonB: [0.78,0.59,1.0], sun: [0.85,0.95,1.0], sunDir: [0.2,0.3,1], stripes: 0, fogDen: 0.006 }
 };
 const PAL_KEYS = Object.keys(PALETTES);
+/* Weather presets — identical to Weather.java: rain, snow, fogMul, cloud, mist, lightning, wind */
+const WEATHER = {
+  clear:   { name: 'SERENO',       rain: 0,    snow: 0,   fog: 1.0, cloud: 0,    mist: 0,    light: 0, wind: 0 },
+  cloudy:  { name: 'NUVOLOSO',     rain: 0,    snow: 0,   fog: 1.15, cloud: 0.85, mist: 0.15, light: 0, wind: 2 },
+  fog:     { name: 'NEBBIA',       rain: 0,    snow: 0,   fog: 3.6, cloud: 0.9,  mist: 1.0, light: 0, wind: 0 },
+  drizzle: { name: 'PIOGGERELLA',  rain: 0.3,  snow: 0,   fog: 1.3, cloud: 0.8,  mist: 0.25, light: 0, wind: 2 },
+  rain:    { name: 'PIOGGIA',      rain: 0.85, snow: 0,   fog: 1.4, cloud: 0.95, mist: 0.3,  light: 0, wind: 5 },
+  storm:   { name: 'TEMPORALE',    rain: 1.0,  snow: 0,   fog: 1.5, cloud: 1.0,  mist: 0.3,  light: 1, wind: 9 },
+  snow:    { name: 'NEVE',         rain: 0.9,  snow: 1,   fog: 1.6, cloud: 0.9,  mist: 0.35, light: 0, wind: 1 }
+};
 const MODES = ['avenue', 'glide', 'drone', 'skyline'];
 const MODE_NAMES = { avenue: 'VOLO SUL VIALE', glide: 'PLANATA', drone: 'DRONE A BASSA QUOTA', skyline: 'SOPRA I TETTI' };
 
@@ -202,7 +212,7 @@ function Cybercity(canvas, opts) {
   }
   this.P = {
     sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground.frag'),
-    board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'), post: prog('post.vert', 'post.frag')
+    board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'), post: prog('post.vert', 'post.frag'), mist: prog('post.vert', 'mist.frag')
   };
   const city = buildCity(opts.seed || 2077);
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
@@ -217,7 +227,7 @@ function Cybercity(canvas, opts) {
     ground: mesh({ aPos: [[-420,-40, 420,-40, 420,L, -420,L], 2] }, [0,1,2,0,2,3]),
     quad: mesh({ aPos: [[-1,-1, 1,-1, 1,1, -1,1], 2] }, [0,1,2,0,2,3])
   };
-  this.camZ = 0; this.t = 0; this.modeT = 0; this.modeIdx = 0; this.fade = 1;
+  this.camZ = 0; this.t = 0; this.flash = 0; this.nextFlash = 3; this.modeT = 0; this.modeIdx = 0; this.fade = 1;
   this.stats = { verts: c.B.pos.length / 3, cars: c.C.lane.length / 16 };
 }
 Cybercity.prototype.draw = function (pr, m) {
@@ -233,7 +243,12 @@ Cybercity.prototype.draw = function (pr, m) {
 Cybercity.prototype.frame = function (dt) {
   const gl = this.gl, o = this.opts, P = this.P;
   const pal = PALETTES[o.palette] || PALETTES.neon;
+  const wx = WEATHER[o.weather] || null;
   this.t += dt;
+  // lightning: random double flashes
+  this.flash = Math.max(0, this.flash - dt * 3.5);
+  if (wx && wx.light > 0) { this.nextFlash -= dt; if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = Math.random() < 0.35 ? 0.15 : 4 + Math.random() * 9; } }
+  const rainAmt = wx ? wx.rain : o.rain, fogDen = pal.fogDen * (wx ? wx.fog : 1);
   const t = this.t;
   // mode handling
   let mode = o.mode;
@@ -261,7 +276,7 @@ Cybercity.prototype.frame = function (dt) {
     const u = pr.u;
     const v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); };
     const f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
-    f1('uTime', t % 3600); f1('uL', L); f1('uCamZ', this.camZ); f1('uFogDen', pal.fogDen);
+    f1('uTime', t % 3600); f1('uL', L); f1('uCamZ', this.camZ); f1('uFogDen', fogDen); f1('uFlash', this.flash);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP);
@@ -274,7 +289,7 @@ Cybercity.prototype.frame = function (dt) {
   const sp = P.sky; gl.useProgram(sp.p); set(sp);
   gl.uniform3fv(sp.u.uFwd, V.f); gl.uniform3fv(sp.u.uRight, V.r); gl.uniform3fv(sp.u.uUp, V.u);
   const ty = Math.tan(fov / 2); gl.uniform2f(sp.u.uTan, ty * W / H, ty);
-  gl.uniform3fv(sp.u.uSunDir, pal.sunDir); gl.uniform3fv(sp.u.uSunCol, pal.sun); gl.uniform1f(sp.u.uSunStripes, pal.stripes);
+  if (sp.u.uCloud) gl.uniform1f(sp.u.uCloud, wx ? wx.cloud : 0); gl.uniform3fv(sp.u.uSunDir, pal.sunDir); gl.uniform3fv(sp.u.uSunCol, pal.sun); gl.uniform1f(sp.u.uSunStripes, pal.stripes);
   this.draw(sp, this.M.quad);
   // opaque
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
@@ -284,7 +299,10 @@ Cybercity.prototype.frame = function (dt) {
   // additive lights
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.32 * (o.traffic === 0 ? 0 : 1)); if (o.traffic !== 0) this.draw(P.car, this.M.car);
-  if (o.rain > 0) { gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uRain, o.rain); gl.uniform1f(P.rain.u.uRainSpeed, 28); this.draw(P.rain, this.M.rain); }
+  if (rainAmt > 0) { gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, 28);
+    if (P.rain.u.uSnow) gl.uniform1f(P.rain.u.uSnow, wx ? wx.snow : 0); if (P.rain.u.uWind) gl.uniform1f(P.rain.u.uWind, wx ? wx.wind : 0); this.draw(P.rain, this.M.rain); }
+  if (wx && wx.mist > 0) { gl.disable(gl.DEPTH_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.mist.p); set(P.mist);
+    gl.uniform1f(P.mist.u.uMist, wx.mist); gl.uniform2f(P.mist.u.uRes, W, H); this.draw(P.mist, this.M.quad); }
   // post
   gl.disable(gl.DEPTH_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.useProgram(P.post.p); gl.uniform1f(P.post.u.uFade, this.fade); gl.uniform1f(P.post.u.uScan, o.scanlines ? 1 : 0); gl.uniform2f(P.post.u.uRes, W, H);
@@ -294,6 +312,7 @@ Cybercity.prototype.frame = function (dt) {
 
 window.Cybercity = Cybercity;
 window.CYBER_PALETTES = PALETTES;
+window.CYBER_WEATHER = WEATHER;
 window.CYBER_MODES = MODES;
 window.CYBER_MODE_NAMES = MODE_NAMES;
 })();

@@ -20,6 +20,8 @@ public class MainActivity extends Activity {
     private CityView city;
     private ClockOverlay clock;
     private LinearLayout panel;
+    private String previewWeather = null;   // null = follow the settings
+    private Button weatherBtn;
     private final Runnable label = new Runnable() {
         @Override public void run() {
             clock.setLabel(city.renderer.currentPalette + " · " + CityRenderer.modeName(city.renderer.currentMode));
@@ -58,6 +60,15 @@ public class MainActivity extends Activity {
             catch (Exception e) { startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS)); }
         }));
         panel.addView(button("IMPOSTAZIONI", false, v -> startActivity(new Intent(this, SettingsActivity.class))));
+        weatherBtn = button("", false, v -> {
+            // cycle the preview through every weather effect (not saved)
+            int i = previewWeather == null ? 1 : Weather.index(previewWeather);
+            i = i + 1 >= Weather.KEYS.length ? 2 : Math.max(2, i + 1);
+            previewWeather = Weather.KEYS[i];
+            applyPreview();
+        });
+        panel.addView(weatherBtn);
+        previewWeather = getIntent().getStringExtra("previewWeather");
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(300), -2, Gravity.TOP | Gravity.END);
         lp.setMargins(dp(16), dp(40), dp(16), dp(16));
         root.addView(panel, lp);
@@ -65,6 +76,16 @@ public class MainActivity extends Activity {
         setContentView(root);
         if (android.os.Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
     }
+
+    private void applyPreview() {
+        Prefs p = Prefs.get(this);
+        String w = previewWeather != null ? previewWeather : Weather.effective(p);
+        city.renderer.setConfig(p.snapshot().weather(w));
+        weatherBtn.setText("METEO: " + (previewWeather != null ? "ANTEPRIMA " : "") + Weather.name(w).replace(" (usa la pioggia manuale)", "") + "  ›");
+        clock.setWeatherLine(p.weatherLine() ? Weather.line(p) : "");
+    }
+
+    @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); previewWeather = i.getStringExtra("previewWeather"); }
 
     private Button button(String text, boolean primary, View.OnClickListener l) {
         Button b = new Button(this);
@@ -85,6 +106,8 @@ public class MainActivity extends Activity {
         super.onResume();
         Prefs p = Prefs.get(this);
         city.reload(p);
+        applyPreview();
+        Weather.refreshIfStale(this, p, () -> runOnUiThread(this::applyPreview));
         clock.setPalette(Palette.of(p.palette()));
         clock.setShowClock(p.clock());
         city.onResume();

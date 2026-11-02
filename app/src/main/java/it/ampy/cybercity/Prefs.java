@@ -47,9 +47,23 @@ public final class Prefs {
     public static final String[] FACEDOWN_NAMES = {"SPEGNI (schermo nero, 3D fermo)", "CHIUDI SALVASCHERMO", "IGNORA"};
     public int faceDown() { return sp.getInt("faceDown", 0); }
     public boolean notifIcons() { return sp.getBoolean("notifIcons", true); }
+    // weather
+    public String weatherMode() { return sp.getString("weather", "auto"); }
+    public String liveWeather() { return sp.getString("wLive", ""); }
+    public long weatherTime() { return sp.getLong("wTime", 0); }
+    public int temp() { return sp.getInt("wTemp", 0); }
+    public boolean useGps() { return sp.getBoolean("wUseGps", false); }
+    public boolean hasLocation() { return sp.contains("wLat"); }
+    public float lat() { return sp.getFloat("wLat", 0); }
+    public float lon() { return sp.getFloat("wLon", 0); }
+    public String city() { return sp.getString("wCity", ""); }
+    public boolean weatherLine() { return sp.getBoolean("wLine", true); }
     public String slotsJson() { return sp.getString("slots", DEFAULT_SLOTS); }
 
     public SharedPreferences.Editor edit() { return sp.edit(); }
+    public SharedPreferences raw() { return sp; }
+    public int i(String k, int d) { return sp.getInt(k, d); }
+    public boolean b(String k, boolean d) { return sp.getBoolean(k, d); }
     public void putString(String k, String v) { sp.edit().putString(k, v).apply(); }
     public void putInt(String k, int v) { sp.edit().putInt(k, v).apply(); }
     public void putBool(String k, boolean v) { sp.edit().putBoolean(k, v).apply(); }
@@ -60,15 +74,18 @@ public final class Prefs {
         public final float speed, rain;
         public final boolean traffic, scanlines;
         public final int fps, cycle, fov, seed;
+        public String weather;   // effective weather preset key ("off" = none)
+        public Snapshot weather(String w) { Snapshot s = new Snapshot(this, palette, mode); s.weather = w; return s; }
         private Snapshot(Snapshot o, String palette, String mode) {
             this.palette = palette; this.mode = mode; speed = o.speed; rain = o.rain; traffic = o.traffic; scanlines = o.scanlines;
-            fps = o.fps; cycle = o.cycle; fov = o.fov; seed = o.seed;
+            fps = o.fps; cycle = o.cycle; fov = o.fov; seed = o.seed; weather = o.weather;
         }
         /** Same settings with a time slot's atmosphere / camera. */
         public Snapshot with(String palette, String mode) { return new Snapshot(this, palette, mode); }
         public Snapshot(Prefs p) {
             palette = p.palette(); mode = p.mode(); speed = p.speedPct() / 100f; rain = p.rainPct() / 100f;
             traffic = p.traffic(); scanlines = p.scanlines(); fps = p.fps(); cycle = p.cycleSec(); fov = p.fov(); seed = p.seed();
+            weather = Weather.effective(p);
         }
     }
     public Snapshot snapshot() { return new Snapshot(this); }

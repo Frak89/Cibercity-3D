@@ -35,7 +35,8 @@
   <label>Atmosfera <select id="palette"></select></label>
   <label>Telecamera <select id="mode"></select></label>
   <label>Velocità <input id="speed" type="range" min="0.3" max="2.5" step="0.1"></label>
-  <label>Pioggia <input id="rain" type="range" min="0" max="1" step="0.05"></label>
+  <label>Meteo <select id="weather"></select></label>
+  <label>Pioggia (senza meteo) <input id="rain" type="range" min="0" max="1" step="0.05"></label>
   <label>Traffico volante <input id="traffic" type="checkbox"></label>
   <label>Scanlines CRT <input id="scanlines" type="checkbox"></label>
   <label>Orologio glitch <input id="clockOn" type="checkbox"></label>
@@ -47,7 +48,7 @@
 <script>/*ENGINE*/</script>
 <script>
 (function(){
-  const DEF={palette:'neon',mode:'auto',speed:1,rain:0.55,traffic:true,scanlines:false,clockOn:true,quality:'0.85',seed:2077,cycle:45};
+  const DEF={weather:'',palette:'neon',mode:'auto',speed:1,rain:0.55,traffic:true,scanlines:false,clockOn:true,quality:'0.85',seed:2077,cycle:45};
   let o=Object.assign({},DEF);
   try{Object.assign(o,JSON.parse(localStorage.getItem('cybercity')||'{}'));}catch(e){}
   const q=new URLSearchParams(location.search);
@@ -55,7 +56,7 @@
   const save=()=>{try{localStorage.setItem('cybercity',JSON.stringify(o));}catch(e){}};
   const cv=document.getElementById('c');
   let city;
-  try{ city=new Cybercity(cv,{get palette(){return o.palette},get mode(){return o.mode},get speed(){return o.speed},get rain(){return o.rain},
+  try{ city=new Cybercity(cv,{get palette(){return o.palette},get mode(){return o.mode},get speed(){return o.speed},get rain(){return o.rain},get weather(){return o.weather},
       get traffic(){return o.traffic?1:0},get scanlines(){return o.scanlines},get cycle(){return o.cycle},seed:o.seed,preserve:q.has('shot')}); }
   catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore WebGL: '+e.message; console.error(e); return; }
   window.__city=city;
@@ -64,11 +65,13 @@
   // settings UI
   const $=id=>document.getElementById(id);
   for(const k in CYBER_PALETTES){ const op=document.createElement('option'); op.value=k; op.textContent=CYBER_PALETTES[k].name; $('palette').appendChild(op); }
+  { const op=document.createElement('option'); op.value=''; op.textContent='SPENTO (usa pioggia)'; $('weather').appendChild(op);
+    for(const k in CYBER_WEATHER){ const w=document.createElement('option'); w.value=k; w.textContent=CYBER_WEATHER[k].name; $('weather').appendChild(w); } }
   const am=document.createElement('option'); am.value='auto'; am.textContent='AUTO (ciclo)'; $('mode').appendChild(am);
   for(const m of CYBER_MODES){ const op=document.createElement('option'); op.value=m; op.textContent=CYBER_MODE_NAMES[m]; $('mode').appendChild(op); }
   const bind=(id,prop,kind)=>{ const el=$(id); if(kind==='check') el.checked=!!o[prop]; else el.value=o[prop];
     el.addEventListener('input',()=>{ o[prop]=kind==='check'?el.checked:kind==='num'?parseFloat(el.value):el.value; save(); if(prop==='quality')resize(); applyAccent(); }); };
-  bind('palette','palette'); bind('mode','mode'); bind('speed','speed','num'); bind('rain','rain','num'); bind('traffic','traffic','check');
+  bind('palette','palette'); bind('weather','weather'); bind('mode','mode'); bind('speed','speed','num'); bind('rain','rain','num'); bind('traffic','traffic','check');
   bind('scanlines','scanlines','check'); bind('clockOn','clockOn','check'); bind('quality','quality');
   function applyAccent(){ const p=CYBER_PALETTES[o.palette]||CYBER_PALETTES.neon; const c=p.neonA.map(v=>Math.round(v*255)); document.body.style.setProperty('--a','rgb('+c+')');
     $('hud').style.display=o.clockOn?'block':'none'; }
