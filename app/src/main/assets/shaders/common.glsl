@@ -5,6 +5,7 @@ precision mediump float;
 #endif
 uniform float uTime;
 uniform float uL;
+uniform float uFar;    // distance where everything has faded into the fog
 uniform float uFogDen;
 uniform vec3 uEye;
 uniform vec3 uFog;
@@ -42,7 +43,7 @@ float sid(float s){ return floor(s * 251.0 + 0.5); }
    so buildings re-entering at the horizon never pop. */
 float fogAmount(float d){
     float f = 1.0 - exp(-d * uFogDen);
-    return max(f, smoothstep(uL * 0.60, uL * 0.84, d));
+    return max(f, smoothstep(uFar * 0.60, uFar * 0.84, d));
 }
 vec3 applyFog(vec3 col, float d, float y){
     float f = fogAmount(d);

@@ -171,7 +171,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
 
     private void common(Prog p, Palette pal, float[] eye) {
         GLES20.glUseProgram(p.id);
-        f1(p, "uTime", t % 3600f); f1(p, "uL", City.L); f1(p, "uCamZ", (float) camZ); f1(p, "uFogDen", pal.fogDen * fogMul); f1(p, "uFlash", flash);
+        f1(p, "uTime", t % 3600f); f1(p, "uL", City.L); f1(p, "uFar", City.L); f1(p, "uZOff", 0.08f); f1(p, "uCamX", 0); f1(p, "uWrapX", p == car ? 420f : 0f); f1(p, "uCamZ", (float) camZ); f1(p, "uFogDen", pal.fogDen * fogMul); f1(p, "uFlash", flash);
         v3(p, "uFog", pal.fog); v3(p, "uSkyTop", pal.top); v3(p, "uWinA", pal.winA); v3(p, "uWinB", pal.winB); v3(p, "uWinC", pal.winC);
         v3(p, "uNeonA", pal.neonA); v3(p, "uNeonB", pal.neonB); v3(p, "uEye", eye);
         int l = p.u("uVP"); if (l >= 0) GLES20.glUniformMatrix4fv(l, 1, false, VP, 0);

@@ -19,6 +19,14 @@ più una versione **browser / PC** con lo stesso motore e gli stessi shader.
 2. Tocca **IMPOSTA COME SALVASCHERMO** → *Salvaschermo* → scegli **Cybercity 3D** → *Quando avviarlo* (in carica / sul dock).
 3. L'ingranaggio accanto a Cybercity 3D nelle impostazioni di sistema apre le opzioni.
 
+## 🏎 NEON RUN — mini gioco open world
+Dentro l'app (pulsante **▶ GIOCA · NEON RUN**, oppure l'icona *Neon Run* nel launcher) e nel browser (`NeonRun.html` nelle Release, `docs/game.html`).
+- Guidi la **AMPY KAGE GT**, una coupé neon originale (bassa, barra luminosa posteriore, cerchi neon, luce sotto la scocca), per una città a griglia **senza confini** (15×15 isolati, il mondo si richiude su se stesso): viali, incroci con strisce pedonali, grattacieli fino a 320 m in centro, insegne olografiche, traffico luminoso a terra e in volo.
+- **7 viste**: inseguimento, inseguimento lontano, cofano, abitacolo (montanti, cruscotto e volante che gira), paraurti, cinematica, dall'alto.
+- Fisica arcade: accelerazione, frenata, retromarcia, **derapata** col freno a mano (punti DRIFT e record), **nitro N₂O**, collisioni con i palazzi (vibrazione), velocità fino a ~340 km/h.
+- Comandi Android: ◀ ▶ (o **sterzo inclinando il telefono**), GAS, FRENO, DRIFT, N₂O, VISTA, pausa. Browser: WASD/frecce, SPAZIO derapata, SHIFT nitro, C vista, P atmosfera, M meteo, V colore, R riparti.
+- Stesse 6 atmosfere e stesso meteo del salvaschermo (nebbia, pioggia, temporale, neve, anche automatico), 6 colori carrozzeria; minimappa, tachimetro neon, barra nitro.
+
 ## Programmazione (Impostazioni → PROGRAMMAZIONE)
 - **Luminosità personalizzata**: come il sistema oppure 1–100%, più una luminosità separata per pause e momenti nascosti.
 - **Fasce orarie**: quante ne vuoi, ognuna con orari, giorni (L M M G V S D), cosa mostrare

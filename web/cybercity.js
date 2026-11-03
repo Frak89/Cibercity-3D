@@ -276,7 +276,7 @@ Cybercity.prototype.frame = function (dt) {
     const u = pr.u;
     const v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); };
     const f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
-    f1('uTime', t % 3600); f1('uL', L); f1('uCamZ', this.camZ); f1('uFogDen', fogDen); f1('uFlash', this.flash);
+    f1('uTime', t % 3600); f1('uL', L); f1('uFar', L); f1('uZOff', 0.08); f1('uCamX', 0); f1('uWrapX', pr === P.car ? 420 : 0); f1('uCamZ', this.camZ); f1('uFogDen', fogDen); f1('uFlash', this.flash);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP);

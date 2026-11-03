@@ -12,3 +12,11 @@ out = root / 'docs/index.html'
 out.parent.mkdir(exist_ok=True)
 out.write_text(html)
 print('wrote', out, len(html), 'bytes')
+
+# NEON RUN mini game
+gtpl = (root / 'web/game_template.html').read_text()
+game = (root / 'web/game.js').read_text()
+ghtml = gtpl.replace('/*SHADERS*/', 'const SHADERS=' + json.dumps(shaders) + ';').replace('/*ENGINE*/', engine).replace('/*GAME*/', game)
+gout = root / 'docs/game.html'
+gout.write_text(ghtml)
+print('wrote', gout, len(ghtml), 'bytes')
