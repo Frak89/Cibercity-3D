@@ -95,6 +95,7 @@ public class GameHud extends View {
             c.drawText(b == B_VIEW ? "VISTA" : LABEL[b], q.centerX(), q.centerY() + t.getTextSize() * 0.35f, t);
         }
         if (b(B_NOS)) { }
+        if (r.hdError != null) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.028f); t.setColor(0xffff6177); c.drawText("AUTO HD NON CARICATA: " + r.hdError, m * 0.04f, m * 0.16f, t); }
         // top-left info
         t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.035f); t.setColor(accent);
         c.drawText("NEON RUN · " + GameRenderer.VIEWS[r.view], m * 0.04f, m * 0.07f, t);

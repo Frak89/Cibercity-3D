@@ -28,6 +28,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     public volatile String palette = "neon", weather = "", paint = "nero";
     public volatile boolean paused = false;
     public volatile float lastImpact = 0;
+    public volatile String hdError = null;
     /** HUD snapshot (written on the GL thread) */
     public volatile float hudKmh, hudBoost, hudDrift, hudSteer, hudH, hudX, hudZ, hudDist; public volatile int hudScore, hudBest; public volatile boolean hudBoosting, hudCockpit;
 
@@ -59,7 +60,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         solid = Gl.prog(ctx, "solid.vert", "solid.frag", common);
         glow = Gl.prog(ctx, "glow.vert", "glow.frag", common);
         hdProg = Gl.prog(ctx, "car_hd.vert", "car_hd.frag", common);
-        try { hd = new CarHd(ctx, hdProg); } catch (Exception ex) { android.util.Log.e(Gl.TAG, "car_hd", ex); hd = null; }
+        try { hd = new CarHd(ctx, hdProg); hdError = null; } catch (Exception ex) { android.util.Log.e(Gl.TAG, "car_hd", ex); hd = null; hdError = String.valueOf(ex.getMessage()); }
         if (city == null) city = new GameCity(2077);
         chunks.clear();
         for (GameCity.Chunk c : city.chunks)

@@ -47,12 +47,14 @@ public final class CarHd {
     /** Reads + uploads (GL thread). */
     public CarHd(Context c, Gl.Prog prog) throws Exception {
         this.prog = prog;
-        byte[] raw;
-        try (InputStream in = new GZIPInputStream(c.getAssets().open("car_hd.bin.gz"))) {
-            ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] b = new byte[65536]; int k;
-            while ((k = in.read(b)) > 0) o.write(b, 0, k);
-            raw = o.toByteArray();
+        // ".akg" on purpose: the Android build silently un-gzips and renames "*.gz" assets
+        byte[] raw = null;
+        for (String name : new String[]{"car_hd.akg", "car_hd.bin", "car_hd.bin.gz"}) {
+            try (InputStream in = c.getAssets().open(name)) { raw = readAll(in); break; } catch (java.io.IOException ignored) { }
         }
+        if (raw == null) throw new java.io.FileNotFoundException("car_hd.akg");
+        if (raw.length > 2 && (raw[0] & 0xff) == 0x1f && (raw[1] & 0xff) == 0x8b)
+            try (InputStream in = new GZIPInputStream(new java.io.ByteArrayInputStream(raw))) { raw = readAll(in); }
         ByteBuffer bb = ByteBuffer.wrap(raw).order(ByteOrder.LITTLE_ENDIAN);
         byte[] magic = new byte[4]; bb.get(magic);
         if (magic[0] != 'A' || magic[1] != 'K' || magic[2] != 'G') throw new IllegalStateException("car_hd.bin non valido");
@@ -71,6 +73,11 @@ public final class CarHd {
             else if (n.equals("steeringWheel")) part.kind = 6;
             parts.add(part);
         }
+    }
+    private static byte[] readAll(InputStream in) throws java.io.IOException {
+        ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] b = new byte[65536]; int k;
+        while ((k = in.read(b)) > 0) o.write(b, 0, k);
+        return o.toByteArray();
     }
     private static int hubIndex(String k) { for (int i = 0; i < 4; i++) if (HUB_KEYS[i].equals(k)) return i; return 0; }
     private static int vbo(ByteBuffer bb, int floats) {

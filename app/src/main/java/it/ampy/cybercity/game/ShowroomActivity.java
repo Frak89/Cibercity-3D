@@ -141,6 +141,9 @@ public class ShowroomActivity extends Activity {
         if (r.camMode == ShowroomRenderer.CAM_INTERIOR) { r.tDoors = 1; sel("doors", true); }
     }
 
-    @Override protected void onResume() { super.onResume(); glv.onResume(); }
+    @Override protected void onResume() {
+        super.onResume(); glv.onResume();
+        glv.postDelayed(() -> { if (r.error != null) android.widget.Toast.makeText(this, "Auto HD non caricata: " + r.error, android.widget.Toast.LENGTH_LONG).show(); }, 2500);
+    }
     @Override protected void onPause() { glv.onPause(); super.onPause(); }
 }

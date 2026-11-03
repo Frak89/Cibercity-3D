@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Builds the HD car once:
- *  - app/src/main/assets/car_hd.bin.gz  (Android: parts, pivots, interleaved-free float arrays + uint16 indices)
+ *  - app/src/main/assets/car_hd.akg  (Android: parts, pivots, interleaved-free float arrays + uint16 indices)
  *  - models/ampy_kage_gt_hd/ampy_kage_gt_hd.obj + .mtl  (textures are made by tools/car_textures.py)
  * Run: node tools/build_car.js */
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
@@ -22,8 +22,8 @@ for (const p of m.parts) {
 }
 const bin = Buffer.concat(chunks);
 const gz = zlib.gzipSync(bin, { level: 9 });
-fs.writeFileSync(path.join(root, 'app/src/main/assets/car_hd.bin.gz'), gz);
-console.log('car_hd.bin', bin.length, 'bytes →', gz.length, 'gz ·', JSON.stringify(m.stats));
+fs.writeFileSync(path.join(root, 'app/src/main/assets/car_hd.akg'), gz);
+console.log('car_hd.akg', bin.length, 'bytes →', gz.length, 'gz ·', JSON.stringify(m.stats));
 
 /* ---------- OBJ / MTL ---------- */
 // texture tiling per material: uv multiplier so that one texture tile = TILE periods of the shader pattern
