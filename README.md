@@ -27,6 +27,14 @@ Dentro l'app (pulsante **▶ GIOCA · NEON RUN**, oppure l'icona *Neon Run* nel 
 - Comandi Android: ◀ ▶ (o **sterzo inclinando il telefono**), GAS, FRENO, DRIFT, N₂O, VISTA, pausa. Browser: WASD/frecce, SPAZIO derapata, SHIFT nitro, C vista, P atmosfera, M meteo, V colore, R riparti.
 - Stesse 6 atmosfere e stesso meteo del salvaschermo (nebbia, pioggia, temporale, neve, anche automatico), 6 colori carrozzeria; minimappa, tachimetro neon, barra nitro.
 
+## 🏁 AMPY KAGE GT in alta definizione + Showroom
+- Modello procedurale HD (~77.000 triangoli, 15 parti): carrozzeria liscia con parafanghi bombati, portiere ad ali di farfalla, cofano apribile,
+  V8 biturbo ibrido con cornetti d'aspirazione neon, interni completi (sedili in pelle cucita e alcantara, volante con palette, cruscotto con schermo HUD,
+  tunnel in carbonio, pedaliera, roll-bar, cinture), cerchi a 10 razze, pneumatici con battistrada, dischi forati, pinze, fari LED e barra posteriore a segmenti.
+- Nel gioco: **ruote anteriori che sterzano**, ruote che girano con la velocità, volante che segue lo sterzo, vista abitacolo con gli interni 3D.
+- **Showroom** (app: SHOWROOM, browser: `Showroom.html`): piattaforma girevole con riflesso, cofano, portiere, interni, abitacolo, motore, sterzo, luci, colore, atmosfera, **scheda tecnica**.
+- Export: `node tools/build_car.js && python3 tools/car_textures.py` → `models/ampy_kage_gt_hd/` (OBJ + MTL + texture PBR 1024 px).
+
 ## Programmazione (Impostazioni → PROGRAMMAZIONE)
 - **Luminosità personalizzata**: come il sistema oppure 1–100%, più una luminosità separata per pause e momenti nascosti.
 - **Fasce orarie**: quante ne vuoi, ognuna con orari, giorni (L M M G V S D), cosa mostrare

@@ -226,7 +226,7 @@ function buildCarModel(paint, accent) {
 }
 
 /* ===================================================================== physics */
-function newCar() { return { x: 0, z: 42, h: 0, vx: 0, vz: 0, steer: 0, boost: 1, drift: 0, score: 0, best: 0, shake: 0, hit: 0, dist: 0 }; }
+function newCar() { return { x: 0, z: 42, h: 0, vx: 0, vz: 0, steer: 0, spin: 0, boost: 1, drift: 0, score: 0, best: 0, shake: 0, hit: 0, dist: 0 }; }
 
 function stepCar(c, inp, dt, city) {
   const fx = Math.sin(c.h), fz = Math.cos(c.h), rx = Math.cos(c.h), rz = -Math.sin(c.h);
@@ -254,6 +254,7 @@ function stepCar(c, inp, dt, city) {
   c.vx = nfx * vF + nrx * vR + (fx - nfx) * vF * 0.6;
   c.vz = nfz * vF + nrz * vR + (fz - nfz) * vF * 0.6;
   c.x += c.vx * dt; c.z += c.vz * dt;
+  c.spin += vF * dt / 0.365;                      // wheel rotation (rad)
   c.dist += Math.hypot(c.vx, c.vz) * dt;
   // drift score
   const slip = Math.abs(c.vx * nrx + c.vz * nrz);
@@ -303,7 +304,8 @@ function cameraFor(view, c, cam, dt, t) {
   switch (view) {
     case 1: e = [-fx * 11, 4.6, -fz * 11]; l = [fx * 6, 1.0, fz * 6]; break;
     case 2: e = [cfx * 0.9, 1.08, cfz * 0.9]; l = [cfx * 30, 0.8, cfz * 30]; fov += 4; break;                 // hood
-    case 3: e = [cfx * -0.15 + crx * -0.35, 1.0, cfz * -0.15 + crz * -0.35]; l = [cfx * 30 + crx * -0.35, 0.95, cfz * 30 + crz * -0.35]; drawCar = false; break; // cockpit
+    case 3: { const de = window.CarHD ? CarHD.RIG.driverEye : [-0.35, 1.0, -0.15];   // driver's eye, in the car frame
+      e = [cfx * de[2] + crx * de[0], de[1], cfz * de[2] + crz * de[0]]; l = [cfx * 30 + crx * de[0], de[1] - 0.12, cfz * 30 + crz * de[0]]; drawCar = !!window.CarHD; fov = 70 + Math.min(10, speed * 0.1); break; } // cockpit
     case 4: e = [cfx * 2.45, 0.45, cfz * 2.45]; l = [cfx * 30, 0.45, cfz * 30]; drawCar = false; fov += 8; break;  // bumper
     case 5: { const a = t * 0.25; e = [Math.sin(a) * 13, 5.5 + Math.sin(t * 0.4) * 2, Math.cos(a) * 13]; l = [0, 0.8, 0]; fov = 55; break; }
     case 6: e = [-fx * 2, 70, -fz * 2]; l = [fx * 3, 0, fz * 3]; fov = 60; break;
@@ -311,7 +313,7 @@ function cameraFor(view, c, cam, dt, t) {
   }
   const sh = c.shake * 0.25;
   e[0] += (Math.random() - 0.5) * sh; e[1] += (Math.random() - 0.5) * sh;
-  return { e, l, drawCar, fov, cockpit: view === 3 };
+  return { e, l, drawCar, fov, cockpit: view === 3 && !window.CarHD };
 }
 
 /* ===================================================================== matrices */
@@ -357,6 +359,7 @@ function Game(canvas, hud, opts) {
   this.P = { sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground_game.frag'),
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
     post: prog('post.vert', 'post.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
+  if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); }
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
@@ -436,7 +439,13 @@ Game.prototype.frame = function (dt, inp) {
   gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
   gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
   gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
-  if (cv.drawCar) {
+  const carM = model(c.h, carRel[0], 0, carRel[2]);
+  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin };
+  if (cv.drawCar && this.hd) {
+    gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB);
+    gl.uniform1f(P.hd.u.uKey, 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
+    this.hd.draw(carM, hdState, 'opaque');
+  } else if (cv.drawCar) {
     gl.useProgram(P.solid.p); set(P.solid);
     gl.uniformMatrix4fv(P.solid.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
     gl.uniform1f(P.solid.u.uGloss, (PAINTS[o.paint] || PAINTS.nero).c[0] > 0.6 ? 0.6 : 1);
@@ -444,6 +453,9 @@ Game.prototype.frame = function (dt, inp) {
   }
   // additive lights
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  if (cv.drawCar && this.hd) {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.hd.p); set(P.hd); this.hd.draw(carM, hdState, "glass"); gl.blendFunc(gl.ONE, gl.ONE);
+  }
   gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car);
   gl.useProgram(P.glow.p); set(P.glow);
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));

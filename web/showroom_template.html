@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>AMPY KAGE GT — Showroom</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #title{position:fixed;left:3vmin;top:3vmin;pointer-events:none}
+  #title h1{margin:0;font-size:4.2vmin;letter-spacing:.25em;color:var(--a);text-shadow:0 0 14px var(--a)}
+  #title div{font-size:1.8vmin;letter-spacing:.3em;opacity:.7}
+  #bar{position:fixed;left:0;right:0;bottom:2.5vmin;display:flex;flex-wrap:wrap;gap:1.2vmin;justify-content:center;padding:0 2vmin}
+  button{background:rgba(7,11,19,.7);color:#ecfcff;border:1px solid var(--a);border-radius:2vmin;padding:1.2vmin 2vmin;font:bold 1.8vmin monospace;letter-spacing:.08em}
+  button.on{background:var(--a);color:#070b13}
+  #specs{position:fixed;right:3vmin;top:3vmin;width:min(46vmin,420px);background:rgba(7,11,19,.82);border:1px solid var(--a);padding:2vmin 2.4vmin;
+    font-size:1.6vmin;line-height:1.55;display:none;backdrop-filter:blur(6px)}
+  #specs.open{display:block}
+  #specs b{color:var(--a);display:block;font-size:1.3vmin;letter-spacing:.2em;margin-top:1vmin}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#ff6177}
+</style>
+</head>
+<body style="--a:#00ffe2">
+<canvas id="c"></canvas>
+<div id="title"><h1>AMPY KAGE GT</h1><div>SHOWROOM · CYBERCITY 3D</div></div>
+<div id="specs"></div>
+<div id="bar">
+  <button id="bTurn" class="on">⟳ RUOTA</button><button id="bHood">COFANO</button><button id="bDoors">PORTIERE</button>
+  <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
+  <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
+  <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
+</div>
+<div id="err"></div>
+<script>/*SHADERS*/</script>
+<script>/*ENGINE*/</script>
+<script>/*CARHD*/</script>
+<script>/*CARRENDER*/</script>
+<script>/*SHOWROOM*/</script>
+<script>
+(function(){
+  const q=new URLSearchParams(location.search);
+  const o={palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',preserve:q.has('shot')};
+  const cv=document.getElementById('c'); let sr;
+  try{ sr=new Showroom(cv,o); }catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
+  window.__sr=sr;
+  function resize(){ const s=Math.min(devicePixelRatio||1,2); cv.width=Math.round(innerWidth*s); cv.height=Math.round(innerHeight*s); } addEventListener('resize',resize); resize();
+  const $=id=>document.getElementById(id);
+  const S=CarHD.SPECS, rows=[['MOTORE',S.engine],['POTENZA',S.power],['COPPIA',S.torque],['REGIME MAX',S.redline],['TRASMISSIONE',S.gearbox],['ACCELERAZIONE',S.accel],
+    ['VELOCITÀ MAX',S.vmax],['FRENATA',S.braking],['PESO',S.weight],['AERODINAMICA',S.aero],['DIMENSIONI',S.dims],['PNEUMATICI',S.tyres],['BATTERIA',S.battery]];
+  $('specs').innerHTML='<div style="font-size:2.4vmin;letter-spacing:.2em">'+S.name+'</div>'+rows.map(r=>'<b>'+r[0]+'</b>'+r[1]).join('');
+  const accent=()=>{ const p=CYBER_PALETTES[o.palette]; document.body.style.setProperty('--a','rgb('+p.neonA.map(v=>v*255|0)+')'); }; accent();
+  const tog=(id,on)=>$(id).classList.toggle('on',on);
+  const mode=m=>{ sr.cam.mode=sr.cam.mode===m?'orbit':m; tog('bInt',sr.cam.mode==='interior'); tog('bCock',sr.cam.mode==='cockpit'); tog('bEng',sr.cam.mode==='engine');
+    if(sr.cam.mode==='engine'){ sr.tg.hood=1; tog('bHood',true);} if(sr.cam.mode==='interior'){ sr.tg.doors=1; tog('bDoors',true);} };
+  $('bTurn').onclick=()=>{ sr.cam.auto=!sr.cam.auto; tog('bTurn',sr.cam.auto); };
+  $('bHood').onclick=()=>{ sr.tg.hood=sr.tg.hood?0:1; tog('bHood',!!sr.tg.hood); };
+  $('bDoors').onclick=()=>{ sr.tg.doors=sr.tg.doors?0:1; tog('bDoors',!!sr.tg.doors); };
+  $('bInt').onclick=()=>mode('interior'); $('bCock').onclick=()=>mode('cockpit'); $('bEng').onclick=()=>mode('engine');
+  $('bSteer').onclick=()=>{ sr.tg.steerDemo=!sr.tg.steerDemo; tog('bSteer',sr.tg.steerDemo); };
+  $('bLights').onclick=()=>{ sr.tg.lights=sr.tg.lights?0:1; tog('bLights',!!sr.tg.lights); };
+  $('bPaint').onclick=()=>{ const ks=Object.keys(CarRenderUtil.PAINTS); o.paint=ks[(ks.indexOf(o.paint)+1)%ks.length]; };
+  $('bPal').onclick=()=>{ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; accent(); };
+  $('bSpecs').onclick=()=>{ $('specs').classList.toggle('open'); tog('bSpecs',$('specs').classList.contains('open')); };
+  // orbit / look around with drag, zoom with wheel / pinch
+  let drag=null;
+  cv.addEventListener('pointerdown',e=>{ drag=[e.clientX,e.clientY]; });
+  addEventListener('pointerup',()=>drag=null);
+  addEventListener('pointermove',e=>{ if(!drag) return; const dx=(e.clientX-drag[0])/innerWidth, dy=(e.clientY-drag[1])/innerHeight; drag=[e.clientX,e.clientY];
+    if(sr.cam.mode==='cockpit'){ sr.cam.look-=dx*3; sr.cam.lookP=Math.max(-0.8,Math.min(0.8,sr.cam.lookP-dy*2)); }
+    else { sr.turn+=dx*4; sr.cam.pitch=Math.max(0.02,Math.min(1.2,sr.cam.pitch+dy*2)); } });
+  cv.addEventListener('wheel',e=>{ sr.cam.dist=Math.max(4,Math.min(14,sr.cam.dist*(1+e.deltaY*0.001))); });
+  if(q.has('shot')){
+    for(const k of ['hood','doors']) if(q.has(k)) { sr.tg[k]=1; sr.st[k==='doors'?'doorL':'hood']=1; if(k==='doors') sr.st.doorR=1; }
+    if(q.has('mode')) sr.cam.mode=q.get('mode');
+    if(q.has('steer')){ sr.st.wheelSteer=0.5; sr.st.steerWheel=2.4; }
+    if(q.has('yaw')) sr.cam.yaw=parseFloat(q.get('yaw')); if(q.has('pitch')) sr.cam.pitch=parseFloat(q.get('pitch')); if(q.has('dist')) sr.cam.dist=parseFloat(q.get('dist'));
+    if(q.has('specs')) $('specs').classList.add('open');
+    sr.cam.auto=false; sr.frame(0.001); window.__done=true; return;
+  }
+  let prev=performance.now();
+  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; sr.frame(dt); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

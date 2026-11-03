@@ -24,7 +24,7 @@
 <div class="tb" id="tn" style="right:3vmin;bottom:44vmin">N₂O</div>
 <div class="tb" id="tv" style="right:39vmin;bottom:24vmin">VISTA</div>
 <div id="err"></div>
-<script>const SHADERS={"billboard.frag": "varying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\n\n/* 5x5 symmetric pseudo glyph (kanji / katakana feel) */\nfloat glyph(vec2 cell, vec2 f){\n    vec2 g = floor(f * 5.0);\n    g.x = min(g.x, 4.0 - g.x);\n    float on = step(0.52, h21(cell * 1.37 + g * 0.71));\n    vec2 inner = fract(f * 5.0);\n    return on * step(0.12, inner.x) * step(0.12, inner.y);\n}\n\nvoid main(){\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, ratio = vMisc.z;\n    vec2 uv = vUV;\n    float gt = floor(uTime * 9.0);\n    float glitch = step(0.94, h21(vec2(gt, id)));\n    uv.x += glitch * (h21(vec2(floor(uv.y * 14.0), gt)) - 0.5) * 0.25;\n    vec3 cA = mix(uNeonA, uNeonB, fract(seed * 3.3));\n    vec3 cB = mix(uNeonB, uWinA, fract(seed * 5.7));\n    vec3 col;\n    if (kind < 0.5) {\n        // vertical scrolling glyph column\n        vec2 grid = vec2(2.0, 2.0 * ratio);\n        vec2 q = uv * grid + vec2(0.0, uTime * 0.8 + seed * 10.0);\n        vec2 cell = floor(q);\n        col = mix(cA, cB, uv.y) * glyph(cell + id, fract(q)) * 1.6;\n    } else if (kind < 1.5) {\n        // equalizer bars / ad pulses\n        float bx = floor(uv.x * 12.0);\n        float hgt = 0.25 + 0.7 * abs(sin(uTime * (1.5 + h21(vec2(bx, id)) * 3.0) + bx));\n        float bar = step(uv.y, hgt) * step(0.15, fract(uv.x * 12.0));\n        col = mix(cB, cA, uv.y / max(hgt, 0.01)) * bar * 1.3;\n        col += cA * 0.15;\n    } else {\n        // pulsing ring logo with glyph caption\n        vec2 p = (uv - vec2(0.5, 0.62)) * vec2(1.0, ratio);\n        float r = length(p);\n        float ring = smoothstep(0.03, 0.0, abs(r - 0.28 - 0.03 * sin(uTime * 3.0)));\n        float core = smoothstep(0.13, 0.1, r) * (0.6 + 0.4 * sin(uTime * 5.0 + seed));\n        vec2 q = vec2(uv.x * 6.0, uv.y * 6.0 * ratio);\n        float cap = step(uv.y, 0.25) * glyph(floor(q) + id + floor(uTime * 0.5), fract(q));\n        col = cA * (ring + core) * 1.5 + cB * cap * 1.4;\n    }\n    // frame + scanlines + panel background\n    float fr = 1.0 - step(0.035, uv.x) * step(uv.x, 0.965) * step(0.02, uv.y) * step(uv.y, 0.98);\n    col += cA * fr * 1.2;\n    col += cA * 0.04;\n    col *= 0.82 + 0.18 * sin(vUV.y * 300.0);\n    col *= 1.0 - glitch * 0.5 * step(0.5, h21(vec2(gt, 7.0)));\n    col = applyFog(col, vDist, vY);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "billboard.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vUV = aUV; vMisc = aMisc; vY = wp.y;\n    vDist = length(wp - uEye);\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "building.frag": "varying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, fw = vMisc.z, top = vMisc.w;\n    vec3 base = vec3(0.016, 0.018, 0.028) + uFog * 0.06;\n    vec3 nA = mix(uNeonA, uNeonB, step(0.5, fract(seed * 7.31)));\n    vec3 col;\n    if (vN.y > 0.5) {\n        vec2 g = abs(fract(vUV * 0.2) - 0.5);\n        col = base * 0.7 + nA * 0.06 * step(0.46, max(g.x, g.y));\n        float blink = step(0.82, fract(uTime * 0.6 + seed * 3.1));\n        col += vec3(1.0, 0.12, 0.1) * blink * smoothstep(1.4, 0.0, length(vUV)) * 3.0;\n        if (kind > 0.5) col += nA * 0.22;\n    } else {\n        float density = 0.22 + 0.5 * fract(seed * 3.71);\n        vec2 cs = kind > 1.5 ? vec2(1.25, 1.5) : vec2(1.9, 2.7);\n        vec2 q = vUV / cs;\n        vec2 c = floor(q);\n        vec2 f = fract(q);\n        float m = step(0.16, f.x) * step(f.x, 0.84) * step(0.24, f.y) * step(f.y, 0.80);\n        float r = h21(c * 0.731 + vec2(id * 1.37, floor(dot(vN, vec3(3.0, 0.0, 7.0)) + 0.5) * 11.0));\n        float lit = step(1.0 - density, r);\n        float flick = h21(c + vec2(floor(uTime * 0.08 + r * 20.0), id));\n        lit *= step(0.035, flick);\n        float pal = fract(r * 13.7 + seed);\n        vec3 wc = pal < 0.62 ? uWinA : (pal < 0.86 ? uWinB : uWinC);\n        wc *= 0.5 + 0.9 * fract(r * 91.1);\n        // whole lit floors (offices)\n        float floorLit = step(0.93, h21(vec2(c.y * 1.3, id)));\n        vec3 detail = base + m * max(lit, floorLit) * wc;\n        float lod = smoothstep(55.0, 210.0, vDist);\n        vec3 far = base + wc * density * 0.30;\n        col = mix(detail, far, lod);\n        col *= 0.7 + 0.3 * smoothstep(0.0, top, vWP.y);\n        if (kind > 0.5) {\n            float e = min(vUV.x, fw - vUV.x);\n            float pulse = 0.78 + 0.22 * sin(uTime * 2.0 + seed * 10.0);\n            col += nA * (exp(-e * 2.2) * 0.9 + exp(-max(0.0, top - vWP.y) * 1.1) * 1.5) * pulse;\n            float band = exp(-abs(fract(vWP.y / 23.0 + seed) - 0.5) * 70.0);\n            col += nA * band * 0.7 * step(0.45, fract(seed * 5.1));\n        }\n        // street-level shop glow\n        col += mix(uNeonA, uWinA, fract(seed * 9.0)) * exp(-vWP.y * 0.22) * 0.55;\n    }\n    col = applyFog(col, vDist, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "building.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vN = aNorm; vUV = aUV; vMisc = aMisc; vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "car.frag": "varying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    float side = exp(-vC.y * vC.y * 3.5);\n    float along = mix(0.25, 1.0, vC.x);\n    vec3 tailCol = vec3(1.0, 0.12, 0.18);\n    vec3 headCol = mix(vec3(0.85, 0.95, 1.0), uNeonA, step(0.8, fract(vSeed * 13.0)));\n    vec3 col = mix(headCol, tailCol, vAway);\n    col += vec3(1.0) * pow(vC.x, 8.0) * 0.6;\n    float fade = 1.0 - fogAmount(vDist) * 0.85;\n    gl_FragColor = vec4(col * side * along * fade * 1.3, 1.0);\n}\n", "car.vert": "attribute vec4 aLane;   // origin x, y, z, speed (m/s)\nattribute vec4 aDir;    // dir x, dir z, trail length, seed\nattribute vec2 aCorner; // x: 0 = tail, 1 = head ; y: side -1..1\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nuniform float uWidth;\nvarying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    vec3 d = vec3(aDir.x, 0.0, aDir.y);\n    float p = mod(aDir.w * 977.0 + aLane.w * uTime, 2.0 * uL);\n    vec3 head = aLane.xyz + d * p;\n    head.x = mod(head.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5;\n    head.z = mod(head.z - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    head.y += sin(uTime * 0.7 + aDir.w * 50.0) * 0.4;\n    vec3 tail = head - d * aDir.z;\n    vec3 h = (uV * vec4(head, 1.0)).xyz;\n    vec3 t = (uV * vec4(tail, 1.0)).xyz;\n    vec3 seg = h - t;\n    vec3 P = mix(t, h, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    float sl = length(seg);\n    vec3 sdir = sl > 1e-4 ? seg / sl : vec3(0.0, 1.0, 0.0);\n    float w = uWidth * (1.0 + 0.004 * length(P));\n    P += perp * aCorner.y * w + sdir * (aCorner.x * 2.0 - 1.0) * w;\n    vC = aCorner;\n    vAway = step(0.0, dot(d, head - uEye));\n    vDist = length(head - uEye);\n    vSeed = aDir.w;\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "common.glsl": "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform float uTime;\nuniform float uL;\nuniform float uFar;    // distance where everything has faded into the fog\nuniform float uFogDen;\nuniform vec3 uEye;\nuniform vec3 uFog;\nuniform vec3 uSkyTop;\nuniform vec3 uWinA;\nuniform vec3 uWinB;\nuniform vec3 uWinC;\nuniform vec3 uNeonA;\nuniform vec3 uNeonB;\nuniform float uFlash;   // lightning\n\nfloat h21(vec2 p){\n    p = fract(p * vec2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return fract(p.x * p.y);\n}\n\nfloat vnoise(vec2 p){\n    vec2 i = floor(p), f = fract(p);\n    f = f * f * (3.0 - 2.0 * f);\n    float a = h21(i), b = h21(i + vec2(1.0, 0.0)), c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));\n    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\nfloat fbm(vec2 p){\n    float v = 0.0, a = 0.5;\n    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }\n    return v;\n}\n\n/* Integer id from an interpolated per-vertex seed: varyings are not bit-exact,\n   so hashing the raw float produces per-pixel noise. */\nfloat sid(float s){ return floor(s * 251.0 + 0.5); }\n\n/* Exponential fog plus a hard fade near the end of the wrapped city chunk,\n   so buildings re-entering at the horizon never pop. */\nfloat fogAmount(float d){\n    float f = 1.0 - exp(-d * uFogDen);\n    return max(f, smoothstep(uFar * 0.60, uFar * 0.84, d));\n}\nvec3 applyFog(vec3 col, float d, float y){\n    float f = fogAmount(d);\n    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02)) + vec3(0.55, 0.6, 0.8) * uFlash;\n    return mix(col, fc, f);\n}\n", "glow.frag": "uniform float uGlow;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\n/* Additive soft light: underglow, headlight pools, tail-light bloom. */\nvoid main(){\n    float f = exp(-dot(vUV, vUV) * 2.6) * (1.0 - smoothstep(0.85, 1.0, max(abs(vUV.x), abs(vUV.y))));\n    float d = length(uEye - vWP);\n    float fade = 1.0 - fogAmount(d) * 0.9;\n    gl_FragColor = vec4(vCol.rgb * f * vCol.a * uGlow * fade, 1.0);\n}\n", "glow.vert": "attribute vec3 aPos;\nattribute vec2 aUV;\nattribute vec4 aCol;\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz; vUV = aUV; vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "ground.frag": "uniform float uCamZ;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float wz = vWP.z + uCamZ;\n    float ax = abs(vWP.x);\n    vec3 col = vec3(0.010, 0.012, 0.018);\n    // dashed lane lines on the avenue\n    float lane = (1.0 - smoothstep(0.05, 0.16, abs(mod(vWP.x + 2.0, 4.0) - 2.0)))\n               * step(ax, 13.0) * step(0.55, fract(wz / 6.0));\n    col += vec3(0.55, 0.58, 0.7) * lane * 0.18;\n    // sidewalk curbs glow\n    col += uNeonA * exp(-abs(ax - 14.5) * 3.0) * 0.35;\n    // cross streets\n    float cz = abs(mod(wz, 84.0) - 7.0);\n    float cross = step(cz, 6.0);\n    col += vec3(0.6, 0.6, 0.7) * cross * step(0.6, fract(vWP.x / 5.0)) * 0.05 * step(ax, 400.0);\n    // wet asphalt: vertical streak reflections of the neon\n    float n = h21(vec2(floor(vWP.x * 0.7), 3.0));\n    float streak = pow(n, 5.0) * (0.55 + 0.45 * sin(wz * 0.045 + n * 40.0 + uTime * 0.3));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.55 * (0.6 + 0.4 * step(13.0, ax));\n    // reflection of the fog / skyline\n    col += uFog * 0.12 * smoothstep(20.0, 300.0, vDist);\n    col = applyFog(col, vDist * 0.7, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "ground.vert": "attribute vec2 aPos;\nuniform mat4 uVP;\nuniform vec3 uEye;\nvarying vec3 vWP;\nvoid main(){\n    vec3 wp = vec3(aPos.x, 0.0, aPos.y);\n    vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "ground_game.frag": "uniform float uCamX;\nuniform float uCamZ;\nuniform float uPitch;   // block pitch (road every uPitch metres)\nuniform float uRoad;    // road width\nvarying vec3 vWP;\n\n/* Game ground: a grid of wet neon streets with lanes, crossings and sidewalks. */\nvoid main(){\n    float vDist = length(vWP - uEye);\n    vec2 w = vWP.xz + vec2(uCamX, uCamZ);                 // world position on the torus\n    vec2 q = mod(w + uPitch * 0.5, uPitch) - uPitch * 0.5; // distance to the nearest road axis (signed)\n    vec2 a = abs(q);\n    float hr = uRoad * 0.5;\n    float onX = step(a.x, hr), onZ = step(a.y, hr);   // inside a road running along z / along x\n    float road = max(onX, onZ);\n    float inter = onX * onZ;\n    vec3 col = vec3(0.012, 0.014, 0.02);\n    // sidewalks and block floor\n    float walk = 1.0 - road;\n    vec2 tl = abs(fract(w * 0.5) - 0.5);\n    col += walk * (vec3(0.028, 0.03, 0.042) + 0.012 * step(0.47, max(tl.x, tl.y)));\n    // curb neon lines\n    float curb = max(onX * (1.0 - onZ) * exp(-abs(a.x - hr) * 4.0), onZ * (1.0 - onX) * exp(-abs(a.y - hr) * 4.0));\n    col += uNeonA * curb * 0.5;\n    // centre double line and dashed lanes (not inside crossings)\n    float alongZ = onX * (1.0 - onZ), alongX = onZ * (1.0 - onX);\n    float centre = alongZ * (1.0 - smoothstep(0.08, 0.16, abs(a.x - 0.25))) + alongX * (1.0 - smoothstep(0.08, 0.16, abs(a.y - 0.25)));\n    col += vec3(1.0, 0.75, 0.25) * centre * 0.35;\n    float lane = alongZ * (1.0 - smoothstep(0.06, 0.14, abs(a.x - 4.6))) * step(0.5, fract(w.y / 6.0))\n               + alongX * (1.0 - smoothstep(0.06, 0.14, abs(a.y - 4.6))) * step(0.5, fract(w.x / 6.0));\n    col += vec3(0.7, 0.75, 0.85) * lane * 0.22;\n    // zebra crossings at the edge of each intersection\n    float zx = onX * step(hr, a.y) * step(a.y, hr + 3.0) * step(0.5, fract(w.x * 0.8));\n    float zz = onZ * step(hr, a.x) * step(a.x, hr + 3.0) * step(0.5, fract(w.y * 0.8));\n    col += vec3(0.6, 0.62, 0.7) * max(zx, zz) * 0.18;\n    // wet asphalt: neon streak reflections\n    // streaks run along the road: thin across, long and slowly varying along\n    float nz = h21(vec2(floor(w.x * 0.8), floor(w.y / 26.0)));\n    float nx = h21(vec2(floor(w.y * 0.8) + 91.0, floor(w.x / 26.0)));\n    float n = alongZ > 0.5 ? nz : nx;\n    float along = alongZ > 0.5 ? w.y : w.x;\n    float streak = pow(n, 6.0) * road * (0.55 + 0.45 * sin(along * 0.07 + n * 40.0));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.5;\n    col += uFog * 0.10 * smoothstep(15.0, 300.0, vDist);\n    col += vec3(0.5, 0.55, 0.7) * uFlash * 0.15;\n    col = applyFog(col, vDist * 0.8, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "mist.frag": "uniform float uMist;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Drifting ground mist / fog banks over the whole frame (alpha-blended). */\nvoid main(){\n    vec2 p = vUV * vec2(uRes.x / uRes.y, 1.0);\n    float n1 = fbm(p * 2.2 + vec2(uTime * 0.035, uTime * 0.008));\n    float n2 = fbm(p * 4.5 - vec2(uTime * 0.06, -uTime * 0.01) + n1);\n    float band = smoothstep(0.85, 0.15, vUV.y);           // denser low, near the street\n    float m = (n1 * 0.65 + n2 * 0.45) * (0.45 + 0.75 * band);\n    m = smoothstep(0.18, 0.8, m) * uMist;\n    vec3 col = uFog * 1.7 + vec3(0.05) + uNeonA * 0.03 + vec3(0.6, 0.65, 0.8) * uFlash;\n    gl_FragColor = vec4(col, m * 0.92);\n}\n", "post.frag": "uniform float uFade;\nuniform float uScan;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Vignette, CRT scanlines and fade-to-black (alpha-blended over the frame). */\nvoid main(){\n    vec2 p = vUV - 0.5;\n    float vig = smoothstep(0.35, 0.85, length(p * vec2(1.0, 0.85)));\n    float scan = uScan * 0.18 * step(0.5, fract(vUV.y * uRes.y / 3.0));\n    float a = clamp(max(uFade, vig * 0.75 + scan), 0.0, 1.0);\n    gl_FragColor = vec4(0.0, 0.0, 0.0, a);\n}\n", "post.vert": "attribute vec2 aPos;\nvarying vec2 vUV;\nvoid main(){\n    vUV = aPos * 0.5 + 0.5;\n    gl_Position = vec4(aPos, 0.0, 1.0);\n}\n", "rain.frag": "uniform float uRain;\nuniform float uSnow;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    float a = (1.0 - abs(vC.y)) * smoothstep(0.0, 0.4, vC.x) * uRain;\n    a *= smoothstep(1.0, 5.0, vDist) * (1.0 - smoothstep(30.0, 70.0, vDist));\n    vec3 col = mix(vec3(0.6, 0.7, 0.85), uFog * 2.2 + uNeonA * 0.2, 0.4);\n    if (uSnow > 0.5) {\n        a = (1.0 - abs(vC.y)) * (1.0 - abs(vC.x * 2.0 - 1.0)) * uRain;\n        a *= smoothstep(0.5, 3.0, vDist) * (1.0 - smoothstep(25.0, 60.0, vDist));\n        col = vec3(0.9, 0.93, 1.0) + uNeonA * 0.08;\n        gl_FragColor = vec4(col * a * 0.9, 1.0);\n        return;\n    }\n    col += vec3(0.6) * uFlash;\n    gl_FragColor = vec4(col * a * 0.35, 1.0);\n}\n", "rain.vert": "attribute vec3 aSeed;\nattribute vec2 aCorner;\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uRainSpeed;\nuniform float uSnow;\nuniform float uWind;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    vec3 pos;\n    pos.x = uEye.x + (aSeed.x - 0.5) * 70.0;\n    float fall = uRainSpeed * (0.8 + aSeed.z * 0.4) * mix(1.0, 0.07, uSnow);\n    pos.y = uEye.y - 25.0 + mod(aSeed.y * 60.0 - uTime * fall, 60.0);\n    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0;\n    pos.x += uSnow * sin(uTime * (0.6 + aSeed.x) + aSeed.y * 30.0) * 1.2 + uWind * 0.02 * mod(uTime * 7.0 + aSeed.z * 50.0, 60.0);\n    vec3 vel = mix(vec3(-0.08 - uWind * 0.02, -1.0, 0.0), vec3(0.0, -0.06, 0.0), uSnow);\n    vec3 a = (uV * vec4(pos, 1.0)).xyz;\n    vec3 b = (uV * vec4(pos + vel * 0.9, 1.0)).xyz;\n    vec3 seg = b - a;\n    vec3 P = mix(a, b, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    P += perp * aCorner.y * mix(0.018, 0.05, uSnow) + (uSnow > 0.5 ? normalize(seg + vec3(1e-4)) * (aCorner.x * 2.0 - 1.0) * 0.04 : vec3(0.0));\n    vC = aCorner;\n    vDist = length(P);\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "sky.frag": "uniform vec3 uSunDir;\nuniform vec3 uSunCol;\nuniform float uSunStripes;\nuniform float uCloud;\nvarying vec3 vDir;\n\nvoid main(){\n    vec3 d = normalize(vDir);\n    float y = d.y;\n    vec3 col = mix(uFog * 1.15, uSkyTop, smoothstep(-0.05, 0.55, y));\n    // stars\n    vec2 sp = d.xz / (abs(y) + 0.25) * 260.0;\n    float st = step(0.9965, h21(floor(sp)));\n    col += (1.0 - uCloud) * vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));\n    // moon / sun\n    float dd = distance(d, normalize(uSunDir));\n    float disk = smoothstep(0.075, 0.070, dd) * (1.0 - 0.75 * uCloud);\n    if (uSunStripes > 0.5) {\n        float sy = (d.y - uSunDir.y) / 0.075;\n        float stripe = step(0.0, sin(sy * 26.0 + uTime * 1.5)) + step(0.25, sy);\n        disk *= clamp(stripe, 0.0, 1.0);\n        col += mix(uSunCol, uNeonB, smoothstep(0.07, -0.07, d.y - uSunDir.y)) * disk * 1.4;\n    } else {\n        col += uSunCol * disk * 1.2;\n    }\n    col += uSunCol * 0.35 * exp(-dd * (7.0 + 6.0 * uCloud)) * (1.0 - 0.5 * uCloud);\n    // weather: moving cloud deck lit by the city glow (and by lightning)\n    if (uCloud > 0.01) {\n        vec2 cp = d.xz / (max(y, 0.0) + 0.18) * 1.6 + vec2(uTime * 0.03, uTime * 0.012);\n        float cl = smoothstep(0.35, 0.85, fbm(cp)) * smoothstep(-0.02, 0.18, y);\n        vec3 cc = uFog * 1.5 + uNeonB * 0.05 + vec3(0.7, 0.75, 0.95) * uFlash * 1.5;\n        float hide = uCloud * 0.85;\n        col = mix(col, uFog * 1.2 + vec3(0.5, 0.55, 0.7) * uFlash, hide * 0.55);\n        col = mix(col, cc, cl * uCloud);\n    }\n    // slow haze bands\n    float band = h21(vec2(floor(y * 40.0 + uTime * 0.02), 1.0));\n    col += uFog * 0.06 * band * smoothstep(0.35, 0.0, y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "sky.vert": "attribute vec2 aPos;\nuniform vec3 uFwd;\nuniform vec3 uRight;\nuniform vec3 uUp;\nuniform vec2 uTan;\nvarying vec3 vDir;\nvoid main(){\n    vDir = uFwd + aPos.x * uTan.x * uRight + aPos.y * uTan.y * uUp;\n    gl_Position = vec4(aPos, 0.9999, 1.0);\n}\n", "solid.frag": "uniform float uGloss;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\n/* Player car: dark metallic paint lit by the city: ambient fog, neon rim light, sliding light streaks. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;            // two-sided: the loft faces are not all wound the same way\n    float d = length(uEye - vWP);\n    vec3 base = vCol.rgb;\n    vec3 amb = uFog * 0.9 + vec3(0.05, 0.05, 0.07);\n    float up = n.y * 0.5 + 0.5;\n    vec3 lit = base * (amb + up * 0.25 + vec3(0.6, 0.65, 0.8) * uFlash);\n    float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);\n    vec3 rim = mix(uNeonA, uNeonB, step(0.0, n.x)) * fres * 0.55;\n    // reflections of city lights sliding over the body\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.92, 1.0, sin(r.y * 22.0 + r.x * 7.0 + uTime * 0.3) * 0.5 + 0.5);\n    vec3 refl = (mix(uFog * 1.4, uSkyTop, clamp(r.y, 0.0, 1.0)) + mix(uWinA, uNeonA, band) * band * 0.7) * uGloss;\n    vec3 col = lit + rim * uGloss + refl * (0.25 + 0.6 * fres);\n    col = mix(col, base * 2.4, vCol.a);\n    col = applyFog(col, d, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "solid.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec4 aCol;   // rgb, a = emissive amount\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = normalize((uModel * vec4(aNorm, 0.0)).xyz);\n    vCol = aCol;\n    gl_Position = uVP * wp;\n}\n"};</script>
+<script>const SHADERS={"billboard.frag": "varying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\n\n/* 5x5 symmetric pseudo glyph (kanji / katakana feel) */\nfloat glyph(vec2 cell, vec2 f){\n    vec2 g = floor(f * 5.0);\n    g.x = min(g.x, 4.0 - g.x);\n    float on = step(0.52, h21(cell * 1.37 + g * 0.71));\n    vec2 inner = fract(f * 5.0);\n    return on * step(0.12, inner.x) * step(0.12, inner.y);\n}\n\nvoid main(){\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, ratio = vMisc.z;\n    vec2 uv = vUV;\n    float gt = floor(uTime * 9.0);\n    float glitch = step(0.94, h21(vec2(gt, id)));\n    uv.x += glitch * (h21(vec2(floor(uv.y * 14.0), gt)) - 0.5) * 0.25;\n    vec3 cA = mix(uNeonA, uNeonB, fract(seed * 3.3));\n    vec3 cB = mix(uNeonB, uWinA, fract(seed * 5.7));\n    vec3 col;\n    if (kind < 0.5) {\n        // vertical scrolling glyph column\n        vec2 grid = vec2(2.0, 2.0 * ratio);\n        vec2 q = uv * grid + vec2(0.0, uTime * 0.8 + seed * 10.0);\n        vec2 cell = floor(q);\n        col = mix(cA, cB, uv.y) * glyph(cell + id, fract(q)) * 1.6;\n    } else if (kind < 1.5) {\n        // equalizer bars / ad pulses\n        float bx = floor(uv.x * 12.0);\n        float hgt = 0.25 + 0.7 * abs(sin(uTime * (1.5 + h21(vec2(bx, id)) * 3.0) + bx));\n        float bar = step(uv.y, hgt) * step(0.15, fract(uv.x * 12.0));\n        col = mix(cB, cA, uv.y / max(hgt, 0.01)) * bar * 1.3;\n        col += cA * 0.15;\n    } else {\n        // pulsing ring logo with glyph caption\n        vec2 p = (uv - vec2(0.5, 0.62)) * vec2(1.0, ratio);\n        float r = length(p);\n        float ring = smoothstep(0.03, 0.0, abs(r - 0.28 - 0.03 * sin(uTime * 3.0)));\n        float core = smoothstep(0.13, 0.1, r) * (0.6 + 0.4 * sin(uTime * 5.0 + seed));\n        vec2 q = vec2(uv.x * 6.0, uv.y * 6.0 * ratio);\n        float cap = step(uv.y, 0.25) * glyph(floor(q) + id + floor(uTime * 0.5), fract(q));\n        col = cA * (ring + core) * 1.5 + cB * cap * 1.4;\n    }\n    // frame + scanlines + panel background\n    float fr = 1.0 - step(0.035, uv.x) * step(uv.x, 0.965) * step(0.02, uv.y) * step(uv.y, 0.98);\n    col += cA * fr * 1.2;\n    col += cA * 0.04;\n    col *= 0.82 + 0.18 * sin(vUV.y * 300.0);\n    col *= 1.0 - glitch * 0.5 * step(0.5, h21(vec2(gt, 7.0)));\n    col = applyFog(col, vDist, vY);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "billboard.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vUV = aUV; vMisc = aMisc; vY = wp.y;\n    vDist = length(wp - uEye);\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "building.frag": "varying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, fw = vMisc.z, top = vMisc.w;\n    vec3 base = vec3(0.016, 0.018, 0.028) + uFog * 0.06;\n    vec3 nA = mix(uNeonA, uNeonB, step(0.5, fract(seed * 7.31)));\n    vec3 col;\n    if (vN.y > 0.5) {\n        vec2 g = abs(fract(vUV * 0.2) - 0.5);\n        col = base * 0.7 + nA * 0.06 * step(0.46, max(g.x, g.y));\n        float blink = step(0.82, fract(uTime * 0.6 + seed * 3.1));\n        col += vec3(1.0, 0.12, 0.1) * blink * smoothstep(1.4, 0.0, length(vUV)) * 3.0;\n        if (kind > 0.5) col += nA * 0.22;\n    } else {\n        float density = 0.22 + 0.5 * fract(seed * 3.71);\n        vec2 cs = kind > 1.5 ? vec2(1.25, 1.5) : vec2(1.9, 2.7);\n        vec2 q = vUV / cs;\n        vec2 c = floor(q);\n        vec2 f = fract(q);\n        float m = step(0.16, f.x) * step(f.x, 0.84) * step(0.24, f.y) * step(f.y, 0.80);\n        float r = h21(c * 0.731 + vec2(id * 1.37, floor(dot(vN, vec3(3.0, 0.0, 7.0)) + 0.5) * 11.0));\n        float lit = step(1.0 - density, r);\n        float flick = h21(c + vec2(floor(uTime * 0.08 + r * 20.0), id));\n        lit *= step(0.035, flick);\n        float pal = fract(r * 13.7 + seed);\n        vec3 wc = pal < 0.62 ? uWinA : (pal < 0.86 ? uWinB : uWinC);\n        wc *= 0.5 + 0.9 * fract(r * 91.1);\n        // whole lit floors (offices)\n        float floorLit = step(0.93, h21(vec2(c.y * 1.3, id)));\n        vec3 detail = base + m * max(lit, floorLit) * wc;\n        float lod = smoothstep(55.0, 210.0, vDist);\n        vec3 far = base + wc * density * 0.30;\n        col = mix(detail, far, lod);\n        col *= 0.7 + 0.3 * smoothstep(0.0, top, vWP.y);\n        if (kind > 0.5) {\n            float e = min(vUV.x, fw - vUV.x);\n            float pulse = 0.78 + 0.22 * sin(uTime * 2.0 + seed * 10.0);\n            col += nA * (exp(-e * 2.2) * 0.9 + exp(-max(0.0, top - vWP.y) * 1.1) * 1.5) * pulse;\n            float band = exp(-abs(fract(vWP.y / 23.0 + seed) - 0.5) * 70.0);\n            col += nA * band * 0.7 * step(0.45, fract(seed * 5.1));\n        }\n        // street-level shop glow\n        col += mix(uNeonA, uWinA, fract(seed * 9.0)) * exp(-vWP.y * 0.22) * 0.55;\n    }\n    col = applyFog(col, vDist, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "building.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vN = aNorm; vUV = aUV; vMisc = aMisc; vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "car.frag": "varying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    float side = exp(-vC.y * vC.y * 3.5);\n    float along = mix(0.25, 1.0, vC.x);\n    vec3 tailCol = vec3(1.0, 0.12, 0.18);\n    vec3 headCol = mix(vec3(0.85, 0.95, 1.0), uNeonA, step(0.8, fract(vSeed * 13.0)));\n    vec3 col = mix(headCol, tailCol, vAway);\n    col += vec3(1.0) * pow(vC.x, 8.0) * 0.6;\n    float fade = 1.0 - fogAmount(vDist) * 0.85;\n    gl_FragColor = vec4(col * side * along * fade * 1.3, 1.0);\n}\n", "car.vert": "attribute vec4 aLane;   // origin x, y, z, speed (m/s)\nattribute vec4 aDir;    // dir x, dir z, trail length, seed\nattribute vec2 aCorner; // x: 0 = tail, 1 = head ; y: side -1..1\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nuniform float uWidth;\nvarying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    vec3 d = vec3(aDir.x, 0.0, aDir.y);\n    float p = mod(aDir.w * 977.0 + aLane.w * uTime, 2.0 * uL);\n    vec3 head = aLane.xyz + d * p;\n    head.x = mod(head.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5;\n    head.z = mod(head.z - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    head.y += sin(uTime * 0.7 + aDir.w * 50.0) * 0.4;\n    vec3 tail = head - d * aDir.z;\n    vec3 h = (uV * vec4(head, 1.0)).xyz;\n    vec3 t = (uV * vec4(tail, 1.0)).xyz;\n    vec3 seg = h - t;\n    vec3 P = mix(t, h, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    float sl = length(seg);\n    vec3 sdir = sl > 1e-4 ? seg / sl : vec3(0.0, 1.0, 0.0);\n    float w = uWidth * (1.0 + 0.004 * length(P));\n    P += perp * aCorner.y * w + sdir * (aCorner.x * 2.0 - 1.0) * w;\n    vC = aCorner;\n    vAway = step(0.0, dot(d, head - uEye));\n    vDist = length(head - uEye);\n    vSeed = aDir.w;\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "car_hd.frag": "uniform float uKey;        // key light strength (studio > street)\nuniform float uGlassPass;  // 1 while drawing the transparent glass\nuniform float uLights;     // headlights / tail lights on\nuniform float uBrake;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec2 vUV;\nvarying vec3 vCol;\nvarying vec4 vPar;\n\n/* Procedural PBR-ish car materials: carbon twill, stitched leather, tyre tread, drilled discs, HUD screens, LED lights, grille. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;\n    float rough = vPar.x, metal = vPar.y, em = vPar.z, pat = vPar.w;\n    vec3 base = vCol;\n    vec2 uv = vUV;\n    float emis = em;\n    if (pat > 0.5 && pat < 1.5) {            // carbon fibre twill\n        vec2 q = uv * 60.0;\n        float a = mod(floor(q.x) + floor(q.y), 2.0);\n        float w = abs(fract(a > 0.5 ? q.x : q.y) - 0.5);\n        base *= 0.55 + 0.9 * (0.4 + 0.6 * w) * (0.7 + 0.3 * a);\n        rough = mix(rough, 0.15, a * 0.5);\n    } else if (pat > 1.5 && pat < 2.5) {     // leather: grain + accent stitching\n        float g = h21(floor(uv * 260.0)) * 0.12;\n        base *= 0.9 + g;\n        float st = (1.0 - smoothstep(0.0, 0.04, abs(fract(uv.y * 6.0) - 0.5))) * step(0.5, fract(uv.x * 90.0));\n        base = mix(base, uNeonB * 0.9, st * 0.8);\n    } else if (pat > 2.5 && pat < 3.5) {     // tyre: tread blocks on the crown, lettering band on the sidewall\n        float crown = smoothstep(0.30, 0.38, uv.y) * (1.0 - smoothstep(0.62, 0.70, uv.y));\n        float groove = step(0.82, fract(uv.x + (uv.y - 0.5) * 3.0)) + step(0.92, fract(uv.y * 5.0));\n        base *= 1.0 - crown * clamp(groove, 0.0, 1.0) * 0.7;\n        float side = 1.0 - crown;\n        float letters = side * step(0.6, h21(vec2(floor(uv.x * 12.0), floor(uv.y * 9.0)))) * step(0.12, uv.y) * step(uv.y, 0.22);\n        base += vec3(0.08) * letters;\n        rough = 0.9;\n    } else if (pat > 3.5 && pat < 4.5) {     // HUD screen\n        vec2 q = uv;\n        float bars = step(0.5, fract(q.x * 18.0)) * step(q.y, 0.25 + 0.6 * h21(vec2(floor(q.x * 18.0), floor(uTime * 2.0))));\n        float ring = smoothstep(0.02, 0.0, abs(length((q - vec2(0.22, 0.5)) * vec2(3.0, 1.0)) - 0.32));\n        float scan = 0.85 + 0.15 * sin(q.y * 300.0);\n        base = (uNeonA * (0.25 + ring * 1.2) + uNeonB * bars * 0.6) * scan;\n        emis = 1.0;\n    } else if (pat > 4.5 && pat < 5.5) {     // drilled + slotted brake disc\n        vec2 q = vec2(uv.x * 48.0, uv.y * 3.0);\n        float hole = 1.0 - smoothstep(0.18, 0.24, length(fract(q) - 0.5));\n        base *= 1.0 - hole * 0.85;\n        base += vec3(0.04) * step(0.97, fract(uv.x * 12.0 + uv.y));\n    } else if (pat > 5.5 && pat < 6.5) {     // segmented tail light bar\n        float seg = step(0.18, fract(uv.x * 46.0));\n        emis = em * seg * (uLights * 0.8 + uBrake * 1.6 + 0.15);\n    } else if (pat > 6.5 && pat < 7.5) {     // LED headlight dots\n        vec2 q = fract(uv * vec2(90.0, 30.0)) - 0.5;\n        float led = 1.0 - smoothstep(0.2, 0.35, length(q));\n        base = mix(base * 0.35, base, led);\n        emis = em * (0.25 + 0.95 * uLights) * (0.4 + 0.6 * led);\n    } else if (pat > 7.5 && pat < 8.5) {     // hexagonal grille\n        vec2 q = uv * vec2(60.0, 34.0);\n        q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;\n        float hex = smoothstep(0.32, 0.4, length(fract(q) - 0.5));\n        base *= 0.15 + 0.85 * hex;\n    } else if (pat > 8.5 && pat < 9.5) {     // neon: gentle pulse\n        emis = em * (0.85 + 0.15 * sin(uTime * 2.2 + vWP.x * 2.0));\n    } else if (pat > 9.5) {                  // carpet\n        base *= 0.8 + 0.3 * h21(floor(uv * 400.0));\n    }\n    vec3 L = normalize(vec3(0.35, 0.8, 0.45));\n    float diff = max(dot(n, L), 0.0);\n    vec3 amb = uFog * 0.7 + uSkyTop * 0.6 + vec3(0.035) + (n.y * 0.5 + 0.5) * vec3(0.05, 0.05, 0.07);\n    amb += uKey * 0.22 * (n.y * 0.5 + 0.5) + uKey * 0.08;            // soft studio / street fill\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.75, 1.0, sin(r.x * 9.0 + r.z * 5.0 + r.y * 3.0) * 0.5 + 0.5);\n    vec3 env = mix(uFog * 1.2 + vec3(0.02), uSkyTop * 1.4 + vec3(0.05, 0.06, 0.09), smoothstep(-0.3, 0.6, r.y));\n    env += mix(uNeonA, uNeonB, step(0.0, r.x)) * band * 0.55 + vec3(0.9, 0.85, 0.8) * smoothstep(0.985, 1.0, dot(r, L)) * 2.0;\n    env += vec3(0.85, 0.9, 1.0) * uKey * 0.5 * smoothstep(0.75, 0.9, r.y) * (0.6 + 0.4 * step(0.5, fract(r.x * 2.5 + 0.25)));  // overhead softboxes\n    float ndv = max(dot(n, v), 0.0);\n    float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);\n    vec3 F0 = mix(vec3(0.04), base, metal);\n    float shin = mix(220.0, 6.0, rough);\n    float spec = pow(max(dot(reflect(-L, n), v), 0.0), shin) * (1.0 - rough) * 1.6;\n    vec3 col = base * (1.0 - metal) * (amb + diff * uKey * 0.9);\n    col += env * mix(vec3(fres), base, metal) * (1.0 - rough * 0.8);\n    col += spec * mix(vec3(1.0), base, metal) * uKey;\n    col += base * emis * 2.4;\n    col += vec3(0.6, 0.65, 0.8) * uFlash * 0.25;\n    col = applyFog(col, length(uEye - vWP), vWP.y);\n    float alpha = 1.0;\n    if (uGlassPass > 0.5) alpha = clamp(0.22 + 0.7 * fres + spec * 0.5, 0.0, 0.92);\n    gl_FragColor = vec4(col, alpha);\n}\n", "car_hd.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute float aMat;\nuniform mat4 uVP;\nuniform mat4 uModel;\nuniform vec3 uMatCol[20];\nuniform vec4 uMatPar[20];   // roughness, metalness, emissive, pattern id\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec2 vUV;\nvarying vec3 vCol;\nvarying vec4 vPar;\nvoid main(){\n    int m = int(aMat + 0.5);\n    vCol = uMatCol[m];\n    vPar = uMatPar[m];\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = (uModel * vec4(aNorm, 0.0)).xyz;\n    vUV = aUV;\n    gl_Position = uVP * wp;\n}\n", "common.glsl": "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform float uTime;\nuniform float uL;\nuniform float uFar;    // distance where everything has faded into the fog\nuniform float uFogDen;\nuniform vec3 uEye;\nuniform vec3 uFog;\nuniform vec3 uSkyTop;\nuniform vec3 uWinA;\nuniform vec3 uWinB;\nuniform vec3 uWinC;\nuniform vec3 uNeonA;\nuniform vec3 uNeonB;\nuniform float uFlash;   // lightning\n\nfloat h21(vec2 p){\n    p = fract(p * vec2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return fract(p.x * p.y);\n}\n\nfloat vnoise(vec2 p){\n    vec2 i = floor(p), f = fract(p);\n    f = f * f * (3.0 - 2.0 * f);\n    float a = h21(i), b = h21(i + vec2(1.0, 0.0)), c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));\n    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\nfloat fbm(vec2 p){\n    float v = 0.0, a = 0.5;\n    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }\n    return v;\n}\n\n/* Integer id from an interpolated per-vertex seed: varyings are not bit-exact,\n   so hashing the raw float produces per-pixel noise. */\nfloat sid(float s){ return floor(s * 251.0 + 0.5); }\n\n/* Exponential fog plus a hard fade near the end of the wrapped city chunk,\n   so buildings re-entering at the horizon never pop. */\nfloat fogAmount(float d){\n    float f = 1.0 - exp(-d * uFogDen);\n    return max(f, smoothstep(uFar * 0.60, uFar * 0.84, d));\n}\nvec3 applyFog(vec3 col, float d, float y){\n    float f = fogAmount(d);\n    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02)) + vec3(0.55, 0.6, 0.8) * uFlash;\n    return mix(col, fc, f);\n}\n", "glow.frag": "uniform float uGlow;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\n/* Additive soft light: underglow, headlight pools, tail-light bloom. */\nvoid main(){\n    float f = exp(-dot(vUV, vUV) * 2.6) * (1.0 - smoothstep(0.85, 1.0, max(abs(vUV.x), abs(vUV.y))));\n    float d = length(uEye - vWP);\n    float fade = 1.0 - fogAmount(d) * 0.9;\n    gl_FragColor = vec4(vCol.rgb * f * vCol.a * uGlow * fade, 1.0);\n}\n", "glow.vert": "attribute vec3 aPos;\nattribute vec2 aUV;\nattribute vec4 aCol;\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz; vUV = aUV; vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "ground.frag": "uniform float uCamZ;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float wz = vWP.z + uCamZ;\n    float ax = abs(vWP.x);\n    vec3 col = vec3(0.010, 0.012, 0.018);\n    // dashed lane lines on the avenue\n    float lane = (1.0 - smoothstep(0.05, 0.16, abs(mod(vWP.x + 2.0, 4.0) - 2.0)))\n               * step(ax, 13.0) * step(0.55, fract(wz / 6.0));\n    col += vec3(0.55, 0.58, 0.7) * lane * 0.18;\n    // sidewalk curbs glow\n    col += uNeonA * exp(-abs(ax - 14.5) * 3.0) * 0.35;\n    // cross streets\n    float cz = abs(mod(wz, 84.0) - 7.0);\n    float cross = step(cz, 6.0);\n    col += vec3(0.6, 0.6, 0.7) * cross * step(0.6, fract(vWP.x / 5.0)) * 0.05 * step(ax, 400.0);\n    // wet asphalt: vertical streak reflections of the neon\n    float n = h21(vec2(floor(vWP.x * 0.7), 3.0));\n    float streak = pow(n, 5.0) * (0.55 + 0.45 * sin(wz * 0.045 + n * 40.0 + uTime * 0.3));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.55 * (0.6 + 0.4 * step(13.0, ax));\n    // reflection of the fog / skyline\n    col += uFog * 0.12 * smoothstep(20.0, 300.0, vDist);\n    col = applyFog(col, vDist * 0.7, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "ground.vert": "attribute vec2 aPos;\nuniform mat4 uVP;\nuniform vec3 uEye;\nvarying vec3 vWP;\nvoid main(){\n    vec3 wp = vec3(aPos.x, 0.0, aPos.y);\n    vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "ground_game.frag": "uniform float uCamX;\nuniform float uCamZ;\nuniform float uPitch;   // block pitch (road every uPitch metres)\nuniform float uRoad;    // road width\nvarying vec3 vWP;\n\n/* Game ground: a grid of wet neon streets with lanes, crossings and sidewalks. */\nvoid main(){\n    float vDist = length(vWP - uEye);\n    vec2 w = vWP.xz + vec2(uCamX, uCamZ);                 // world position on the torus\n    vec2 q = mod(w + uPitch * 0.5, uPitch) - uPitch * 0.5; // distance to the nearest road axis (signed)\n    vec2 a = abs(q);\n    float hr = uRoad * 0.5;\n    float onX = step(a.x, hr), onZ = step(a.y, hr);   // inside a road running along z / along x\n    float road = max(onX, onZ);\n    float inter = onX * onZ;\n    vec3 col = vec3(0.012, 0.014, 0.02);\n    // sidewalks and block floor\n    float walk = 1.0 - road;\n    vec2 tl = abs(fract(w * 0.5) - 0.5);\n    col += walk * (vec3(0.028, 0.03, 0.042) + 0.012 * step(0.47, max(tl.x, tl.y)));\n    // curb neon lines\n    float curb = max(onX * (1.0 - onZ) * exp(-abs(a.x - hr) * 4.0), onZ * (1.0 - onX) * exp(-abs(a.y - hr) * 4.0));\n    col += uNeonA * curb * 0.5;\n    // centre double line and dashed lanes (not inside crossings)\n    float alongZ = onX * (1.0 - onZ), alongX = onZ * (1.0 - onX);\n    float centre = alongZ * (1.0 - smoothstep(0.08, 0.16, abs(a.x - 0.25))) + alongX * (1.0 - smoothstep(0.08, 0.16, abs(a.y - 0.25)));\n    col += vec3(1.0, 0.75, 0.25) * centre * 0.35;\n    float lane = alongZ * (1.0 - smoothstep(0.06, 0.14, abs(a.x - 4.6))) * step(0.5, fract(w.y / 6.0))\n               + alongX * (1.0 - smoothstep(0.06, 0.14, abs(a.y - 4.6))) * step(0.5, fract(w.x / 6.0));\n    col += vec3(0.7, 0.75, 0.85) * lane * 0.22;\n    // zebra crossings at the edge of each intersection\n    float zx = onX * step(hr, a.y) * step(a.y, hr + 3.0) * step(0.5, fract(w.x * 0.8));\n    float zz = onZ * step(hr, a.x) * step(a.x, hr + 3.0) * step(0.5, fract(w.y * 0.8));\n    col += vec3(0.6, 0.62, 0.7) * max(zx, zz) * 0.18;\n    // wet asphalt: neon streak reflections\n    // streaks run along the road: thin across, long and slowly varying along\n    float nz = h21(vec2(floor(w.x * 0.8), floor(w.y / 26.0)));\n    float nx = h21(vec2(floor(w.y * 0.8) + 91.0, floor(w.x / 26.0)));\n    float n = alongZ > 0.5 ? nz : nx;\n    float along = alongZ > 0.5 ? w.y : w.x;\n    float streak = pow(n, 6.0) * road * (0.55 + 0.45 * sin(along * 0.07 + n * 40.0));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.5;\n    col += uFog * 0.10 * smoothstep(15.0, 300.0, vDist);\n    col += vec3(0.5, 0.55, 0.7) * uFlash * 0.15;\n    col = applyFog(col, vDist * 0.8, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "mist.frag": "uniform float uMist;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Drifting ground mist / fog banks over the whole frame (alpha-blended). */\nvoid main(){\n    vec2 p = vUV * vec2(uRes.x / uRes.y, 1.0);\n    float n1 = fbm(p * 2.2 + vec2(uTime * 0.035, uTime * 0.008));\n    float n2 = fbm(p * 4.5 - vec2(uTime * 0.06, -uTime * 0.01) + n1);\n    float band = smoothstep(0.85, 0.15, vUV.y);           // denser low, near the street\n    float m = (n1 * 0.65 + n2 * 0.45) * (0.45 + 0.75 * band);\n    m = smoothstep(0.18, 0.8, m) * uMist;\n    vec3 col = uFog * 1.7 + vec3(0.05) + uNeonA * 0.03 + vec3(0.6, 0.65, 0.8) * uFlash;\n    gl_FragColor = vec4(col, m * 0.92);\n}\n", "post.frag": "uniform float uFade;\nuniform float uScan;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Vignette, CRT scanlines and fade-to-black (alpha-blended over the frame). */\nvoid main(){\n    vec2 p = vUV - 0.5;\n    float vig = smoothstep(0.35, 0.85, length(p * vec2(1.0, 0.85)));\n    float scan = uScan * 0.18 * step(0.5, fract(vUV.y * uRes.y / 3.0));\n    float a = clamp(max(uFade, vig * 0.75 + scan), 0.0, 1.0);\n    gl_FragColor = vec4(0.0, 0.0, 0.0, a);\n}\n", "post.vert": "attribute vec2 aPos;\nvarying vec2 vUV;\nvoid main(){\n    vUV = aPos * 0.5 + 0.5;\n    gl_Position = vec4(aPos, 0.0, 1.0);\n}\n", "rain.frag": "uniform float uRain;\nuniform float uSnow;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    float a = (1.0 - abs(vC.y)) * smoothstep(0.0, 0.4, vC.x) * uRain;\n    a *= smoothstep(1.0, 5.0, vDist) * (1.0 - smoothstep(30.0, 70.0, vDist));\n    vec3 col = mix(vec3(0.6, 0.7, 0.85), uFog * 2.2 + uNeonA * 0.2, 0.4);\n    if (uSnow > 0.5) {\n        a = (1.0 - abs(vC.y)) * (1.0 - abs(vC.x * 2.0 - 1.0)) * uRain;\n        a *= smoothstep(0.5, 3.0, vDist) * (1.0 - smoothstep(25.0, 60.0, vDist));\n        col = vec3(0.9, 0.93, 1.0) + uNeonA * 0.08;\n        gl_FragColor = vec4(col * a * 0.9, 1.0);\n        return;\n    }\n    col += vec3(0.6) * uFlash;\n    gl_FragColor = vec4(col * a * 0.35, 1.0);\n}\n", "rain.vert": "attribute vec3 aSeed;\nattribute vec2 aCorner;\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uRainSpeed;\nuniform float uSnow;\nuniform float uWind;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    vec3 pos;\n    pos.x = uEye.x + (aSeed.x - 0.5) * 70.0;\n    float fall = uRainSpeed * (0.8 + aSeed.z * 0.4) * mix(1.0, 0.07, uSnow);\n    pos.y = uEye.y - 25.0 + mod(aSeed.y * 60.0 - uTime * fall, 60.0);\n    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0;\n    pos.x += uSnow * sin(uTime * (0.6 + aSeed.x) + aSeed.y * 30.0) * 1.2 + uWind * 0.02 * mod(uTime * 7.0 + aSeed.z * 50.0, 60.0);\n    vec3 vel = mix(vec3(-0.08 - uWind * 0.02, -1.0, 0.0), vec3(0.0, -0.06, 0.0), uSnow);\n    vec3 a = (uV * vec4(pos, 1.0)).xyz;\n    vec3 b = (uV * vec4(pos + vel * 0.9, 1.0)).xyz;\n    vec3 seg = b - a;\n    vec3 P = mix(a, b, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    P += perp * aCorner.y * mix(0.018, 0.05, uSnow) + (uSnow > 0.5 ? normalize(seg + vec3(1e-4)) * (aCorner.x * 2.0 - 1.0) * 0.04 : vec3(0.0));\n    vC = aCorner;\n    vDist = length(P);\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "sky.frag": "uniform vec3 uSunDir;\nuniform vec3 uSunCol;\nuniform float uSunStripes;\nuniform float uCloud;\nvarying vec3 vDir;\n\nvoid main(){\n    vec3 d = normalize(vDir);\n    float y = d.y;\n    vec3 col = mix(uFog * 1.15, uSkyTop, smoothstep(-0.05, 0.55, y));\n    // stars\n    vec2 sp = d.xz / (abs(y) + 0.25) * 260.0;\n    float st = step(0.9965, h21(floor(sp)));\n    col += (1.0 - uCloud) * vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));\n    // moon / sun\n    float dd = distance(d, normalize(uSunDir));\n    float disk = smoothstep(0.075, 0.070, dd) * (1.0 - 0.75 * uCloud);\n    if (uSunStripes > 0.5) {\n        float sy = (d.y - uSunDir.y) / 0.075;\n        float stripe = step(0.0, sin(sy * 26.0 + uTime * 1.5)) + step(0.25, sy);\n        disk *= clamp(stripe, 0.0, 1.0);\n        col += mix(uSunCol, uNeonB, smoothstep(0.07, -0.07, d.y - uSunDir.y)) * disk * 1.4;\n    } else {\n        col += uSunCol * disk * 1.2;\n    }\n    col += uSunCol * 0.35 * exp(-dd * (7.0 + 6.0 * uCloud)) * (1.0 - 0.5 * uCloud);\n    // weather: moving cloud deck lit by the city glow (and by lightning)\n    if (uCloud > 0.01) {\n        vec2 cp = d.xz / (max(y, 0.0) + 0.18) * 1.6 + vec2(uTime * 0.03, uTime * 0.012);\n        float cl = smoothstep(0.35, 0.85, fbm(cp)) * smoothstep(-0.02, 0.18, y);\n        vec3 cc = uFog * 1.5 + uNeonB * 0.05 + vec3(0.7, 0.75, 0.95) * uFlash * 1.5;\n        float hide = uCloud * 0.85;\n        col = mix(col, uFog * 1.2 + vec3(0.5, 0.55, 0.7) * uFlash, hide * 0.55);\n        col = mix(col, cc, cl * uCloud);\n    }\n    // slow haze bands\n    float band = h21(vec2(floor(y * 40.0 + uTime * 0.02), 1.0));\n    col += uFog * 0.06 * band * smoothstep(0.35, 0.0, y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "sky.vert": "attribute vec2 aPos;\nuniform vec3 uFwd;\nuniform vec3 uRight;\nuniform vec3 uUp;\nuniform vec2 uTan;\nvarying vec3 vDir;\nvoid main(){\n    vDir = uFwd + aPos.x * uTan.x * uRight + aPos.y * uTan.y * uUp;\n    gl_Position = vec4(aPos, 0.9999, 1.0);\n}\n", "solid.frag": "uniform float uGloss;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\n/* Player car: dark metallic paint lit by the city: ambient fog, neon rim light, sliding light streaks. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;            // two-sided: the loft faces are not all wound the same way\n    float d = length(uEye - vWP);\n    vec3 base = vCol.rgb;\n    vec3 amb = uFog * 0.9 + vec3(0.05, 0.05, 0.07);\n    float up = n.y * 0.5 + 0.5;\n    vec3 lit = base * (amb + up * 0.25 + vec3(0.6, 0.65, 0.8) * uFlash);\n    float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);\n    vec3 rim = mix(uNeonA, uNeonB, step(0.0, n.x)) * fres * 0.55;\n    // reflections of city lights sliding over the body\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.92, 1.0, sin(r.y * 22.0 + r.x * 7.0 + uTime * 0.3) * 0.5 + 0.5);\n    vec3 refl = (mix(uFog * 1.4, uSkyTop, clamp(r.y, 0.0, 1.0)) + mix(uWinA, uNeonA, band) * band * 0.7) * uGloss;\n    vec3 col = lit + rim * uGloss + refl * (0.25 + 0.6 * fres);\n    col = mix(col, base * 2.4, vCol.a);\n    col = applyFog(col, d, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "solid.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec4 aCol;   // rgb, a = emissive amount\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = normalize((uModel * vec4(aNorm, 0.0)).xyz);\n    vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "studio_floor.frag": "uniform float uAlpha;\nvarying vec3 vWP;\n/* Showroom floor: glossy dark (the mirrored car shows through), neon turntable ring and a faint grid. */\nvoid main(){\n    vec2 p = vWP.xz + uEye.xz * 0.0;\n    float r = length(vWP.xz);\n    vec3 col = vec3(0.012, 0.013, 0.02) + uFog * 0.08;\n    float ring = exp(-abs(r - 3.6) * 18.0) + 0.5 * exp(-abs(r - 3.75) * 40.0);\n    col += uNeonA * ring * 0.9;\n    float sweep = smoothstep(0.96, 1.0, sin(atan(vWP.z, vWP.x) * 1.0 - uTime * 1.2) * 0.5 + 0.5) * step(r, 3.6);\n    col += uNeonA * sweep * 0.06;\n    vec2 g = abs(fract(vWP.xz * 0.5) - 0.5);\n    col += uNeonB * 0.05 * step(0.48, max(g.x, g.y)) * smoothstep(14.0, 4.0, r);\n    col *= smoothstep(26.0, 5.0, r) * 0.9 + 0.1;\n    float a = mix(uAlpha, 1.0, smoothstep(3.0, 9.0, r));\n    gl_FragColor = vec4(col, a);\n}\n"};</script>
 <script>/* Cybercity 3D — web engine (WebGL 1). Same shaders and city generator as the Android DreamService.
  * SHADERS is injected by tools/build_web.py from app/src/main/assets/shaders. */
 (function () {
@@ -344,6 +344,538 @@ window.CYBER_MODES = MODES;
 window.CYBER_MODE_NAMES = MODE_NAMES;
 })();
 </script>
+<script>/* AMPY KAGE GT — high-detail procedural model (original design, same lines as the game car).
+ * One generator for everything: browser (game + showroom), node (tools/build_car.js → Android asset + OBJ export).
+ * Units: metres, +Y up, +Z front, car centred on the origin, wheels on y = 0.
+ * Every part has a pivot so the renderer can animate it (hood, butterfly doors, steering wheels, wheel spin, steering wheel). */
+(function (root) {
+'use strict';
+const M = { PAINT: 0, CARBON: 1, TRIM: 2, CHROME: 3, GLASS: 4, HEAD: 5, TAIL: 6, NEON: 7, TIRE: 8, DISC: 9, CALIPER: 10,
+  LEATHER: 11, ALCANTARA: 12, DASH: 13, SCREEN: 14, ALU: 15, ENGNEON: 16, INEON: 17, GRILLE: 18, CARPET: 19 };
+const MAT_NAMES = ['paint', 'carbon', 'trim_black', 'chrome', 'glass', 'headlight', 'taillight', 'neon', 'tyre', 'brake_disc', 'caliper',
+  'leather', 'alcantara', 'dashboard', 'screen', 'aluminium', 'engine_neon', 'interior_neon', 'grille', 'carpet'];
+
+/* hinge / hub positions shared with the renderers */
+const RIG = {
+  hood: { pivot: [0, 0.80, 0.96], axis: 'x', open: -0.95 },
+  doorL: { pivot: [-0.98, 0.50, 0.40], open: 1.05, out: 0.22 },
+  doorR: { pivot: [0.98, 0.50, 0.40], open: 1.05, out: -0.22 },
+  wheels: { FL: [-0.92, 0.36, 1.42], FR: [0.92, 0.36, 1.42], RL: [-0.92, 0.36, -1.45], RR: [0.92, 0.36, -1.45] },
+  wheelRadius: 0.365,
+  steering: { pivot: [-0.40, 0.84, 0.10], tilt: 0.47 },    // column tilt about x (rad)
+  driverEye: [-0.40, 1.02, -0.36]
+};
+
+/* ---------------------------------------------------------------- mesh parts */
+function Part(name, pivot) {
+  return { name, pivot: pivot || [0, 0, 0], pos: [], norm: [], uv: [], mat: [], idx: [], gidx: [] };
+}
+function vert(P, p, n, uv, mat) {
+  P.pos.push(p[0], p[1], p[2]); P.norm.push(n[0], n[1], n[2]); P.uv.push(uv[0], uv[1]); P.mat.push(mat);
+  return P.pos.length / 3 - 1;
+}
+function tri(P, a, b, c, mat) { (mat === M.GLASS ? P.gidx : P.idx).push(a, b, c); }
+function sub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+function add(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+function scl(a, s) { return [a[0] * s, a[1] * s, a[2] * s]; }
+function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function norm(a) { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+function smooth(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+function rotX(p, a) { const c = Math.cos(a), s = Math.sin(a); return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c]; }
+function rotY(p, a) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; }
+function rotZ(p, a) { const c = Math.cos(a), s = Math.sin(a); return [p[0] * c - p[1] * s, p[0] * s + p[1] * c, p[2]]; }
+
+/**
+ * Parametric surface on a (nu × nv) grid. fn(u, v) → point. Normals from the analytic derivatives.
+ * pick(uc, vc) → { part, mat } | null decides, per quad, which part and material receive it (so one loft can be
+ * cut into body / doors / hood…). Vertices are shared per part.
+ */
+function surface(fn, nu, nv, pick, uvs, opts) {
+  opts = opts || {};
+  const e = 1e-4, cache = new Map();
+  const grid = [];
+  for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) {
+    const u = i / nu, v = j / nv;
+    const p = fn(u, v);
+    const du = sub(fn(Math.min(1, u + e), v), fn(Math.max(0, u - e), v));
+    const dv = sub(fn(u, Math.min(1, v + e)), fn(u, Math.max(0, v - e)));
+    let n = norm(cross(du, dv));
+    if (opts.flip) n = scl(n, -1);
+    if (!isFinite(n[0])) n = [0, 1, 0];
+    grid.push({ p, n, uv: [u * (uvs ? uvs[0] : 1), v * (uvs ? uvs[1] : 1)] });
+  }
+  const at = (i, j) => grid[i * (nv + 1) + j];
+  for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) {
+    const r = pick((i + 0.5) / nu, (j + 0.5) / nv);
+    if (!r) continue;
+    const P = r.part, off = r.offset || 0;
+    const key = (k, l) => P.name + ':' + (opts.id || '') + ':' + k + ':' + l + ':' + r.mat + ':' + off;
+    const ids = [[i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]].map(([k, l]) => {
+      const kk = key(k, l);
+      if (cache.has(kk)) return cache.get(kk);
+      const g = at(k, l);
+      const id = vert(P, off ? add(g.p, scl(g.n, off)) : g.p, g.n, g.uv, r.mat);
+      cache.set(kk, id); return id;
+    });
+    if (r.reverse) { tri(P, ids[0], ids[2], ids[1], r.mat); tri(P, ids[0], ids[3], ids[2], r.mat); }
+    else { tri(P, ids[0], ids[1], ids[2], r.mat); tri(P, ids[0], ids[2], ids[3], r.mat); }
+  }
+}
+
+/** Lathe around an axis through `c`: profile [[a, r]] (a along the axis, r radius); axis 'x' or 'z'. */
+function lathe(P, c, profile, seg, mat, axis, uvRep, a0, a1) {
+  a0 = a0 || 0; a1 = a1 === undefined ? Math.PI * 2 : a1;
+  const pt = (k, s) => {
+    const [a, r] = profile[k], t = a0 + (a1 - a0) * s;
+    return axis === 'z' ? [c[0] + Math.cos(t) * r, c[1] + Math.sin(t) * r, c[2] + a] : [c[0] + a, c[1] + Math.cos(t) * r, c[2] + Math.sin(t) * r];
+  };
+  const fn = (u, v) => {
+    const f = u * (profile.length - 1), k = Math.min(profile.length - 2, Math.floor(f)), w = f - k;
+    const p0 = pt(k, v), p1 = pt(k + 1, v);
+    return [lerp(p0[0], p1[0], w), lerp(p0[1], p1[1], w), lerp(p0[2], p1[2], w)];
+  };
+  surface(fn, (profile.length - 1) * 2, seg, () => ({ part: P, mat }), [1, uvRep || 1], { id: 'lathe' + P.pos.length });
+}
+
+/** Superellipsoid (rounded box) centred at c, radii r, exponent e (0.1 = boxy, 1 = ellipsoid), rotation rx (about x). */
+function blob(P, c, r, e, mat, rx, ry, nu, nv) {
+  const sp = (x, p) => Math.sign(x) * Math.pow(Math.abs(x), p);
+  const fn = (u, v) => {
+    const th = (u - 0.5) * Math.PI, ph = v * Math.PI * 2;
+    let p = [r[0] * sp(Math.cos(th), e) * sp(Math.cos(ph), e), r[1] * sp(Math.sin(th), e), r[2] * sp(Math.cos(th), e) * sp(Math.sin(ph), e)];
+    if (rx) p = rotX(p, rx);
+    if (ry) p = rotY(p, ry);
+    return add(p, c);
+  };
+  surface(fn, nu || 14, nv || 20, () => ({ part: P, mat }), [2, 2], { id: 'blob' + P.pos.length });
+}
+
+/** Box (axis-aligned in its own frame) – exact flat faces. */
+function box(P, c, h, mat, rx, ry, rz) {
+  const T = p => { let q = p; if (rz) q = rotZ(q, rz); if (rx) q = rotX(q, rx); if (ry) q = rotY(q, ry); return add(q, c); };
+  const R = n => { let q = n; if (rz) q = rotZ(q, rz); if (rx) q = rotX(q, rx); if (ry) q = rotY(q, ry); return q; };
+  const faces = [[[1, 0, 0], [0, 1, 0], [0, 0, 1]], [[-1, 0, 0], [0, 0, 1], [0, 1, 0]], [[0, 1, 0], [0, 0, 1], [1, 0, 0]],
+    [[0, -1, 0], [1, 0, 0], [0, 0, 1]], [[0, 0, 1], [1, 0, 0], [0, 1, 0]], [[0, 0, -1], [0, 1, 0], [1, 0, 0]]];
+  for (const [n, a, b] of faces) {
+    const ctr = [n[0] * h[0], n[1] * h[1], n[2] * h[2]];
+    const A = [a[0] * h[0], a[1] * h[1], a[2] * h[2]], B = [b[0] * h[0], b[1] * h[1], b[2] * h[2]];
+    const ps = [sub(sub(ctr, A), B), add(sub(ctr, B), A), add(add(ctr, A), B), add(sub(ctr, A), B)];
+    const nn = R(n);
+    const ids = ps.map((p, i) => vert(P, T(p), nn, [[0, 0], [1, 0], [1, 1], [0, 1]][i], mat));
+    tri(P, ids[0], ids[1], ids[2], mat); tri(P, ids[0], ids[2], ids[3], mat);
+  }
+}
+
+/** Tube along a polyline. */
+function tube(P, pts, r, seg, mat) {
+  for (let k = 0; k < pts.length - 1; k++) {
+    const a = pts[k], b = pts[k + 1], d = norm(sub(b, a));
+    const up = Math.abs(d[1]) > 0.9 ? [1, 0, 0] : [0, 1, 0];
+    const s = norm(cross(d, up)), t = cross(s, d);
+    const ring = (c) => { const out = []; for (let i = 0; i <= seg; i++) { const an = i / seg * Math.PI * 2; const n = add(scl(s, Math.cos(an)), scl(t, Math.sin(an))); out.push([add(c, scl(n, r)), n]); } return out; };
+    const ra = ring(a), rb = ring(b);
+    for (let i = 0; i < seg; i++) {
+      const i0 = vert(P, ra[i][0], ra[i][1], [i / seg, 0], mat), i1 = vert(P, ra[i + 1][0], ra[i + 1][1], [(i + 1) / seg, 0], mat);
+      const i2 = vert(P, rb[i + 1][0], rb[i + 1][1], [(i + 1) / seg, 1], mat), i3 = vert(P, rb[i][0], rb[i][1], [i / seg, 1], mat);
+      tri(P, i0, i1, i2, mat); tri(P, i0, i2, i3, mat);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------- body definition */
+// key stations: z, half width, bottom, shoulder height, top (centre line)
+const ST = [
+  [-2.34, 0.78, 0.36, 0.60, 0.76], [-2.22, 0.92, 0.30, 0.68, 0.84], [-1.85, 1.00, 0.25, 0.76, 0.88], [-1.45, 1.03, 0.24, 0.81, 0.89],
+  [-1.05, 1.00, 0.23, 0.72, 0.89], [-0.40, 0.97, 0.22, 0.61, 0.88], [0.40, 0.97, 0.22, 0.59, 0.84], [1.00, 0.99, 0.22, 0.66, 0.78],
+  [1.42, 1.01, 0.23, 0.79, 0.74], [1.85, 0.98, 0.24, 0.68, 0.64], [2.18, 0.90, 0.27, 0.52, 0.54], [2.36, 0.70, 0.31, 0.42, 0.45]];
+const Z0 = ST[0][0], Z1 = ST[ST.length - 1][0];
+function station(z) {
+  // Catmull-Rom through the key stations
+  let k = 0; while (k < ST.length - 2 && z > ST[k + 1][0]) k++;
+  const p0 = ST[Math.max(0, k - 1)], p1 = ST[k], p2 = ST[k + 1], p3 = ST[Math.min(ST.length - 1, k + 2)];
+  const t = clamp((z - p1[0]) / (p2[0] - p1[0]), 0, 1), t2 = t * t, t3 = t2 * t;
+  const o = [];
+  for (let i = 1; i < 5; i++) o.push(0.5 * (2 * p1[i] + (-p0[i] + p2[i]) * t + (2 * p0[i] - 5 * p1[i] + 4 * p2[i] - p3[i]) * t2 + (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * t3));
+  return o; // W, Yb, Ys, Yt
+}
+const AXLES = [1.42, -1.45], ARCH_R = 0.43;
+/** Body surface point. u: 0 rear → 1 front, v: 0 left sill → 0.5 roof centre line → 1 right sill. */
+function bodyPt(u, v) {
+  const z = lerp(Z0, Z1, u);
+  const [W, Yb, Ys, Yt] = station(z);
+  const side = v < 0.5 ? -1 : 1, vv = v < 0.5 ? v * 2 : (1 - v) * 2;
+  let x, y;
+  if (vv < 0.45) {
+    const k = vv / 0.45;
+    let yb = Yb;
+    for (const ax of AXLES) { const dz = z - ax; if (Math.abs(dz) < ARCH_R) yb = Math.max(yb, 0.36 + Math.sqrt(ARCH_R * ARCH_R - dz * dz) * (1 - 0.0)); }
+    yb = Math.min(yb, Ys - 0.07);
+    x = side * W * (0.955 + 0.045 * Math.sin(k * Math.PI / 2));
+    y = yb + (Ys - yb) * k;
+  } else {
+    const k = (vv - 0.45) / 0.55, ph = k * Math.PI / 2;
+    x = side * W * Math.pow(Math.cos(ph), 0.55);
+    y = Ys + (Yt - Ys) * Math.pow(Math.sin(ph), 0.75);
+  }
+  return [x, y, z];
+}
+const zOf = u => lerp(Z0, Z1, u);
+const uOf = z => (z - Z0) / (Z1 - Z0);
+
+// cabin / greenhouse
+const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.55, 1.10], [0.98, 0.84]];
+const CZ0 = -1.30, CZ1 = 0.98;
+function roofY(z) {
+  let k = 0; while (k < CB.length - 2 && z > CB[k + 1][0]) k++;
+  const a = CB[k], b = CB[k + 1], t = smooth((z - a[0]) / (b[0] - a[0]));
+  return lerp(a[1], b[1], t);
+}
+function cabinPt(u, v) {
+  const z = lerp(CZ0, CZ1, u);
+  const side = v < 0.5 ? -1 : 1, vv = v < 0.5 ? v * 2 : (1 - v) * 2;
+  const [W] = station(z);
+  const Wb = W * 0.88, Wr = 0.62 + 0.04 * Math.sin(u * Math.PI), yb = 0.86, Yr = Math.max(yb + 0.01, roofY(z));
+  let x, y;
+  if (vv < 0.6) { const k = vv / 0.6; x = side * lerp(Wb, Wr, Math.pow(k, 0.9)); y = lerp(yb, Yr - 0.05, k); }
+  else { const k = (vv - 0.6) / 0.4; x = side * Wr * (1 - k); y = Yr - 0.05 + 0.05 * Math.sin(k * Math.PI / 2); }
+  return [x, y, z];
+}
+
+/* ---------------------------------------------------------------- build */
+function build(opt) {
+  opt = opt || {};
+  const q = opt.quality === 'low' ? 0.5 : 1;
+  const parts = {};
+  const P = (name, pivot) => (parts[name] = parts[name] || Part(name, pivot));
+  const body = P('body'), hood = P('hood', RIG.hood.pivot), doorL = P('doorL', RIG.doorL.pivot), doorR = P('doorR', RIG.doorR.pivot);
+  const interior = P('interior'), engine = P('engine'), wheel = P('steeringWheel', RIG.steering.pivot);
+  const NU = Math.round(110 * q), NV = Math.round(72 * q);
+  const DZ0 = -0.62, DZ1 = 0.40;                         // door cut
+  const HZ0 = 0.96, HZ1 = 2.16;                           // hood cut
+  const inDoor = (z, vv) => z > DZ0 && z < DZ1 && vv > 0.07 && vv < 0.72;
+  const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > 0.80;
+  const inCabin = (u, v) => {
+    const p = bodyPt(u, v), z = p[2];
+    if (z < CZ0 + 0.03 || z > CZ1 - 0.03) return false;
+    return Math.abs(p[0]) < station(z)[0] * 0.88 - 0.015 && p[1] > 0.78;
+  };
+  // ---- main body loft, cut into body / doors / hood
+  surface(bodyPt, NU, NV, (u, v) => {
+    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
+    // side skirt carbon strip
+    const mat = vv < 0.09 ? M.CARBON : M.PAINT;
+    if (inDoor(z, vv)) return { part: left ? doorL : doorR, mat };
+    if (inHood(z, vv)) return { part: hood, mat: M.PAINT };
+    if (inCabin(u, v)) return null;              // the greenhouse sits here: open the shell
+    return { part: body, mat };
+  }, [5, 3], { id: 'body' });
+  // door cards (inside of the doors) and hood underside
+  surface(bodyPt, NU, NV, (u, v) => {
+    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
+    if (inDoor(z, vv)) {
+      const mat = vv > 0.6 ? M.INEON : vv > 0.42 ? M.ALCANTARA : M.LEATHER;
+      return { part: left ? doorL : doorR, mat: (vv > 0.6 && vv < 0.64) ? M.INEON : (vv > 0.6 ? M.DASH : mat), offset: -0.07 };
+    }
+    if (inHood(z, vv)) return { part: hood, mat: M.TRIM, offset: -0.02 };
+    return null;
+  }, [5, 3], { id: 'inner' });
+  // panel gaps: thin dark frames around the door and hood cuts (slightly proud of the surface)
+  const seam = (z, vv, cut0, cut1, v0, v1) => {
+    const du = 0.008, dv = 0.006;
+    return (Math.abs(z - cut0) < du || Math.abs(z - cut1) < du) && vv > v0 && vv < v1 || (z > cut0 && z < cut1 && (Math.abs(vv - v0) < dv || Math.abs(vv - v1) < dv));
+  };
+  surface(bodyPt, NU * 3, NV * 3, (u, v) => {
+    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
+    if (seam(z, vv, DZ0, DZ1, 0.07, 0.72) || seam(z, vv, HZ0, HZ1, 0.80, 1.01)) return { part: body, mat: M.TRIM, offset: 0.002 };
+    return null;
+  }, [1, 1], { id: 'seam' });
+  // shoulder neon line, door handles, hood vents
+  surface(bodyPt, NU * 2, NV * 4, (u, v) => {
+    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
+    if (z > -2.1 && z < 2.0 && Math.abs(vv - 0.46) < 0.008) return { part: inDoor(z, vv) ? (left ? doorL : doorR) : body, mat: M.NEON, offset: 0.004 };
+    if (z > -0.45 && z < -0.25 && Math.abs(vv - 0.58) < 0.02) return { part: left ? doorL : doorR, mat: M.CHROME, offset: 0.006 };
+    if (z > 1.35 && z < 1.85 && vv > 0.86 && vv < 0.94 && Math.floor((z - 1.35) / 0.06) % 2 === 0) return { part: hood, mat: M.NEON, offset: 0.004 };
+    return null;
+  }, [1, 1], { id: 'details' });
+  // headlights (follow the nose surface) and full-width segmented tail light
+  surface(bodyPt, NU * 3, NV * 3, (u, v) => {
+    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
+    if (z > 2.24 && z < 2.31 && vv > 0.60 && vv < 0.84) return { part: body, mat: M.HEAD, offset: 0.004 };
+    if (z > 2.31 && z < 2.345 && vv > 0.40 && vv < 0.6) return { part: body, mat: M.NEON, offset: 0.004 };   // DRL hook
+    if (z < -2.27 && vv > 0.42) return { part: body, mat: M.TAIL, offset: 0.004 };
+    return null;
+  }, [8, 4], { id: 'lights' });
+  // end caps: rear panel (dark, with diffuser) and nose with intake grille
+  const capFn = (zc, recess) => (s, t) => { const p = bodyPt(uOf(zc), s); const c = [0, 0.32 + (station(zc)[3] - 0.32) * 0.55, zc + recess]; return [lerp(p[0], c[0], t * 0.98), lerp(p[1], c[1], t * 0.98), lerp(p[2], c[2], t)]; };
+  surface(capFn(Z0, -0.02), NV, 10, (s, t) => ({ part: body, mat: M.TRIM }), [4, 1], { id: 'rearcap' });
+  surface(capFn(Z1, 0.03), NV, 10, (s, t) => {
+    const p = capFn(Z1, 0.03)(s, t);
+    return { part: body, mat: p[1] < 0.37 && Math.abs(p[0]) < 0.62 ? M.GRILLE : M.PAINT };
+  }, [8, 4], { id: 'frontcap' });
+  // floor
+  surface((u, v) => { const p0 = bodyPt(u, 0.0001), p1 = bodyPt(u, 0.9999); return [lerp(p0[0], p1[0], v), Math.min(p0[1], 0.25), p0[2]]; }, 40, 4, () => ({ part: body, mat: M.TRIM }), [1, 1], { id: 'floor' });
+  // wheel arch liners
+  for (const ax of AXLES) for (const sx of [-1, 1]) {
+    const W = station(ax)[0];
+    const Ys = station(ax)[2];
+    surface((u, v) => { const a = Math.PI * u; return [sx * lerp(W * 0.6, W * 0.95, v), Math.min(Ys - 0.07, 0.36 + Math.sin(a) * ARCH_R), ax + Math.cos(a) * ARCH_R]; }, 24, 3,
+      () => ({ part: body, mat: M.TRIM }), [1, 1], { id: 'arch' + ax + sx });
+  }
+  // ---- greenhouse: glass + carbon roof + pillars; side windows belong to the doors
+  surface(cabinPt, Math.round(70 * q), Math.round(48 * q), (u, v) => {
+    const z = lerp(CZ0, CZ1, u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
+    if (vv > 0.62 && z > -1.0 && z < 0.32) return { part: body, mat: M.CARBON };
+    if (z > 0.30 && z < 0.40) return { part: body, mat: M.TRIM };                  // A pillar
+    if (z < -0.95 && vv < 0.62) return { part: body, mat: M.PAINT };                // fastback C pillars
+    if (z > -0.66 && z < -0.58 && vv < 0.62) return { part: body, mat: M.TRIM };   // B pillar
+    if (z > -0.58 && z < 0.30 && vv < 0.62) return { part: left ? doorL : doorR, mat: M.GLASS };
+    return { part: body, mat: M.GLASS };
+  }, [3, 3], { id: 'cabin' });
+  // ---- spoiler (airfoil) with endplates and neon edge
+  const foil = (u, v) => { const x = lerp(-0.92, 0.92, u), a = v * Math.PI * 2, c = 0.34; return [x, 1.10 + Math.sin(a) * 0.03 * (Math.cos(a) > 0 ? 1 : 0.5), -2.06 + Math.cos(a) * c / 2]; };
+  surface(foil, 30, 16, () => ({ part: body, mat: M.CARBON }), [6, 1], { id: 'wing' });
+  surface((u, v) => { const p = foil(u, 0.5); return [p[0], 1.105 + v * 0.012, -2.23]; }, 30, 1, () => ({ part: body, mat: M.NEON }), [1, 1], { id: 'wingneon' });
+  for (const sx of [-0.94, 0.94]) box(body, [sx, 1.08, -2.06], [0.012, 0.09, 0.2], M.CARBON);
+  for (const sx of [-0.55, 0.55]) box(body, [sx, 0.98, -2.0], [0.02, 0.12, 0.05], M.TRIM, 0.25);
+  // ---- splitter, diffuser, exhausts, side mirrors
+  box(body, [0, 0.235, 2.30], [0.78, 0.012, 0.14], M.CARBON);
+  box(body, [0, 0.235, 2.445], [0.78, 0.012, 0.006], M.NEON);
+  for (let i = -2; i <= 2; i++) box(body, [i * 0.18, 0.29, -2.12], [0.008, 0.06, 0.2], M.TRIM, -0.2);
+  for (const ex of [-0.38, -0.22, 0.22, 0.38]) {
+    lathe(body, [ex, 0.33, -2.38], [[0, 0.052], [0.12, 0.052], [0.12, 0.044], [0.0, 0.044]], 20, M.CHROME, 'z');
+    lathe(body, [ex, 0.33, -2.35], [[0, 0.0], [0, 0.044]], 20, M.ENGNEON, 'z');
+  }
+  for (const [door, sx] of [[doorL, -1], [doorR, 1]]) {
+    blob(door, [sx * 1.04, 0.95, 0.30], [0.09, 0.05, 0.11], 0.6, M.PAINT, 0, 0, 10, 14);
+    box(door, [sx * 1.00, 0.92, 0.32], [0.04, 0.012, 0.02], M.TRIM);
+    box(door, [sx * 1.115, 0.95, 0.27], [0.004, 0.04, 0.08], M.CHROME);   // mirror glass
+  }
+  // ---- interior
+  // floor, firewall, rear bulkhead, tunnel, sills
+  box(interior, [0, 0.30, -0.10], [0.86, 0.01, 1.0], M.CARPET);
+  box(interior, [0, 0.55, 0.93], [0.88, 0.25, 0.02], M.DASH);
+  box(interior, [0, 0.62, -1.07], [0.88, 0.32, 0.02], M.ALCANTARA);
+  blob(interior, [0, 0.40, -0.05], [0.13, 0.10, 0.9], 0.25, M.CARBON);
+  for (const sx of [-0.86, 0.86]) box(interior, [sx, 0.42, -0.1], [0.04, 0.12, 0.62], M.CARBON);
+  // dashboard: lofted wave across the cabin, screen, vents, binnacle
+  surface((u, v) => {
+    const x = lerp(-0.9, 0.9, u), a = v * Math.PI;
+    const z = 0.62 + Math.cos(a) * 0.28 - 0.04 * Math.cos(x * 3);
+    const y = 0.64 + Math.sin(a) * 0.25 + 0.015 * Math.sin(x * 6);
+    return [x, y, z];
+  }, Math.round(60 * q), Math.round(16 * q), (u, v) => ({ part: interior, mat: v > 0.45 && v < 0.55 ? M.INEON : M.DASH }), [6, 2], { id: 'dash' });
+  // wide curved screen in front of the driver and centre
+  surface((u, v) => { const x = lerp(-0.78, 0.22, u); return [x, 0.80 + v * 0.09, 0.36 + 0.03 * (x + 0.28) * (x + 0.28) + v * 0.035]; }, 30, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'screen' });
+  // centre console rising to the dash, gear selector, start button
+  blob(interior, [0, 0.52, 0.45], [0.12, 0.07, 0.25], 0.3, M.CARBON, -0.35);
+  tube(interior, [[0, 0.52, 0.22], [0, 0.62, 0.20]], 0.012, 10, M.CHROME);
+  blob(interior, [0, 0.64, 0.20], [0.03, 0.025, 0.035], 0.8, M.LEATHER);
+  lathe(interior, [0.08, 0.56, 0.35], [[0, 0], [0, 0.018], [0.01, 0.018], [0.01, 0]], 14, M.ENGNEON, 'z');
+  // seats: cushion, backrest, bolsters, headrest, accent stripe, harness
+  for (const sx of [-0.40, 0.40]) {
+    blob(interior, [sx, 0.40, -0.52], [0.25, 0.07, 0.25], 0.35, M.LEATHER, -0.05);
+    for (const bx of [-0.21, 0.21]) blob(interior, [sx + bx, 0.47, -0.52], [0.05, 0.07, 0.24], 0.4, M.ALCANTARA, -0.05);
+    blob(interior, [sx, 0.73, -0.79], [0.24, 0.32, 0.07], 0.35, M.LEATHER, -0.22);
+    for (const bx of [-0.2, 0.2]) blob(interior, [sx + bx, 0.73, -0.75], [0.05, 0.28, 0.08], 0.4, M.ALCANTARA, -0.22, bx > 0 ? -0.35 : 0.35);
+    blob(interior, [sx, 1.08, -0.87], [0.13, 0.09, 0.05], 0.4, M.LEATHER, -0.22);
+    box(interior, [sx, 0.73, -0.718], [0.012, 0.27, 0.004], M.INEON, -0.22);
+    for (const hx of [-0.08, 0.08]) tube(interior, [[sx + hx, 0.98, -0.83], [sx + hx * 0.5, 0.76, -0.71], [sx + hx * 0.2, 0.50, -0.62]], 0.012, 6, M.CALIPER);
+  }
+  // pedals and dead pedal
+  for (const [px, w] of [[-0.52, 0.03], [-0.40, 0.05], [-0.30, 0.04]]) box(interior, [px, 0.40, 0.78], [w, 0.06, 0.01], M.ALU, 0.6);
+  // roll hoop behind the seats
+  tube(interior, [[-0.80, 0.30, -1.02], [-0.78, 1.0, -1.02], [-0.6, 1.15, -1.02], [0.6, 1.15, -1.02], [0.78, 1.0, -1.02], [0.80, 0.30, -1.02]], 0.022, 10, M.CALIPER);
+  tube(interior, [[-0.6, 1.15, -1.02], [0.75, 0.35, -1.05]], 0.018, 8, M.CALIPER);
+  // footwell / sill ambient neon
+  for (const sx of [-0.83, 0.83]) box(interior, [sx, 0.32, -0.1], [0.004, 0.006, 0.6], M.INEON);
+  // ---- steering wheel (own part: rotates with the steering) – built around its local z axis
+  const sw = wheel;
+  {
+    const R = 0.17, r = 0.022, seg = 48;
+    const ring = [];
+    for (let i = 0; i <= seg; i++) { const a = i / seg * Math.PI * 2; ring.push([Math.cos(a) * R * 1.05, Math.sin(a) * R * (Math.sin(a) < 0 ? 0.88 : 1), 0]); }
+    // flat-bottom yoke-ish rim
+    for (let i = 0; i < seg; i++) tube(sw, [ring[i], ring[i + 1]], r, 8, (i > seg * 0.2 && i < seg * 0.3) ? M.INEON : M.ALCANTARA);
+    for (const a of [Math.PI, 0, -Math.PI / 2]) tube(sw, [[0, 0, 0.02], [Math.cos(a) * R, Math.sin(a) * R * 0.9, 0]], 0.014, 8, M.CARBON);
+    lathe(sw, [0, 0, 0.03], [[0, 0], [0, 0.055], [0.02, 0.05], [0.02, 0]], 24, M.CARBON, 'z');
+    lathe(sw, [0, 0, 0.051], [[0, 0.03], [0, 0.036]], 24, M.INEON, 'z');
+    box(sw, [0.20, 0.03, 0.02], [0.012, 0.05, 0.004], M.ALU);       // shift paddles
+    box(sw, [-0.20, 0.03, 0.02], [0.012, 0.05, 0.004], M.ALU);
+    tube(sw, [[0, 0, 0.06], [0, 0, 0.30]], 0.03, 12, M.DASH);       // column
+  }
+  // ---- engine bay + twin-turbo V8 hybrid (visible with the hood open)
+  box(engine, [0, 0.30, 1.56], [0.86, 0.01, 0.58], M.TRIM);
+  for (const sx of [-0.86, 0.86]) box(engine, [sx, 0.52, 1.56], [0.01, 0.22, 0.58], M.TRIM);
+  box(engine, [0, 0.52, 0.99], [0.86, 0.22, 0.01], M.TRIM);
+  box(engine, [0, 0.42, 2.10], [0.74, 0.11, 0.02], M.GRILLE);                 // radiator
+  blob(engine, [0, 0.38, 1.52], [0.24, 0.08, 0.44], 0.2, M.ALU);              // block
+  for (const sx of [-1, 1]) {
+    blob(engine, [sx * 0.21, 0.47, 1.52], [0.11, 0.05, 0.40], 0.18, M.ALU, 0, 0, 10, 16);
+    box(engine, [sx * 0.21, 0.515, 1.52], [0.07, 0.006, 0.36], M.ENGNEON, 0, 0, sx * 0.5);   // valve cover neon
+    lathe(engine, [sx * 0.55, 0.42, 1.25], [[-0.07, 0.0], [-0.07, 0.08], [0.07, 0.10], [0.07, 0.0]], 18, M.ALU, 'x');   // turbo
+    lathe(engine, [sx * 0.55, 0.42, 1.25], [[0.071, 0.0], [0.071, 0.06]], 18, M.ENGNEON, 'x');
+    tube(engine, [[sx * 0.45, 0.43, 1.25], [sx * 0.30, 0.52, 1.30], [sx * 0.12, 0.56, 1.40]], 0.03, 10, M.CHROME);
+  }
+  // velocity-stack intake trumpets (vertical)
+  const trumpet = (c) => {
+    const prof = [[0, 0.028], [0.06, 0.028], [0.085, 0.045], [0.09, 0.045]];
+    const fn = (u, v) => { const f = u * (prof.length - 1), k = Math.min(prof.length - 2, Math.floor(f)), w = f - k, a = lerp(prof[k][0], prof[k + 1][0], w), r = lerp(prof[k][1], prof[k + 1][1], w), t = v * Math.PI * 2; return [c[0] + Math.cos(t) * r, c[1] + a, c[2] + Math.sin(t) * r]; };
+    surface(fn, 6, 14, () => ({ part: engine, mat: M.CHROME }), [1, 1], { id: 'tr' + c.join() });
+    surface((u, v) => { const t = v * Math.PI * 2, r = 0.046; return [c[0] + Math.cos(t) * r, c[1] + 0.09 + u * 0.004, c[2] + Math.sin(t) * r]; }, 1, 14, () => ({ part: engine, mat: M.ENGNEON }), [1, 1], { id: 'trn' + c.join() });
+  };
+  for (let i = 0; i < 4; i++) for (const sx of [-1, 1]) trumpet([sx * 0.08, 0.52, 1.27 + i * 0.16]);
+  box(engine, [0, 0.53, 1.52], [0.05, 0.025, 0.34], M.CARBON);                 // plenum spine
+  box(engine, [0.52, 0.40, 1.80], [0.14, 0.07, 0.14], M.ENGNEON);              // hybrid e-motor pack
+  box(engine, [-0.55, 0.38, 1.85], [0.12, 0.07, 0.10], M.TRIM);                // battery
+  // ---- wheels: 4 spinning wheels (tyre, rim, disc) + 4 calipers that only steer
+  const wheels = {};
+  for (const key of ['FL', 'FR', 'RL', 'RR']) {
+    const hub = RIG.wheels[key], out = hub[0] > 0 ? 1 : -1;
+    const W = P('wheel' + key, hub), C = P('caliper' + key, hub);
+    const X = a => a * out;              // local x: outward positive
+    const seg = Math.round(64 * q);
+    // tyre (tread via uv in the shader)
+    lathe(W, [0, 0, 0], [[X(-0.15), 0.245], [X(-0.155), 0.30], [X(-0.14), 0.348], [X(-0.11), 0.365], [X(0.0), 0.367], [X(0.11), 0.365], [X(0.14), 0.348], [X(0.155), 0.30], [X(0.15), 0.245]], seg, M.TIRE, 'x', 40);
+    // rim barrel + lip
+    lathe(W, [0, 0, 0], [[X(-0.13), 0.235], [X(0.11), 0.235], [X(0.13), 0.245], [X(0.135), 0.235]], seg, M.CHROME, 'x', 1);
+    lathe(W, [0, 0, 0], [[X(0.136), 0.226], [X(0.136), 0.236]], seg, M.NEON, 'x', 1);
+    // 10 twisted spokes
+    for (let s = 0; s < 10; s++) {
+      const a = s / 10 * Math.PI * 2;
+      const sp = (u, v) => {
+        const r = lerp(0.06, 0.228, u), tw = 0.18 * u, w = lerp(0.028, 0.018, u), aa = a + tw + (v - 0.5) * w / r * 2;
+        const xo = X(lerp(0.112, 0.126, u * u) + 0.012 * Math.sin(v * Math.PI));
+        return [xo, Math.cos(aa) * r, Math.sin(aa) * r];
+      };
+      surface(sp, 8, 4, () => ({ part: W, mat: M.CHROME }), [1, 1], { id: 'spk' + key + s });
+      surface((u, v) => { const p = sp(u, v); return [p[0] - X(0.02), p[1], p[2]]; }, 8, 2, () => ({ part: W, mat: M.TRIM }), [1, 1], { id: 'spkb' + key + s });
+    }
+    lathe(W, [0, 0, 0], [[X(0.12), 0], [X(0.13), 0.06], [X(0.12), 0.07]], 24, M.CHROME, 'x');
+    lathe(W, [X(0.131), 0, 0], [[0, 0.035], [0, 0.045]], 24, M.NEON, 'x');
+    for (let n = 0; n < 5; n++) { const a = n / 5 * Math.PI * 2; lathe(W, [X(0.13), Math.cos(a) * 0.045, Math.sin(a) * 0.045], [[0, 0], [0, 0.009], [X(0.012), 0.009], [X(0.012), 0]], 8, M.ALU, 'x'); }
+    // drilled brake disc
+    lathe(W, [0, 0, 0], [[X(0.03), 0.08], [X(0.03), 0.19], [X(0.0), 0.19], [X(0.0), 0.08]], seg, M.DISC, 'x', 1);
+    // caliper (only steers) at the rear-top of the disc
+    blob(C, [X(0.035), 0.10, -0.10], [0.03, 0.09, 0.07], 0.25, M.CALIPER, 0.75, 0, 10, 12);
+    box(C, [X(0.066), 0.10, -0.10], [0.002, 0.05, 0.02], M.NEON, 0.75);
+    wheels[key] = { wheel: W, caliper: C };
+  }
+  // ---- orient every quad for exporters (two-sided anyway in our shaders) and pack
+  const list = Object.values(parts).filter(p => p.pos.length);
+  let tris = 0, verts = 0;
+  for (const p of list) { tris += (p.idx.length + p.gidx.length) / 3; verts += p.pos.length / 3; }
+  return { parts: list, rig: RIG, stats: { tris, verts, parts: list.length } };
+}
+
+/* ---------------------------------------------------------------- performance sheet (fictional, consistent with the game physics) */
+const SPECS = {
+  name: 'AMPY KAGE GT',
+  engine: 'V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore',
+  power: '780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min',
+  torque: '1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)',
+  redline: '9.000 giri/min',
+  gearbox: 'Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring',
+  accel: '0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s',
+  vmax: '345 km/h (con N₂O) · 260 km/h senza boost',
+  braking: '100–0 km/h in 29 m · dischi carboceramici 410/390 mm',
+  weight: '1.420 kg · rapporto peso/potenza 1,42 kg/CV',
+  aero: 'Deportanza 520 kg a 250 km/h · ala posteriore attiva',
+  dims: 'L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m',
+  tyres: '265/30 R21 ant. · 325/25 R22 post.',
+  battery: '6,2 kWh · boost elettrico 18 s · ricarica in frenata'
+};
+
+const api = { build, M, MAT_NAMES, RIG, SPECS, bodyPt, station };
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+root.CarHD = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>/* WebGL renderer for the HD car (CarHD): uploads the parts, animates them (hood, butterfly doors, steering wheels,
+ * wheel spin, steering wheel) and draws opaque + glass passes. Mirrored in game/CarHdRenderer.java. */
+(function (root) {
+'use strict';
+const PAINTS = {
+  nero: [0.03, 0.03, 0.04], rosso: [0.42, 0.02, 0.04], perla: [0.72, 0.72, 0.76], oro: [0.55, 0.38, 0.08], ciano: [0.0, 0.30, 0.36], viola: [0.20, 0.03, 0.30]
+};
+/* id → colour, roughness, metalness, emissive, pattern */
+function materials(paint, a, b) {
+  return [
+    [paint, 0.18, 0.55, 0, 0], [[0.06, 0.06, 0.07], 0.3, 0.2, 0, 1], [[0.02, 0.02, 0.025], 0.6, 0, 0, 0], [[0.30, 0.31, 0.35], 0.12, 1, 0, 0],
+    [[0.02, 0.03, 0.05], 0.05, 0, 0, 0], [[0.85, 0.95, 1.0], 0.2, 0, 1, 7], [[1.0, 0.06, 0.12], 0.2, 0, 1, 6], [a, 0.3, 0, 1, 9],
+    [[0.025, 0.025, 0.025], 0.9, 0, 0, 3], [[0.35, 0.35, 0.37], 0.35, 0.9, 0, 5], [b, 0.35, 0.2, 0.15, 0], [[0.05, 0.045, 0.05], 0.55, 0, 0, 2],
+    [[0.035, 0.035, 0.04], 0.95, 0, 0, 0], [[0.025, 0.027, 0.035], 0.7, 0, 0, 0], [[0, 0, 0], 0.3, 0, 1, 4], [[0.6, 0.6, 0.62], 0.35, 1, 0, 0],
+    [b, 0.3, 0, 1, 9], [a, 0.3, 0, 0.8, 9], [[0.03, 0.03, 0.035], 0.5, 0.3, 0, 8], [[0.03, 0.03, 0.035], 1, 0, 0, 10]
+  ];
+}
+
+/* --- column-major 4x4 helpers --- */
+const I = () => new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+function mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
+const T = (x, y, z) => { const m = I(); m[12] = x; m[13] = y; m[14] = z; return m; };
+const RX = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]); };
+const RY = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]); };
+const RZ = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]); };
+
+/** Model matrix of every part for a given state {steer, spin, wheelSteer, hood, doors, steerWheel}. */
+function partMatrix(name, rig, car, st) {
+  const pv = rig.hood.pivot;
+  switch (name) {
+    case 'hood': return mul(car, mul(T(pv[0], pv[1], pv[2]), mul(RX(rig.hood.open * st.hood), T(-pv[0], -pv[1], -pv[2]))));
+    case 'doorL': case 'doorR': {
+      const d = rig[name], k = name === 'doorL' ? st.doorL : st.doorR, p = d.pivot;
+      return mul(car, mul(T(p[0], p[1], p[2]), mul(RZ(d.out * k), mul(RX(d.open * k), T(-p[0], -p[1], -p[2])))));
+    }
+    case 'steeringWheel': { const p = rig.steering.pivot; return mul(car, mul(T(p[0], p[1], p[2]), mul(RX(rig.steering.tilt), RZ(-st.steerWheel)))); }
+    default:
+      if (name.startsWith('wheel') || name.startsWith('caliper')) {
+        const key = name.slice(name.startsWith('wheel') ? 5 : 7), hub = rig.wheels[key];
+        const steer = key[0] === 'F' ? st.wheelSteer : 0;
+        let m = mul(car, mul(T(hub[0], hub[1], hub[2]), RY(steer)));
+        if (name.startsWith('wheel')) m = mul(m, RX(st.spin));
+        return m;
+      }
+      return car;
+  }
+}
+
+function CarRender(gl, prog, model) {
+  this.gl = gl; this.prog = prog; this.rig = model.rig;
+  const buf = (arr, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; };
+  this.parts = model.parts.map(p => ({ name: p.name, pos: buf(p.pos), norm: buf(p.norm), uv: buf(p.uv), mat: buf(p.mat),
+    idx: p.idx.length ? buf(p.idx, true) : null, n: p.idx.length, gidx: p.gidx.length ? buf(p.gidx, true) : null, gn: p.gidx.length }));
+  this.loc = { aPos: gl.getAttribLocation(prog.p, 'aPos'), aNorm: gl.getAttribLocation(prog.p, 'aNorm'), aUV: gl.getAttribLocation(prog.p, 'aUV'), aMat: gl.getAttribLocation(prog.p, 'aMat') };
+}
+CarRender.prototype.setMaterials = function (paint, a, b) {
+  const gl = this.gl, u = this.prog.u, mats = materials(PAINTS[paint] || PAINTS.nero, a, b);
+  const col = new Float32Array(60), par = new Float32Array(80);
+  mats.forEach((m, i) => { col.set(m[0], i * 3); par.set([m[1], m[2], m[3], m[4]], i * 4); });
+  gl.useProgram(this.prog.p);
+  gl.uniform3fv(u['uMatCol[0]'], col); gl.uniform4fv(u['uMatPar[0]'], par);
+};
+/** pass: 'opaque' | 'glass'. car: base model matrix. skip: set of part names not to draw. */
+CarRender.prototype.draw = function (car, st, pass, skip) {
+  const gl = this.gl, L = this.loc, u = this.prog.u;
+  gl.useProgram(this.prog.p);
+  gl.uniform1f(u.uGlassPass, pass === 'glass' ? 1 : 0);
+  for (const p of this.parts) {
+    if (skip && skip.has(p.name)) continue;
+    const ib = pass === 'glass' ? p.gidx : p.idx, n = pass === 'glass' ? p.gn : p.n;
+    if (!ib) continue;
+    gl.uniformMatrix4fv(u.uModel, false, partMatrix(p.name, this.rig, car, st));
+    const bind = (loc, b, s) => { if (loc < 0) return; gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, s, gl.FLOAT, false, 0, 0); };
+    bind(L.aPos, p.pos, 3); bind(L.aNorm, p.norm, 3); bind(L.aUV, p.uv, 2); bind(L.aMat, p.mat, 1);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_SHORT, 0);
+  }
+  for (const k in L) if (L[k] >= 0) gl.disableVertexAttribArray(L[k]);
+};
+
+root.CarRender = CarRender;
+root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
 <script>/* Cybercity 3D — NEON RUN: open-world driving mini game (WebGL 1).
  * Same shaders as the screensaver (SHADERS injected by tools/build_web.py) and the same
  * palettes / weather (window.CYBER_PALETTES / CYBER_WEATHER from cybercity.js).
@@ -572,7 +1104,7 @@ function buildCarModel(paint, accent) {
 }
 
 /* ===================================================================== physics */
-function newCar() { return { x: 0, z: 42, h: 0, vx: 0, vz: 0, steer: 0, boost: 1, drift: 0, score: 0, best: 0, shake: 0, hit: 0, dist: 0 }; }
+function newCar() { return { x: 0, z: 42, h: 0, vx: 0, vz: 0, steer: 0, spin: 0, boost: 1, drift: 0, score: 0, best: 0, shake: 0, hit: 0, dist: 0 }; }
 
 function stepCar(c, inp, dt, city) {
   const fx = Math.sin(c.h), fz = Math.cos(c.h), rx = Math.cos(c.h), rz = -Math.sin(c.h);
@@ -600,6 +1132,7 @@ function stepCar(c, inp, dt, city) {
   c.vx = nfx * vF + nrx * vR + (fx - nfx) * vF * 0.6;
   c.vz = nfz * vF + nrz * vR + (fz - nfz) * vF * 0.6;
   c.x += c.vx * dt; c.z += c.vz * dt;
+  c.spin += vF * dt / 0.365;                      // wheel rotation (rad)
   c.dist += Math.hypot(c.vx, c.vz) * dt;
   // drift score
   const slip = Math.abs(c.vx * nrx + c.vz * nrz);
@@ -649,7 +1182,8 @@ function cameraFor(view, c, cam, dt, t) {
   switch (view) {
     case 1: e = [-fx * 11, 4.6, -fz * 11]; l = [fx * 6, 1.0, fz * 6]; break;
     case 2: e = [cfx * 0.9, 1.08, cfz * 0.9]; l = [cfx * 30, 0.8, cfz * 30]; fov += 4; break;                 // hood
-    case 3: e = [cfx * -0.15 + crx * -0.35, 1.0, cfz * -0.15 + crz * -0.35]; l = [cfx * 30 + crx * -0.35, 0.95, cfz * 30 + crz * -0.35]; drawCar = false; break; // cockpit
+    case 3: { const de = window.CarHD ? CarHD.RIG.driverEye : [-0.35, 1.0, -0.15];   // driver's eye, in the car frame
+      e = [cfx * de[2] + crx * de[0], de[1], cfz * de[2] + crz * de[0]]; l = [cfx * 30 + crx * de[0], de[1] - 0.12, cfz * 30 + crz * de[0]]; drawCar = !!window.CarHD; fov = 70 + Math.min(10, speed * 0.1); break; } // cockpit
     case 4: e = [cfx * 2.45, 0.45, cfz * 2.45]; l = [cfx * 30, 0.45, cfz * 30]; drawCar = false; fov += 8; break;  // bumper
     case 5: { const a = t * 0.25; e = [Math.sin(a) * 13, 5.5 + Math.sin(t * 0.4) * 2, Math.cos(a) * 13]; l = [0, 0.8, 0]; fov = 55; break; }
     case 6: e = [-fx * 2, 70, -fz * 2]; l = [fx * 3, 0, fz * 3]; fov = 60; break;
@@ -657,7 +1191,7 @@ function cameraFor(view, c, cam, dt, t) {
   }
   const sh = c.shake * 0.25;
   e[0] += (Math.random() - 0.5) * sh; e[1] += (Math.random() - 0.5) * sh;
-  return { e, l, drawCar, fov, cockpit: view === 3 };
+  return { e, l, drawCar, fov, cockpit: view === 3 && !window.CarHD };
 }
 
 /* ===================================================================== matrices */
@@ -703,6 +1237,7 @@ function Game(canvas, hud, opts) {
   this.P = { sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground_game.frag'),
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
     post: prog('post.vert', 'post.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
+  if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); }
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
@@ -782,7 +1317,13 @@ Game.prototype.frame = function (dt, inp) {
   gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
   gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
   gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
-  if (cv.drawCar) {
+  const carM = model(c.h, carRel[0], 0, carRel[2]);
+  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin };
+  if (cv.drawCar && this.hd) {
+    gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB);
+    gl.uniform1f(P.hd.u.uKey, 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
+    this.hd.draw(carM, hdState, 'opaque');
+  } else if (cv.drawCar) {
     gl.useProgram(P.solid.p); set(P.solid);
     gl.uniformMatrix4fv(P.solid.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
     gl.uniform1f(P.solid.u.uGloss, (PAINTS[o.paint] || PAINTS.nero).c[0] > 0.6 ? 0.6 : 1);
@@ -790,6 +1331,9 @@ Game.prototype.frame = function (dt, inp) {
   }
   // additive lights
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  if (cv.drawCar && this.hd) {
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.hd.p); set(P.hd); this.hd.draw(carM, hdState, "glass"); gl.blendFunc(gl.ONE, gl.ONE);
+  }
   gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car);
   gl.useProgram(P.glow.p); set(P.glow);
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));

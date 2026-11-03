@@ -32,7 +32,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     public volatile float hudKmh, hudBoost, hudDrift, hudSteer, hudH, hudX, hudZ, hudDist; public volatile int hudScore, hudBest; public volatile boolean hudBoosting, hudCockpit;
 
     private GameCity city;
-    private Gl.Prog sky, building, ground, board, traffic, rain, post, mist, solid, glow;
+    private Gl.Prog sky, building, ground, board, traffic, rain, post, mist, solid, glow, hdProg;
+    private CarHd hd;
+    private final CarHd.State hdState = new CarHd.State();
     private final List<Gl.Mesh> chunks = new ArrayList<>();
     private Gl.Mesh mBoard, mTraffic, mRain, mGround, mQuad, cSolid, cUnder, cHeads, cTail;
     private String carBuilt = "";
@@ -56,6 +58,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         mist = Gl.prog(ctx, "post.vert", "mist.frag", common);
         solid = Gl.prog(ctx, "solid.vert", "solid.frag", common);
         glow = Gl.prog(ctx, "glow.vert", "glow.frag", common);
+        hdProg = Gl.prog(ctx, "car_hd.vert", "car_hd.frag", common);
+        try { hd = new CarHd(ctx, hdProg); } catch (Exception ex) { android.util.Log.e(Gl.TAG, "car_hd", ex); hd = null; }
         if (city == null) city = new GameCity(2077);
         chunks.clear();
         for (GameCity.Chunk c : city.chunks)
@@ -98,7 +102,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         switch (view) {
             case 1: set(e, -fx * 11, 4.6f, -fz * 11); set(l, fx * 6, 1.0f, fz * 6); break;
             case 2: set(e, cfx * 0.9f, 1.08f, cfz * 0.9f); set(l, cfx * 30, 0.8f, cfz * 30); fov += 4; break;
-            case 3: set(e, cfx * -0.15f + crx * -0.35f, 1.0f, cfz * -0.15f + crz * -0.35f); set(l, cfx * 30 + crx * -0.35f, 0.95f, cfz * 30 + crz * -0.35f); drawCar = false; break;
+            case 3: { float[] de = CarHd.DRIVER_EYE;
+                set(e, cfx * de[2] + crx * de[0], de[1], cfz * de[2] + crz * de[0]); set(l, cfx * 30 + crx * de[0], de[1] - 0.12f, cfz * 30 + crz * de[0]);
+                drawCar = hd != null; fov = 70 + Math.min(10, speed * 0.1f); break; }
             case 4: set(e, cfx * 2.45f, 0.45f, cfz * 2.45f); set(l, cfx * 30, 0.45f, cfz * 30); drawCar = false; fov += 8; break;
             case 5: { float a = t * 0.25f; set(e, (float) Math.sin(a) * 13, 5.5f + (float) Math.sin(t * 0.4f) * 2, (float) Math.cos(a) * 13); set(l, 0, 0.8f, 0); fov = 55; break; }
             case 6: set(e, -fx * 2, 70, -fz * 2); set(l, fx * 3, 0, fz * 3); fov = 60; break;
@@ -165,13 +171,25 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(M, 0);
         Matrix.translateM(M, 0, -e[0], 0, -e[2]);
         Matrix.rotateM(M, 0, (float) Math.toDegrees(car.h), 0, 1, 0);
-        if (drawCar) {
+        hdState.wheelSteer = car.steer * 0.5f; hdState.steerWheel = car.steer * 2.6f; hdState.spin = car.spin;
+        if (drawCar && hd != null) {
+            common(hdProg, pal, fogDen, camX, camZ, eye);
+            hd.setMaterials(paint, pal.neonA, pal.neonB);
+            hdProg.f1("uKey", 0.35f); hdProg.f1("uLights", 1); hdProg.f1("uBrake", input.brake ? 1 : 0);
+            hd.draw(M, hdState, false);
+        } else if (drawCar) {
             common(solid, pal, fogDen, camX, camZ, eye);
             solid.m4("uModel", M);
             solid.f1("uGloss", CarModel.PAINTS[CarModel.paintIndex(paint)][0] > 0.6f ? 0.6f : 1f);
             Gl.draw(solid, cSolid);
         }
-        GLES20.glEnable(GLES20.GL_BLEND); GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE); GLES20.glDepthMask(false);
+        GLES20.glEnable(GLES20.GL_BLEND); GLES20.glDepthMask(false);
+        if (drawCar && hd != null) {
+            GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+            common(hdProg, pal, fogDen, camX, camZ, eye);
+            hd.draw(M, hdState, true);
+        }
+        GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE);
         common(traffic, pal, fogDen, camX, camZ, eye); traffic.f1("uWidth", 0.3f); Gl.draw(traffic, mTraffic);
         common(glow, pal, fogDen, camX, camZ, eye);
         glow.m4("uModel", M);
@@ -196,7 +214,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         GLES20.glDepthMask(true); GLES20.glDisable(GLES20.GL_BLEND);
 
         hudKmh = car.speed() * 3.6f; hudBoost = car.boost; hudBoosting = car.boosting; hudDrift = car.drift; hudSteer = car.steer;
-        hudH = car.h; hudX = car.x; hudZ = car.z; hudDist = car.dist; hudScore = car.score; hudBest = car.best; hudCockpit = view == 3;
+        hudH = car.h; hudX = car.x; hudZ = car.z; hudDist = car.dist; hudScore = car.score; hudBest = car.best; hudCockpit = view == 3 && hd == null;
     }
 
     public void resetCar() { car.reset(); camH = 0; }

@@ -80,7 +80,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         r.paused = true;
         String[] items = {"▶ RIPRENDI", "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
             "METEO: " + weatherName(sp.getString("gWeather", "")), "COLORE AUTO: " + CarModel.PAINT_NAMES[CarModel.paintIndex(r.paint)],
-            "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI"};
+            "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI", "🏁 SHOWROOM (garage)"};
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle("NEON RUN · PAUSA")
             .setItems(items, (d, i) -> {
@@ -99,6 +99,7 @@ public class GameActivity extends Activity implements SensorEventListener {
                     case 5: hud.tilt = !hud.tilt; sp.edit().putBoolean("gTilt", hud.tilt).apply(); registerTilt(); r.paused = false; return;
                     case 6: r.resetCar(); r.paused = false; return;
                     case 7: finish(); return;
+                    case 8: startActivity(new android.content.Intent(this, ShowroomActivity.class)); return;
                     default: r.paused = false;
                 }
             })

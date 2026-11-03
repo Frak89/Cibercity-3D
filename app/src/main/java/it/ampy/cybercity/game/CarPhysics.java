@@ -9,6 +9,7 @@ final class CarPhysics {
 
     static final class Input { volatile boolean gas, brake, hand, boost; volatile float steer; }
 
+    float spin = 0;
     float x = 0, z = 42, h = 0, vx = 0, vz = 0, steer = 0, boost = 1, drift = 0, shake = 0, hit = 0, dist = 0;
     int score = 0, best = 0;
     boolean boosting; float slip;
@@ -40,6 +41,7 @@ final class CarPhysics {
         vx = nfx * vF + nrx * vR + (fx - nfx) * vF * 0.6f;
         vz = nfz * vF + nrz * vR + (fz - nfz) * vF * 0.6f;
         x += vx * dt; z += vz * dt;
+        spin += vF * dt / CarHd.WHEEL_R;
         dist += speed() * dt;
         slip = Math.abs(vx * nrx + vz * nrz);
         if (slip > 4 && sp > 12) drift += slip * dt * 10;

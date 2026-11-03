@@ -63,6 +63,7 @@ jobs:
           python3 tools/build_web.py
           cp docs/index.html out/Cybercity3D.html
           cp docs/game.html out/NeonRun.html
+          cp docs/showroom.html out/Showroom.html
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -74,7 +75,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest out/Cybercity3D.apk out/Cybercity3D.html out/NeonRun.html \
+          gh release create latest out/Cybercity3D.apk out/Cybercity3D.html out/NeonRun.html out/Showroom.html \
             --title "Cybercity3D — ultima build" \
             --notes "APK compilato automaticamente dal commit ${GITHUB_SHA::7}. Scarica Cybercity3D.apk (salvaschermo Android) oppure Cybercity3D.html (versione browser / PC)." \
             --prerelease
