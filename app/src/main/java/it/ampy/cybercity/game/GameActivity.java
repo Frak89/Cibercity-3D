@@ -82,7 +82,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         r.paused = true;
         String[] items = {"▶ RIPRENDI", "SUONO MOTORE: " + (sp.getBoolean("gSound", true) ? "ON" : "OFF"), "PROPULSIONE: " + CarHd.POWER_NAMES[r.power], "CAPOTE: " + (r.roofOpen ? "APERTA (SPIDER)" : "CHIUSA"), "SCARICO: " + (r.race ? "ELABORATO" : "SERIE"), "MODULO CRONO: " + (r.chronoOn ? "ON (salto a 300 km/h)" : "OFF"), "VOLO LEVITA: " + (r.flyOn ? "ON" : "OFF"), "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
             "METEO: " + weatherName(sp.getString("gWeather", "")), "COLORE AUTO: " + CarModel.PAINT_NAMES[CarModel.paintIndex(r.paint)],
-            "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI", "🏁 SHOWROOM (garage)"};
+            "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI", "🏁 SHOWROOM (garage)", "🏎 KAGE CIRCUIT · PISTA 11 KM"};
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle("NEON RUN · PAUSA")
             .setItems(items, (d, i) -> {
@@ -108,6 +108,7 @@ public class GameActivity extends Activity implements SensorEventListener {
                     case 12: r.resetCar(); r.paused = false; return;
                     case 13: finish(); return;
                     case 14: startActivity(new android.content.Intent(this, ShowroomActivity.class)); return;
+                    case 15: startActivity(new android.content.Intent(this, TrackActivity.class)); return;
                     default: r.paused = false;
                 }
             })
@@ -146,6 +147,8 @@ public class GameActivity extends Activity implements SensorEventListener {
         super.onResume();
         glv.onResume();
         registerTilt();
+        r.kit = sp.getInt("cKit", 0); r.rim = sp.getInt("cRim", 0); r.rimC = sp.getInt("cRimC", 3); r.livery = sp.getInt("cLiv", 0);
+        r.stripeC = sp.getInt("cStripe", 0); r.text = sp.getInt("cText", -1); r.brakes = sp.getInt("cBrakes", 0);
         if (sound == null) sound = new EngineSound(r.eng);
         sound.muted = !sp.getBoolean("gSound", true); sound.start();
         hud.post(haptics);

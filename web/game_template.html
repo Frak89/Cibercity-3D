@@ -60,7 +60,7 @@
     if(e.code==='KeyP'){ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; save(); }
     if(e.code==='KeyM'){ const ks=['',...Object.keys(CYBER_WEATHER)]; o.weather=ks[(ks.indexOf(o.weather)+1)%ks.length]; save(); }
     if(e.code==='KeyV'){ const ks=Object.keys(NeonRun.PAINTS); o.paint=ks[(ks.indexOf(o.paint)+1)%ks.length]; save(); }
-    if(e.code==='KeyR'){ Object.assign(game.c,NeonRun.newCar()); }
+    if(e.code==='KeyR'){ Object.assign(game.c,NeonRun.newCar()); if(game.eng) game.eng.refuel(1); }
     if(e.code==='KeyH'){ o.help=!o.help; save(); }
   });
   addEventListener('keyup',e=>{ keys[e.code]=false; });

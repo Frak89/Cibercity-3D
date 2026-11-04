@@ -40,11 +40,25 @@ public final class CarHd {
     public static int paintIndex(String k) { for (int i = 0; i < PAINT_KEYS.length; i++) if (PAINT_KEYS[i].equals(k)) return i; return 0; }
 
     /** Animated state (radians / 0..1). */
-    public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin, roof, time, chronoPh, fly; public int power; public boolean race, chrono; }   // power: 0 V8, 1 Wankel, 2 LEVITA
+    public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin, roof, time, chronoPh, fly, hand; public int power, kit, rim, livery, text = -1; public boolean race, chrono; }
+    /* customisation (same as KAGE_COLORS / KAGE_BRAKES / RIG in the web build) */
+    public static final String[] COLOR_KEYS = {"bianco", "nero", "rosso", "oro", "ciano", "viola", "arancio"};
+    public static final String[] COLOR_NAMES = {"BIANCO", "NERO", "ROSSO", "ORO", "CIANO", "VIOLA", "ARANCIO"};
+    public static final float[][] COLORS = {{0.92f, 0.92f, 0.94f}, {0.03f, 0.03f, 0.035f}, {0.8f, 0.05f, 0.08f}, {0.85f, 0.62f, 0.18f}, {0f, 0.85f, 0.85f}, {0.55f, 0.2f, 0.85f}, {1f, 0.45f, 0.05f}};
+    public static final String[] BRAKE_NAMES = {"ACCIAIO · PINZE NEON", "CARBOCERAMICA · GIALLO", "ORO · ROSSO", "BLU ANODIZZATO"};
+    static final float[][] BRAKE_DISC = {{0.35f, 0.35f, 0.37f}, {0.10f, 0.10f, 0.11f}, {0.62f, 0.48f, 0.20f}, {0.18f, 0.28f, 0.55f}};
+    static final float[][] BRAKE_CAL = {null, {0.95f, 0.75f, 0.05f}, {0.80f, 0.04f, 0.06f}, {0.10f, 0.35f, 0.95f}};
+    public static final String[] KIT_NAMES = {"SERIE", "WIDEBODY I", "WIDEBODY II GT"}, RIM_NAMES = {"SERIE", "FORGED Y", "TURBOFAN"}, LIVERY_NAMES = {"NESSUNA", "DOPPIA STRISCIA", "LATERALE"};
+    public static final String[] TEXT_PRESETS = {"KAGE GT", "AMPY", "CYBERCITY", "NEON RUN"};
+    static final float[] KIT_TRACK = {0, 0.07f, 0.10f};
+    static final float[] HB_PIVOT = {-0.13f, 0.50f, -0.18f}; static final float HB_PULL = -0.55f;
+    public float[] stripe = COLORS[0], rimCol = COLORS[3]; public int brakes = 0;
+    public static int colorIndex(String k) { for (int i = 0; i < COLOR_KEYS.length; i++) if (COLOR_KEYS[i].equals(k)) return i; return 0; }   // power: 0 V8, 1 Wankel, 2 LEVITA
 
     static final class Part {
         String name; int kind; int hub = -1;          // kind: 0 static, 1 hood, 2 doorL, 3 doorR, 4 wheel, 5 caliper, 6 steering wheel
         int vPos, vNorm, vUV, vMat, ibo, gibo, n, gn, mask = 7;
+        int vis = 0;   // 0 always, 1/2 kit, 3..5 rim A/B/C, 6/7 livery, 10+n lettering preset n
     }
     private final List<Part> parts = new ArrayList<>();
     private Gl.Prog prog;
@@ -75,6 +89,15 @@ public final class CarHd {
             String n = part.name;
             if (n.equals("hood")) part.kind = 1; else if (n.equals("doorL")) part.kind = 2; else if (n.equals("doorR")) part.kind = 3;
             else if (n.startsWith("wheel")) { part.kind = 4; part.hub = hubIndex(n.substring(5)); }
+            else if (n.startsWith("rim") && n.length() == 6) { part.kind = 4; part.hub = hubIndex(n.substring(4)); part.vis = 3 + (n.charAt(3) - 'A'); }
+            else if (n.equals("kit1") || n.equals("kit2")) { part.kind = 0; part.vis = n.charAt(3) - '0'; }
+            else if (n.startsWith("liv")) {
+                part.vis = n.charAt(3) == '1' ? 6 : 7;
+                String f = n.substring(4);
+                part.kind = f.equals("H") ? 1 : f.equals("A") ? 7 : f.equals("B") ? 8 : f.equals("T") ? 9 : f.equals("L") ? 2 : f.equals("R") ? 3 : 0;
+            }
+            else if (n.startsWith("txt")) { char id = n.charAt(3); part.vis = id >= '0' && id <= '9' ? 10 + (id - '0') : 99; part.kind = n.endsWith("L") ? 2 : 3; }
+            else if (n.equals("handbrake")) part.kind = 25;
             else if (n.startsWith("caliper")) { part.kind = 5; part.hub = hubIndex(n.substring(7)); }
             else if (n.equals("steeringWheel")) part.kind = 6;
             else if (n.equals("roofA")) part.kind = 7; else if (n.equals("roofB")) part.kind = 8; else if (n.equals("tonneau")) part.kind = 9;
@@ -124,17 +147,18 @@ public final class CarHd {
     /** Material table — same as materials() in web/car_render.js. */
     public void setMaterials(String paint, float[] a, float[] b) {
         float[] p = PAINTS[paintIndex(paint)];
+        float[] disc = BRAKE_DISC[Math.max(0, Math.min(3, brakes))], cal = BRAKE_CAL[Math.max(0, Math.min(3, brakes))] != null ? BRAKE_CAL[brakes] : b;
         float[][] col = {p, {0.06f, 0.06f, 0.07f}, {0.02f, 0.02f, 0.025f}, {0.30f, 0.31f, 0.35f}, {0.02f, 0.03f, 0.05f}, {0.85f, 0.95f, 1.0f}, {1.0f, 0.06f, 0.12f}, a,
-            {0.025f, 0.025f, 0.025f}, {0.35f, 0.35f, 0.37f}, b, {0.05f, 0.045f, 0.05f}, {0.035f, 0.035f, 0.04f}, {0.025f, 0.027f, 0.035f}, {0, 0, 0}, {0.6f, 0.6f, 0.62f},
-            b, a, {0.03f, 0.03f, 0.035f}, {0.03f, 0.03f, 0.035f}, {0.62f, 0.58f, 0.60f}};
+            {0.025f, 0.025f, 0.025f}, disc, cal, {0.05f, 0.045f, 0.05f}, {0.035f, 0.035f, 0.04f}, {0.025f, 0.027f, 0.035f}, {0, 0, 0}, {0.6f, 0.6f, 0.62f},
+            b, a, {0.03f, 0.03f, 0.035f}, {0.03f, 0.03f, 0.035f}, {0.62f, 0.58f, 0.60f}, stripe, {0.92f, 0.92f, 0.88f}, rimCol};
         float[][] par = {{0.18f, 0.55f, 0, 0}, {0.3f, 0.2f, 0, 1}, {0.6f, 0, 0, 0}, {0.12f, 1, 0, 0}, {0.05f, 0, 0, 0}, {0.2f, 0, 1, 7}, {0.2f, 0, 1, 6}, {0.3f, 0, 1, 9},
             {0.9f, 0, 0, 3}, {0.35f, 0.9f, 0, 5}, {0.35f, 0.2f, 0.15f, 0}, {0.55f, 0, 0, 2}, {0.95f, 0, 0, 0}, {0.7f, 0, 0, 0}, {0.3f, 0, 1, 4}, {0.35f, 1, 0, 0},
-            {0.3f, 0, 1, 9}, {0.3f, 0, 0.8f, 9}, {0.5f, 0.3f, 0, 8}, {1, 0, 0, 10}, {0.22f, 1, 0, 11}};
-        float[] c3 = new float[63], c4 = new float[84];
-        for (int i = 0; i < 21; i++) { System.arraycopy(col[i], 0, c3, i * 3, 3); System.arraycopy(par[i], 0, c4, i * 4, 4); }
+            {0.3f, 0, 1, 9}, {0.3f, 0, 0.8f, 9}, {0.5f, 0.3f, 0, 8}, {1, 0, 0, 10}, {0.22f, 1, 0, 11}, {0.2f, 0.3f, 0, 0}, {0.5f, 0, 0.12f, 0}, {0.18f, 1, 0, 0}};
+        float[] c3 = new float[72], c4 = new float[96];
+        for (int i = 0; i < 24; i++) { System.arraycopy(col[i], 0, c3, i * 3, 3); System.arraycopy(par[i], 0, c4, i * 4, 4); }
         GLES20.glUseProgram(prog.id);
-        GLES20.glUniform3fv(prog.u("uMatCol"), 21, c3, 0);
-        GLES20.glUniform4fv(prog.u("uMatPar"), 21, c4, 0);
+        GLES20.glUniform3fv(prog.u("uMatCol"), 24, c3, 0);
+        GLES20.glUniform4fv(prog.u("uMatPar"), 24, c4, 0);
     }
 
     private static void about(float[] m, float[] p, float rad) {
@@ -159,7 +183,7 @@ public final class CarHd {
             case 12: {
                 float[] h = HUBS[p.hub]; float fl = s.fly, outS = h[0] > 0 ? 1 : -1;
                 float bob = SPHERE_LIFT + 0.006f * (float) Math.sin(s.time * 2.3f + h[2] * 3 + h[0]);
-                Matrix.translateM(out, 0, h[0] + outS * TUCK_X * fl, h[1] + bob + TUCK_Y * fl, h[2]);
+                Matrix.translateM(out, 0, h[0] + outS * (TUCK_X * fl + KIT_TRACK[Math.max(0, Math.min(2, s.kit))]), h[1] + bob + TUCK_Y * fl, h[2]);
                 if (p.hub < 2) Matrix.rotateM(out, 0, (float) Math.toDegrees(s.wheelSteer * (1 - fl)), 0, 1, 0);
                 Matrix.rotateM(out, 0, (float) Math.toDegrees(-outS * fl * Math.PI / 2), 0, 0, 1);
                 if (fl > 0.5f) Matrix.rotateM(out, 0, (float) Math.toDegrees((s.time * 4) % (2 * Math.PI)), 0, 1, 0);
@@ -188,9 +212,10 @@ public final class CarHd {
                 Matrix.translateM(out, 0, -pv[0], -pv[1], -pv[2]);
                 break;
             }
+            case 25: about(out, HB_PIVOT, HB_PULL * s.hand); return;
             case 4: case 5: {
                 float[] h = HUBS[p.hub];
-                Matrix.translateM(out, 0, h[0], h[1], h[2]);
+                Matrix.translateM(out, 0, h[0] + (h[0] > 0 ? 1 : -1) * KIT_TRACK[Math.max(0, Math.min(2, s.kit))], h[1], h[2]);
                 if (p.hub < 2) Matrix.rotateM(out, 0, (float) Math.toDegrees(s.wheelSteer), 0, 1, 0);
                 if (p.kind == 4) Matrix.rotateM(out, 0, (float) Math.toDegrees(s.spin % (2 * Math.PI)), 1, 0, 0);
                 break;
@@ -217,6 +242,13 @@ public final class CarHd {
             if ((p.kind == 18 && s.race) || (p.kind == 17 && !s.race)) continue;
             if ((p.kind == 14 || p.kind == 15) && !s.chrono) continue;
             if (p.kind == 16 && s.fly > 0.25f) continue;
+            if (p.vis != 0) {
+                int v = p.vis;
+                if ((v == 1 || v == 2) && s.kit != v) continue;
+                if (v >= 3 && v <= 5 && s.rim != v - 3) continue;
+                if ((v == 6 || v == 7) && s.livery != v - 5) continue;
+                if (v >= 10 && s.text != v - 10) continue;
+            }
             partMatrix(p, car, s, T);
             GLES20.glUniformMatrix4fv(lm, 1, false, T, 0);
             bind(aPos, p.vPos, 3); bind(aNorm, p.vNorm, 3); bind(aUV, p.vUV, 2); bind(aMat, p.vMat, 1);

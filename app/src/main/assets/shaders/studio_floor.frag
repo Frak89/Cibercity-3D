@@ -12,6 +12,8 @@ void main(){
     vec2 g = abs(fract(vWP.xz * 0.5) - 0.5);
     col += uNeonB * 0.05 * step(0.48, max(g.x, g.y)) * smoothstep(14.0, 4.0, r);
     col *= smoothstep(26.0, 5.0, r) * 0.9 + 0.1;
-    float a = mix(uAlpha, 1.0, smoothstep(3.0, 9.0, r));
+    vec3 hl = headLight(vWP) * 0.35;
+    col += hl;
+    float a = min(1.0, length(hl) * 0.8 + mix(uAlpha, 1.0, smoothstep(3.0, 9.0, r)));
     gl_FragColor = vec4(col, a);
 }

@@ -61,6 +61,7 @@ public class MainActivity extends Activity {
         }));
         panel.addView(button("▶ GIOCA · NEON RUN", true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.GameActivity.class))));
         panel.addView(button("SHOWROOM · AMPY KAGE GT", false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.ShowroomActivity.class))));
+        panel.addView(button("🏁 KAGE CIRCUIT · PISTA 11 KM", false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class))));
         panel.addView(button("IMPOSTAZIONI", false, v -> startActivity(new Intent(this, SettingsActivity.class))));
         weatherBtn = button("", false, v -> {
             // cycle the preview through every weather effect (not saved)

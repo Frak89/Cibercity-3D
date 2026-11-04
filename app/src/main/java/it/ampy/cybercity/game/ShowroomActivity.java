@@ -44,6 +44,7 @@ public class ShowroomActivity extends Activity {
         r.paint = sp.getString("gPaint", "rosso");
         r.power = CarHd.powerIndex(sp.getString("gPower", "v8"));
         r.race = sp.getBoolean("gRace", false); r.chrono = sp.getBoolean("gChrono", false);
+        loadCustom();
         accent = Palette.argb(Palette.of(r.palette).neonA);
         glv = new GLSurfaceView(this);
         glv.setEGLContextClientVersion(2);
@@ -98,6 +99,7 @@ public class ShowroomActivity extends Activity {
             r.power = (r.power + 1) % 3; sp.edit().putString("gPower", CarHd.POWER_KEYS[r.power]).apply();
             btn.get("power").setText(CarHd.POWER_NAMES[r.power]); specs.setText(specsText()); titleView.setText(CarHd.MODEL_NAMES[r.power]);
         });
+        add(bar, "custom", "🎨 PERSONALIZZA", false, v -> customize());
         add(bar, "exh", "SCARICO: SERIE", false, v -> { r.race = !r.race; sel("exh", r.race); btn.get("exh").setText(r.race ? "SCARICO: ELABORATO" : "SCARICO: SERIE"); sp.edit().putBoolean("gRace", r.race).apply(); });
         add(bar, "chrono", "MODULO CRONO", false, v -> { r.chrono = !r.chrono; sel("chrono", r.chrono); sp.edit().putBoolean("gChrono", r.chrono).apply(); });
         add(bar, "fly", "VOLO", false, v -> {
@@ -156,6 +158,32 @@ public class ShowroomActivity extends Activity {
     private void revBg(TextView t, boolean on) {
         GradientDrawable g = new GradientDrawable(); g.setColor(on ? 0xffff7a2e : 0xb3070b13); g.setStroke(dp(2), 0xffff7a2e); g.setCornerRadius(dp(22));
         t.setBackground(g); t.setTextColor(on ? 0xff070b13 : 0xffffd2b0);
+    }
+
+    /** kits, rims, liveries, lettering, brake colours — saved for the game too */
+    private void loadCustom() {
+        r.kit = sp.getInt("cKit", 0); r.rim = sp.getInt("cRim", 0); r.rimC = sp.getInt("cRimC", 3); r.livery = sp.getInt("cLiv", 0);
+        r.stripeC = sp.getInt("cStripe", 0); r.text = sp.getInt("cText", -1); r.brakes = sp.getInt("cBrakes", 0);
+    }
+    private void customize() {
+        String[] items = {"KIT: " + CarHd.KIT_NAMES[r.kit], "CERCHI: " + CarHd.RIM_NAMES[r.rim], "COLORE CERCHI: " + CarHd.COLOR_NAMES[r.rimC],
+            "LIVREA: " + CarHd.LIVERY_NAMES[r.livery], "COLORE LIVREA: " + CarHd.COLOR_NAMES[r.stripeC], "SCRITTA: " + (r.text < 0 ? "NESSUNA" : CarHd.TEXT_PRESETS[r.text]),
+            "FRENI: " + CarHd.BRAKE_NAMES[r.brakes], "TARGA: KAGE 2789 GT"};
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("PERSONALIZZAZIONE")
+            .setItems(items, (d, i) -> {
+                switch (i) {
+                    case 0: r.kit = (r.kit + 1) % 3; break;
+                    case 1: r.rim = (r.rim + 1) % 3; break;
+                    case 2: r.rimC = (r.rimC + 1) % CarHd.COLORS.length; break;
+                    case 3: r.livery = (r.livery + 1) % 3; break;
+                    case 4: r.stripeC = (r.stripeC + 1) % CarHd.COLORS.length; break;
+                    case 5: r.text = r.text + 1 >= CarHd.TEXT_PRESETS.length ? -1 : r.text + 1; break;
+                    case 6: r.brakes = (r.brakes + 1) % CarHd.BRAKE_NAMES.length; break;
+                    default: return;
+                }
+                sp.edit().putInt("cKit", r.kit).putInt("cRim", r.rim).putInt("cRimC", r.rimC).putInt("cLiv", r.livery).putInt("cStripe", r.stripeC).putInt("cText", r.text).putInt("cBrakes", r.brakes).apply();
+                glv.post(this::customize);
+            }).show();
     }
 
     private String specsText() {

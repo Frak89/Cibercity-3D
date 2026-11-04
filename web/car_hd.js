@@ -5,9 +5,9 @@
 (function (root) {
 'use strict';
 const M = { PAINT: 0, CARBON: 1, TRIM: 2, CHROME: 3, GLASS: 4, HEAD: 5, TAIL: 6, NEON: 7, TIRE: 8, DISC: 9, CALIPER: 10,
-  LEATHER: 11, ALCANTARA: 12, DASH: 13, SCREEN: 14, ALU: 15, ENGNEON: 16, INEON: 17, GRILLE: 18, CARPET: 19, TITAN: 20 };
+  LEATHER: 11, ALCANTARA: 12, DASH: 13, SCREEN: 14, ALU: 15, ENGNEON: 16, INEON: 17, GRILLE: 18, CARPET: 19, TITAN: 20, STRIPE: 21, PLATE: 22, RIMCOL: 23 };
 const MAT_NAMES = ['paint', 'carbon', 'trim_black', 'chrome', 'glass', 'headlight', 'taillight', 'neon', 'tyre', 'brake_disc', 'caliper',
-  'leather', 'alcantara', 'dashboard', 'screen', 'aluminium', 'engine_neon', 'interior_neon', 'grille', 'carpet', 'titanium'];
+  'leather', 'alcantara', 'dashboard', 'screen', 'aluminium', 'engine_neon', 'interior_neon', 'grille', 'carpet', 'titanium', 'livery', 'plate', 'rim_custom'];
 
 /* hinge / hub positions shared with the renderers */
 const RIG = {
@@ -22,7 +22,12 @@ const RIG = {
   // then the stack flips backwards around the B pivot into the well under the rear deck lid (tonneau).
   roof: { pivotB: [0, 0.86, -1.32], joint: [0, 1.235, -0.35], fold: Math.PI - 0.08, flip: Math.PI - 0.10 },
   tonneau: { pivot: [0, 0.85, -2.22], open: -1.15 },
-  winDrop: 0.32,
+  winDrop: 0.45,
+  handbrake: { pivot: [-0.13, 0.50, -0.18], pull: -0.55 },
+  // widebody kits push the wheels outwards (track width, m per side)
+  kitTrack: [0, 0.07, 0.10],
+  plate: 'KAGE 2789 GT',
+  textPresets: ['KAGE GT', 'AMPY', 'CYBERCITY', 'NEON RUN'],
   // levitation spheres (RSQ-style) instead of wheels
   sphere: { r: 0.335, lift: 0.04 },
   // KAGE CHRONO: chrono core between the seats (three counter-rotating rings)
@@ -34,6 +39,78 @@ const RIG = {
 function roofPhases(r) {
   const sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
   return { win: sm(r / 0.2), lid: sm((r - 0.12) / 0.2) * (1 - sm((r - 0.80) / 0.18)), fold: sm((r - 0.25) / 0.25), flip: sm((r - 0.42) / 0.40) };
+}
+
+/* ---------------------------------------------------------------- stroke font (liveries, plates): glyphs on a 4 × 6 grid */
+const FONT = {
+  A: [[[0,0],[0,4],[2,6],[4,4],[4,0]], [[0,3],[4,3]]], B: [[[0,0],[0,6],[3,6],[4,5],[4,4],[3,3],[0,3]], [[3,3],[4,2],[4,1],[3,0],[0,0]]],
+  C: [[[4,5],[3,6],[1,6],[0,5],[0,1],[1,0],[3,0],[4,1]]], D: [[[0,0],[0,6],[2.5,6],[4,4.5],[4,1.5],[2.5,0],[0,0]]],
+  E: [[[4,6],[0,6],[0,0],[4,0]], [[0,3],[3,3]]], F: [[[4,6],[0,6],[0,0]], [[0,3],[3,3]]],
+  G: [[[4,5],[3,6],[1,6],[0,5],[0,1],[1,0],[3,0],[4,1],[4,3],[2,3]]], H: [[[0,0],[0,6]], [[4,0],[4,6]], [[0,3],[4,3]]],
+  I: [[[1,6],[3,6]], [[2,6],[2,0]], [[1,0],[3,0]]], J: [[[4,6],[4,1],[3,0],[1,0],[0,1]]], K: [[[0,0],[0,6]], [[4,6],[0,2.5]], [[1.3,3.6],[4,0]]],
+  L: [[[0,6],[0,0],[4,0]]], M: [[[0,0],[0,6],[2,3],[4,6],[4,0]]], N: [[[0,0],[0,6],[4,0],[4,6]]], O: [[[1,0],[0,1],[0,5],[1,6],[3,6],[4,5],[4,1],[3,0],[1,0]]],
+  P: [[[0,0],[0,6],[3,6],[4,5],[4,4],[3,3],[0,3]]], Q: [[[1,0],[0,1],[0,5],[1,6],[3,6],[4,5],[4,1],[3,0],[1,0]], [[2.5,1.5],[4,-0.5]]],
+  R: [[[0,0],[0,6],[3,6],[4,5],[4,4],[3,3],[0,3]], [[2,3],[4,0]]], S: [[[4,5],[3,6],[1,6],[0,5],[0,4],[1,3],[3,3],[4,2],[4,1],[3,0],[1,0],[0,1]]],
+  T: [[[0,6],[4,6]], [[2,6],[2,0]]], U: [[[0,6],[0,1],[1,0],[3,0],[4,1],[4,6]]], V: [[[0,6],[2,0],[4,6]]], W: [[[0,6],[1,0],[2,4],[3,0],[4,6]]],
+  X: [[[0,0],[4,6]], [[0,6],[4,0]]], Y: [[[0,6],[2,3],[4,6]], [[2,3],[2,0]]], Z: [[[0,6],[4,6],[0,0],[4,0]]],
+  0: [[[1,0],[0,1],[0,5],[1,6],[3,6],[4,5],[4,1],[3,0],[1,0]], [[0.5,1],[3.5,5]]], 1: [[[1,5],[2,6],[2,0]], [[1,0],[3,0]]],
+  2: [[[0,5],[1,6],[3,6],[4,5],[4,4],[0,0],[4,0]]], 3: [[[0,5],[1,6],[3,6],[4,5],[4,4],[3,3],[1.5,3]], [[3,3],[4,2],[4,1],[3,0],[1,0],[0,1]]],
+  4: [[[3,0],[3,6],[0,2],[4,2]]], 5: [[[4,6],[0,6],[0,3.5],[3,3.5],[4,2.5],[4,1],[3,0],[0,0]]], 6: [[[4,5],[3,6],[1,6],[0,5],[0,1],[1,0],[3,0],[4,1],[4,2],[3,3],[0,3]]],
+  7: [[[0,6],[4,6],[1.5,0]]], 8: [[[1,3],[0,4],[0,5],[1,6],[3,6],[4,5],[4,4],[3,3],[1,3],[0,2],[0,1],[1,0],[3,0],[4,1],[4,2],[3,3]]],
+  9: [[[0,1],[1,0],[3,0],[4,1],[4,5],[3,6],[1,6],[0,5],[0,4],[1,3],[4,3]]], '-': [[[0.5,3],[3.5,3]]], '.': [[[1.8,0],[2.2,0]]], '·': [[[1.8,3],[2.2,3]]]
+};
+/** polylines of a text in "em" units: glyph height 1, advance 0.92 */
+function textStrokes(text) {
+  const out = []; let x = 0;
+  for (const ch of String(text).toUpperCase()) {
+    const g = FONT[ch];
+    if (g) for (const pl of g) out.push(pl.map(p => [x + p[0] / 6, p[1] / 6]));
+    x += ch === ' ' ? 0.6 : 0.92;
+  }
+  return { lines: out, width: Math.max(0, x - 0.25) };
+}
+/* ---------------------------------------------------------------- decals on the skin (liveries, lettering) */
+function bodyNrm(u, v) { const e = 1e-4; return norm(cross(sub(bodyPt(Math.min(1, u + e), v), bodyPt(Math.max(0, u - e), v)), sub(bodyPt(u, Math.min(1, v + e)), bodyPt(u, Math.max(0, v - e))))); }
+const Z0b = () => bodyPt(0, 0.5)[2], Z1b = () => bodyPt(1, 0.5)[2];
+/** point + outward normal on the body skin at (z, vv) on the left / right side */
+function onSkin(z, vv, left, lift) {
+  const z0 = Z0b(), z1 = Z1b(), u = (z - z0) / (z1 - z0), v = left ? vv / 2 : 1 - vv / 2;
+  const p = bodyPt(u, v), n0 = bodyNrm(u, v), sg = Math.sign(n0[0] * p[0] + n0[1] * (p[1] - 0.45) + n0[2] * p[2] * 0.3) || 1, n = scl(n0, sg);
+  return [add(p, scl(n, lift || 0.003)), n];
+}
+/** thin ribbon along fn(t) → [point, normal] */
+function ribbon(P, fn, n, w, mat) {
+  let pa = -1, pb = -1;
+  for (let i = 0; i <= n; i++) {
+    const [p, nn] = fn(i / n), q2 = fn(Math.min(1, (i + 0.5) / n))[0], q0 = fn(Math.max(0, (i - 0.5) / n))[0];
+    let side = cross(sub(q2, q0), nn); const l = Math.hypot(side[0], side[1], side[2]); if (l < 1e-9) continue; side = scl(side, w / 2 / l);
+    const a = vert(P, add(p, side), nn, [i / n, 0], mat), b = vert(P, sub(p, side), nn, [i / n, 1], mat);
+    if (pa >= 0) { tri(P, pa, a, b, mat); tri(P, pa, b, pb, mat); }
+    pa = a; pb = b;
+  }
+}
+/** lettering along the door side: H = cap height (m), centred at zc, baseline at vv0 */
+function textOnSide(P, text, left, zc, vv0, H, mat) {
+  const { lines, width } = textStrokes(text), kvv = 1.25;
+  for (const pl of lines) for (let i = 0; i < pl.length - 1; i++) {
+    const a = pl[i], b = pl[i + 1], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    ribbon(P, t => { const x = lerp(a[0], b[0], t), y = lerp(a[1], b[1], t); const z = left ? zc + (x - width / 2) * H : zc - (x - width / 2) * H; return onSkin(z, vv0 + y * H * kvv, left, 0.0035); },
+      Math.max(1, Math.ceil(len * 6)), H * 0.14, mat);
+  }
+}
+/** flat lettering on a plane: origin o, right axis rx, up axis ry, normal nz */
+function textFlat(P, text, o, rx, ry, nz, H, mat) {
+  const { lines, width } = textStrokes(text);
+  for (const pl of lines) for (let i = 0; i < pl.length - 1; i++) {
+    const a = pl[i], b = pl[i + 1];
+    ribbon(P, t => { const x = (lerp(a[0], b[0], t) - width / 2) * H, y = (lerp(a[1], b[1], t) - 0.5) * H; return [add(o, add(scl(rx, x), scl(ry, y))), nz]; }, 1, H * 0.15, mat);
+  }
+}
+/** custom lettering parts (web: rebuilt at runtime when the text changes) */
+function buildText(text, id) {
+  const L = Part('txt' + (id || 'C') + 'L'), Rr = Part('txt' + (id || 'C') + 'R');
+  textOnSide(L, text, true, -0.10, 0.21, 0.10, M.STRIPE); textOnSide(Rr, text, false, -0.10, 0.21, 0.10, M.STRIPE);
+  return [L, Rr];
 }
 
 /* ---------------------------------------------------------------- mesh parts */
@@ -336,13 +413,20 @@ function build(opt) {
   // headlights (follow the nose surface) and full-width segmented tail light
   surface(bodyPt, NU * 3, NV * 3, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
-    // headlight: a dark lens pocket with a thin diagonal LED blade inside
-    const blade = Math.abs((z - 2.30) + (vv - 0.62) * 0.42);
-    if (z > 2.22 && z < 2.315 && vv > 0.60 && vv < 0.86) return { part: body, mat: blade < 0.007 ? M.HEAD : M.GLASS === 4 && blade < 0.03 ? M.TRIM : M.PAINT, offset: blade < 0.03 ? 0.003 : 0 } ;
-    if (z > 2.315 && z < 2.335 && vv > 0.42 && vv < 0.62) return { part: body, mat: M.NEON, offset: 0.004 };   // DRL hook
     if (z < -2.27 && vv > 0.42) return { part: body, mat: M.TAIL, offset: 0.004 };
     return null;
   }, [8, 4], { id: 'lights' });
+  // headlights: clean LED-matrix panels following the nose (exact edges, no grid staircase), dark bezel, DRL hook
+  const onBody = (z, vv, left, lift) => {
+    const u = uOf(z), v = vOf(vv, left), p = bodyPt(u, v), n0 = bodyN(u, v);
+    const sg = Math.sign(n0[0] * p[0] + n0[1] * (p[1] - 0.45) + n0[2] * p[2]) || 1, n = scl(n0, sg);
+    return [add(p, scl(n, lift)), n];
+  };
+  for (const left of [true, false]) {
+    surface((u, v) => onBody(lerp(2.200, 2.322, u), lerp(0.585, 0.872, v), left, 0.0025)[0], 24, 12, () => ({ part: body, mat: M.TRIM }), [1, 1], { id: 'hlBezel' + left });
+    surface((u, v) => onBody(lerp(2.214, 2.308, u), lerp(0.605, 0.852, v), left, 0.0045)[0], 30, 16, () => ({ part: body, mat: M.HEAD }), [0.26, 0.30], { id: 'hlPanel' + left });
+    gap(body, t => [uOf(2.326), vOf(lerp(0.40, 0.62, t), left)], 24, 0.014, M.NEON, 0.004);
+  }
   // end caps: rear panel (dark, with diffuser) and nose with intake grille
   const capFn = (zc, recess) => (s, t) => { const p = bodyPt(uOf(zc), s); const c = [0, 0.32 + (station(zc)[3] - 0.32) * 0.55, zc + recess]; return [lerp(p[0], c[0], t * 0.98), lerp(p[1], c[1], t * 0.98), lerp(p[2], c[2], t)]; };
   surface(capFn(Z0, -0.02), NV, 10, (s, t) => ({ part: body, mat: M.TRIM }), [4, 1], { id: 'rearcap' });
@@ -463,12 +547,18 @@ function build(opt) {
     surface(dash, Math.round(80 * q), Math.round(28 * q), (u, v) => {
       return { part: interior, mat: v < 0.5 ? M.LEATHER : v < 0.75 ? M.ALCANTARA : M.CARBON };
     }, [8, 3], { id: 'dash' });
+    // close the dashboard: end caps against the doors and a centre stack down to the tunnel
+    for (const ex of [0, 1]) surface((u, v) => { const p = dash(ex, u), c = dash(ex, 0.5); return [p[0], lerp(p[1], c[1] - 0.06, v), lerp(p[2], c[2] + 0.06, v)]; }, 20, 4, () => ({ part: interior, mat: M.ALCANTARA }), [1, 1], { id: 'dashCap' + ex });
+    surface((u, v) => { const x = lerp(-0.14, 0.14, u), p = dash(0.5 + x / 1.56, 0.95); return [x, lerp(p[1], 0.47, v), lerp(p[2], 0.30, v)]; }, 10, 6, () => ({ part: interior, mat: M.CARBON }), [2, 2], { id: 'stack' });
+    for (const sx of [-1, 1]) surface((u, v) => { const y = lerp(0.47, 0.66, u), z = lerp(0.30, 0.44, u); return [sx * 0.14, y, lerp(z, z + 0.12, v)]; }, 4, 4, () => ({ part: interior, mat: M.CARBON }), [1, 1], { id: 'stackS' + sx });
+    for (let k = 0; k < 4; k++) box(interior, [-0.075 + k * 0.05, 0.585, 0.395 - 0.02 * k * 0], [0.016, 0.008, 0.004], k === 1 ? M.ENGNEON : M.ALU, -0.6);
+    surface((u, v) => { const p = dash(lerp(0.62, 0.95, u), 0.82); return [p[0], p[1] - 0.004, p[2] - 0.004]; }, 20, 1, () => ({ part: interior, mat: M.TRIM }), [1, 1], { id: 'glovebox' });
     // driver display inside the binnacle (uv.x 0..1 → instrument cluster in the shader)
-    surface((u, v) => { const x = lerp(-0.60, -0.20, u); return [x, 0.878 + v * 0.072, 0.335 + 0.30 * (x + 0.40) * (x + 0.40) + v * 0.03]; }, 28, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'cluster' });
+    surface((u, v) => { const x = lerp(-0.20, -0.60, u); return [x, 0.878 + v * 0.072, 0.335 + 0.30 * (x + 0.40) * (x + 0.40) + v * 0.03]; }, 28, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'cluster' });
     surface((u, v) => { const x = lerp(-0.615, -0.185, u); return [x, 0.87 + v * 0.088, 0.342 + 0.30 * (x + 0.40) * (x + 0.40) + v * 0.03]; }, 28, 2, () => ({ part: interior, mat: M.CARBON }), [4, 1], { id: 'clusterBack' });
     surface((u, v) => { const x = lerp(-0.615, -0.185, u); return [x, 0.868 + v * 0.004, 0.33 + 0.30 * (x + 0.40) * (x + 0.40)]; }, 28, 1, () => ({ part: interior, mat: M.INEON }), [1, 1], { id: 'clusterLine' });
     // floating centre display (uv.x 2..3 → navigation map)
-    surface((u, v) => [lerp(-0.07, 0.27, u), 0.745 + v * 0.11, 0.315 + v * 0.03], 16, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'centre', uvOff: [2, 0] });
+    surface((u, v) => [lerp(0.27, -0.07, u), 0.745 + v * 0.11, 0.315 + v * 0.03], 16, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'centre', uvOff: [2, 0] });
     box(interior, [0.10, 0.80, 0.335], [0.18, 0.062, 0.008], M.TRIM, -0.27);
     tube(interior, [[0.10, 0.74, 0.35], [0.10, 0.70, 0.40]], 0.012, 8, M.ALU);
     // turbine vents
@@ -494,6 +584,16 @@ function build(opt) {
     blob(interior, [sx, 1.005, -0.845], [0.12, 0.075, 0.045], 0.4, M.LEATHER, -0.22);
     box(interior, [sx, 0.73, -0.718], [0.012, 0.27, 0.004], M.INEON, -0.22);
     for (const hx of [-0.08, 0.08]) tube(interior, [[sx + hx, 0.98, -0.83], [sx + hx * 0.5, 0.76, -0.71], [sx + hx * 0.2, 0.50, -0.62]], 0.012, 6, M.ALCANTARA);
+  }
+  // handbrake lever on the tunnel, next to the driver
+  {
+    const hb = P('handbrake', RIG.handbrake.pivot), c = RIG.handbrake.pivot;
+    box(interior, [c[0], c[1] - 0.01, c[2] - 0.06], [0.035, 0.012, 0.11], M.CARBON);
+    surface((u, v) => { const a = u * Math.PI * 2; return [c[0] + Math.cos(a) * 0.03 * (1 - v * 0.4), c[1] + v * 0.03, c[2] - 0.06 + Math.sin(a) * 0.09 * (1 - v * 0.5)]; }, 16, 3, () => ({ part: interior, mat: M.LEATHER }), [3, 1], { id: 'hbBoot' });
+    tube(hb, [[c[0], c[1], c[2]], [c[0], c[1] + 0.05, c[2] - 0.10], [c[0], c[1] + 0.075, c[2] - 0.22]], 0.013, 10, M.ALU);
+    tube(hb, [[c[0], c[1] + 0.06, c[2] - 0.12], [c[0], c[1] + 0.078, c[2] - 0.23]], 0.021, 12, M.ALCANTARA);
+    lathe(hb, [c[0], c[1] + 0.078, c[2] - 0.235], [[0, 0.0], [0, 0.012], [-0.012, 0.012], [-0.014, 0]], 12, M.CHROME, 'z');
+    box(hb, [c[0], c[1] + 0.088, c[2] - 0.17], [0.004, 0.002, 0.04], M.INEON);
   }
   // pedals and dead pedal
   for (const [px, w] of [[-0.52, 0.03], [-0.40, 0.05], [-0.30, 0.04]]) box(interior, [px, 0.40, 0.78], [w, 0.06, 0.01], M.ALU, 0.6);
@@ -529,7 +629,7 @@ function build(opt) {
     // spokes into a carbon centre plate with a small display, rotary dials, buttons and a shift-light bar
     for (const sx of [-1, 1]) surface((u, v) => { const x = sx * lerp(0.05, 0.15, u), y = lerp(-0.028, 0.022, v) - 0.03 * u * u; return [x, y, 0.025 - 0.012 * u]; }, 10, 3, () => ({ part: sw, mat: M.CARBON }), [2, 1], { id: 'spk' + sx });
     blob(sw, [0, -0.005, 0.03], [0.065, 0.055, 0.018], 0.35, M.CARBON);
-    surface((u, v) => [lerp(-0.042, 0.042, u), lerp(-0.026, 0.020, v), 0.011], 8, 4, () => ({ part: sw, mat: M.SCREEN }), [1, 1], { id: 'swdisp' });
+    surface((u, v) => [lerp(0.042, -0.042, u), lerp(-0.026, 0.020, v), 0.011], 8, 4, () => ({ part: sw, mat: M.SCREEN }), [1, 1], { id: 'swdisp' });
     for (let k = 0; k < 9; k++) box(sw, [-0.04 + k * 0.01, 0.040, 0.016], [0.0035, 0.0025, 0.003], k < 3 ? M.NEON : k < 6 ? M.ENGNEON : M.TAIL);
     for (const [dx, dy] of [[-0.11, -0.035], [0.11, -0.035]]) {
       lathe(sw, [dx, dy, 0.012], [[0, 0.0], [0, 0.016], [0.012, 0.016], [0.012, 0]], 16, M.ALU, 'z');
@@ -575,9 +675,27 @@ function build(opt) {
     const seg = Math.round(64 * q);
     // tyre (tread via uv in the shader)
     lathe(W, [0, 0, 0], [[X(-0.15), 0.245], [X(-0.155), 0.30], [X(-0.14), 0.348], [X(-0.11), 0.365], [X(0.0), 0.367], [X(0.11), 0.365], [X(0.14), 0.348], [X(0.155), 0.30], [X(0.15), 0.245]], seg, M.TIRE, 'x', 40);
-    // rim barrel + lip
-    lathe(W, [0, 0, 0], [[X(-0.13), 0.235], [X(0.11), 0.235], [X(0.13), 0.245], [X(0.135), 0.235]], seg, M.CHROME, 'x', 1);
-    lathe(W, [0, 0, 0], [[X(0.136), 0.226], [X(0.136), 0.236]], seg, M.NEON, 'x', 1);
+    // rim styles: A (stock twisted 10-spoke), B (forged split-Y 7×2, custom colour), C (aero turbofan disc)
+    const RA = P('rimA' + key, hub), RB = P('rimB' + key, hub), RC = P('rimC' + key, hub);
+    for (const [Rp, lipMat] of [[RA, M.CHROME], [RB, M.RIMCOL], [RC, M.CARBON]]) {
+      lathe(Rp, [0, 0, 0], [[X(-0.13), 0.235], [X(0.11), 0.235], [X(0.13), 0.245], [X(0.135), 0.235]], seg, lipMat, 'x', 1);
+      lathe(Rp, [0, 0, 0], [[X(0.136), 0.226], [X(0.136), 0.236]], seg, M.NEON, 'x', 1);
+    }
+    for (let s2 = 0; s2 < 7; s2++) for (const sg of [-1, 1]) {
+      const a = s2 / 7 * Math.PI * 2;
+      surface((u, v) => { const r = lerp(0.07, 0.228, u), sp = sg * 0.11 * smooth(u * 1.4), w = lerp(0.022, 0.012, u), aa = a + sp + (v - 0.5) * w / r * 2;
+        return [X(lerp(0.118, 0.128, u) + 0.008 * Math.sin(v * Math.PI)), Math.cos(aa) * r, Math.sin(aa) * r]; }, 10, 3, () => ({ part: RB, mat: M.RIMCOL }), [1, 1], { id: 'rb' + key + s2 + sg });
+    }
+    lathe(RB, [0, 0, 0], [[X(0.122), 0], [X(0.132), 0.05], [X(0.124), 0.075]], 28, M.RIMCOL, 'x');
+    lathe(RB, [X(0.133), 0, 0], [[0, 0.0], [0, 0.03]], 20, M.CHROME, 'x');
+    // turbofan: flat carbon disc with curved blades and a glowing ring
+    lathe(RC, [0, 0, 0], [[X(0.116), 0.06], [X(0.116), 0.226]], seg, M.TRIM, 'x');
+    for (let b = 0; b < 18; b++) {
+      const a = b / 18 * Math.PI * 2;
+      surface((u, v) => { const r = lerp(0.07, 0.224, u), aa = a + 0.55 * u * u; return [X(0.118 + v * 0.016), Math.cos(aa) * r, Math.sin(aa) * r]; }, 8, 1, () => ({ part: RC, mat: M.CARBON }), [1, 1], { id: 'rc' + key + b });
+    }
+    lathe(RC, [X(0.132), 0, 0], [[0, 0.155], [0, 0.163]], seg, M.ENGNEON, 'x');
+    lathe(RC, [0, 0, 0], [[X(0.122), 0], [X(0.136), 0.055], [X(0.126), 0.07]], 28, M.CARBON, 'x');
     // 10 twisted spokes
     for (let s = 0; s < 10; s++) {
       const a = s / 10 * Math.PI * 2;
@@ -586,12 +704,12 @@ function build(opt) {
         const xo = X(lerp(0.112, 0.126, u * u) + 0.012 * Math.sin(v * Math.PI));
         return [xo, Math.cos(aa) * r, Math.sin(aa) * r];
       };
-      surface(sp, 8, 4, () => ({ part: W, mat: M.CHROME }), [1, 1], { id: 'spk' + key + s });
-      surface((u, v) => { const p = sp(u, v); return [p[0] - X(0.02), p[1], p[2]]; }, 8, 2, () => ({ part: W, mat: M.TRIM }), [1, 1], { id: 'spkb' + key + s });
+      surface(sp, 8, 4, () => ({ part: RA, mat: M.CHROME }), [1, 1], { id: 'spk' + key + s });
+      surface((u, v) => { const p = sp(u, v); return [p[0] - X(0.02), p[1], p[2]]; }, 8, 2, () => ({ part: RA, mat: M.TRIM }), [1, 1], { id: 'spkb' + key + s });
     }
-    lathe(W, [0, 0, 0], [[X(0.12), 0], [X(0.13), 0.06], [X(0.12), 0.07]], 24, M.CHROME, 'x');
-    lathe(W, [X(0.131), 0, 0], [[0, 0.035], [0, 0.045]], 24, M.NEON, 'x');
-    for (let n = 0; n < 5; n++) { const a = n / 5 * Math.PI * 2; lathe(W, [X(0.13), Math.cos(a) * 0.045, Math.sin(a) * 0.045], [[0, 0], [0, 0.009], [X(0.012), 0.009], [X(0.012), 0]], 8, M.ALU, 'x'); }
+    lathe(RA, [0, 0, 0], [[X(0.12), 0], [X(0.13), 0.06], [X(0.12), 0.07]], 24, M.CHROME, 'x');
+    lathe(RA, [X(0.131), 0, 0], [[0, 0.035], [0, 0.045]], 24, M.NEON, 'x');
+    for (const Rp of [RA, RB, RC]) for (let n = 0; n < 5; n++) { const a = n / 5 * Math.PI * 2; lathe(Rp, [X(0.133), Math.cos(a) * 0.045, Math.sin(a) * 0.045], [[0, 0], [0, 0.009], [X(0.012), 0.009], [X(0.012), 0]], 8, M.ALU, 'x'); }
     // drilled brake disc
     lathe(W, [0, 0, 0], [[X(0.03), 0.08], [X(0.03), 0.19], [X(0.0), 0.19], [X(0.0), 0.08]], seg, M.DISC, 'x', 1);
     // caliper (only steers) at the rear-top of the disc
@@ -668,6 +786,84 @@ function build(opt) {
     // built around the origin; the renderer places them at the core centre with their own spin
     ring(rings[0], 0.060, 0.006, M.ENGNEON); ring(rings[1], 0.050, 0.005, M.CHROME); ring(rings[2], 0.040, 0.005, M.NEON);
   }
+  // ---- widebody kits (bolt-on overfenders) — the renderer pushes the wheels out by RIG.kitTrack
+  {
+    const kits = [P('kit1'), P('kit2')];
+    kits.forEach((K, ki) => {
+      const ext = ki ? 0.115 : 0.08;
+      for (const ax of AXLES) for (const sd of [-1, 1]) {
+        const prof = [[0.0, 0.14], [0.45, 0.115], [0.85, 0.06], [1.0, 0.02], [0.92, 0.0], [0.7, -0.01]];
+        const pr = t => { const f = t * (prof.length - 1), k = Math.min(prof.length - 2, Math.floor(f)), w = f - k; return [lerp(prof[k][0], prof[k + 1][0], w), lerp(prof[k][1], prof[k + 1][1], w)]; };
+        const fl = (u, v) => {
+          const a = Math.PI * lerp(0.04, 0.96, u), z = ax + Math.cos(a) * ARCH_R, [W, , Ys] = station(z), [dx, dr] = pr(v);
+          const y = Math.min(0.36 + Math.sin(a) * (ARCH_R + dr), Ys - 0.015);
+          return [sd * (W * 0.955 + dx * ext), y, ax + Math.cos(a) * (ARCH_R + dr)];
+        };
+        surface(fl, 40, 10, (u, v) => ({ part: K, mat: ki && v > 0.25 && v < 0.6 && Math.floor(u * 16) % 3 === 0 && (ax > 0 ? u < 0.35 : u > 0.65) ? M.TRIM : M.PAINT }), [1, 1], { id: 'flare' + ki + ax + sd });
+        // rivets along the base of the bolt-on flare (kit 1) / carbon edge (kit 2)
+        if (!ki) for (let i = 0; i < 11; i++) { const p = fl(i / 10, 0.12); lathe(K, p, [[0, 0], [0, 0.008], [sd * 0.004, 0.006], [sd * 0.006, 0]], 8, M.CHROME, 'x'); }
+        else surface((u, v) => { const p = fl(u, 1 - v * 0.1); return [p[0] + sd * 0.003, p[1], p[2]]; }, 40, 1, () => ({ part: K, mat: M.CARBON }), [4, 1], { id: 'flareE' + ki + ax + sd });
+      }
+      // side skirts (extended to the flares), splitter, rear diffuser
+      for (const sd of [-1, 1]) {
+        surface((u, v) => { const z = lerp(-0.98, 0.95, u), W = station(z)[0]; return [sd * (W * 0.95 + v * ext * 0.9), 0.235 + v * 0.01, z]; }, 30, 3, () => ({ part: K, mat: M.CARBON }), [8, 1], { id: 'skirt' + ki + sd });
+        if (ki) { box(K, [sd * 0.95, 0.40, 2.12], [0.07, 0.004, 0.05], M.CARBON, 0, 0, sd * 0.25); box(K, [sd * 0.97, 0.32, 2.05], [0.06, 0.004, 0.045], M.CARBON, 0, 0, sd * 0.3); }
+        if (ki) surface((u, v) => { const z = lerp(-0.9, 0.9, u), W = station(z)[0]; return [sd * (W * 0.95 + ext * 0.9 + 0.003), 0.247 + v * 0.006, z]; }, 30, 1, () => ({ part: K, mat: M.NEON }), [1, 1], { id: 'skirtN' + sd });
+      }
+      box(K, [0, 0.205, 2.36], [0.86 + ext, 0.01, ki ? 0.17 : 0.12], M.CARBON);
+      for (let i = -3; i <= 3; i++) box(K, [i * 0.13, 0.27, -2.30], [0.006, ki ? 0.07 : 0.05, ki ? 0.22 : 0.15], M.CARBON, -0.25);
+    });
+  }
+  // ---- liveries: 1 = twin racing stripes over nose / hood / roof / deck, 2 = side hockey stripe
+  {
+    const L1 = P('liv1'), L1H = P('liv1H'), L1A = P('liv1A'), L1B = P('liv1B'), L1T = P('liv1T');
+    const vAtX = (fn, u, x, left) => { let a = left ? 0 : 0.5, b = left ? 0.5 : 1; for (let i = 0; i < 30; i++) { const m = (a + b) / 2, px = fn(u, m)[0]; if (left ? px < x : px > x) a = m; else b = m; } return (a + b) / 2; };
+    const cabN = (u, v) => { const e = 1e-4; return norm(cross(sub(cabinPt(Math.min(1, u + e), v), cabinPt(Math.max(0, u - e), v)), sub(cabinPt(u, Math.min(1, v + e)), cabinPt(u, Math.max(0, v - e))))); };
+    const stripe = (Pp, fn, nf, z0, z1, zA, zB, x, n) => ribbon(Pp, t => {
+      const z = lerp(z0, z1, t), u = (z - zA) / (zB - zA), left = x < 0, v = vAtX(fn, u, x, left), p = fn(u, v), nn0 = nf(u, v), nn = nn0[1] < 0 ? scl(nn0, -1) : nn0;
+      return [add(p, scl(nn, 0.004)), nn];
+    }, n, 0.13, M.STRIPE);
+    for (const x of [-0.13, 0.13]) {
+      stripe(L1, bodyPt, bodyN, HZ1 + 0.01, Z1 - 0.03, Z0, Z1, x, 12);
+      stripe(L1H, bodyPt, bodyN, HZ0 + 0.01, HZ1 - 0.01, Z0, Z1, x, 30);
+      stripe(L1A, cabinPt, cabN, -0.33, 0.30, CZ0, CZ1, x, 14);
+      stripe(L1B, cabinPt, cabN, -0.98, -0.37, CZ0, CZ1, x, 14);
+      stripe(L1T, bodyPt, bodyN, TZ0 + 0.01, TZ1 - 0.01, Z0, Z1, x, 20);
+      stripe(L1, bodyPt, bodyN, Z0 + 0.03, TZ0 - 0.01, Z0, Z1, x, 4);
+    }
+    const L2 = P('liv2'), L2L = P('liv2L'), L2R = P('liv2R');
+    for (const left of [true, false]) {
+      const path = [[2.10, 0.17], [-1.55, 0.17], [-2.05, 0.40]], pts = [];
+      for (let i = 0; i < path.length - 1; i++) for (let k = 0; k < 40; k++) { const t = k / 40; pts.push([lerp(path[i][0], path[i + 1][0], t), lerp(path[i][1], path[i + 1][1], t)]); }
+      pts.push(path[path.length - 1]);
+      // split the stripe where it crosses the door cut so each piece moves with its panel
+      let run = [], cur = null;
+      const flush = () => { if (run.length > 1) { const r2 = run.slice(); ribbon(cur, t => { const f = t * (r2.length - 1), k = Math.min(r2.length - 2, Math.floor(f)), w = f - k; return onSkin(lerp(r2[k][0], r2[k + 1][0], w), lerp(r2[k][1], r2[k + 1][1], w), left, 0.0035); }, r2.length * 2, 0.075, M.STRIPE); } run = []; };
+      for (const q of pts) { const pp = (q[0] > DZ0 && q[0] < DZ1) ? (left ? L2L : L2R) : L2; if (pp !== cur) { if (run.length) run.push(q); flush(); cur = pp; } run.push(q); }
+      flush();
+    }
+  }
+  // ---- lettering presets on the doors (web can rebuild a custom one at runtime)
+  RIG.textPresets.forEach((t, i) => { const [L, Rr] = buildText(t, String(i)); parts[L.name] = L; parts[Rr.name] = Rr; });
+  // ---- number plates KAGE 2789 GT (front + rear)
+  {
+    const pl = P('plates');
+    for (const [c, f] of [[[0, 0.30, 2.392], 1], [[0, 0.50, -2.372], -1]]) {
+      box(pl, [c[0], c[1], c[2] - f * 0.006], [0.265, 0.062, 0.004], M.TRIM);
+      box(pl, c, [0.255, 0.055, 0.0025], M.PLATE);
+      textFlat(pl, RIG.plate, [c[0], c[1] - 0.002, c[2] + f * 0.003], [f, 0, 0], [0, 1, 0], [0, 0, f], 0.05, M.TRIM);
+    }
+  }
+  // ---- chrono core detail: energy coil, plasma column, bolted caps, conduits to the console
+  {
+    const C = RIG.chrono.center, core = parts['chrono'];
+    const coil = []; for (let i = 0; i <= 160; i++) { const a = i / 160 * Math.PI * 2 * 7; coil.push([C[0] + Math.cos(a) * 0.083, C[1] - 0.13 + i / 160 * 0.26, C[2] + Math.sin(a) * 0.083]); }
+    tube(core, coil, 0.004, 6, M.ENGNEON);
+    lathe(core, [C[0], C[1] - 0.13, C[2]], [[0, 0.018], [0.26, 0.018]], 16, M.NEON, 'y');
+    for (const yy of [C[1] - 0.155, C[1] + 0.155]) for (let b = 0; b < 10; b++) { const a = b / 10 * Math.PI * 2; lathe(core, [C[0] + Math.cos(a) * 0.092, yy, C[2] + Math.sin(a) * 0.092], [[0, 0.006], [0.01, 0.006], [0.012, 0]], 8, M.CHROME, 'y'); }
+    for (const sx of [-1, 1]) tube(core, [[C[0] + sx * 0.09, C[1] - 0.18, C[2]], [C[0] + sx * 0.12, 0.40, C[2] + 0.2], [C[0] + sx * 0.12, 0.47, -0.3], [C[0] + sx * 0.12, 0.50, 0.2]], 0.008, 6, M.INEON);
+    surface((u, v) => [lerp(-0.05, 0.05, u), 0.585 + v * 0.002, lerp(0.10, 0.16, v)], 6, 2, () => ({ part: core, mat: M.SCREEN }), [1, 1], { id: 'chronoUI', uvOff: [0, 0] });
+  }
   // ---- orient every quad for exporters (two-sided anyway in our shaders) and pack
   const list = Object.values(parts).filter(p => p.pos.length);
   let tris = 0, verts = 0;
@@ -721,7 +917,7 @@ const SPECS_BY = {
   })
 };
 const POWER = { v8: 'V8 BITURBO IBRIDO', wankel: 'WANKEL 4 ROTORI H₂', mag: 'LEVITA ELETTRICA' };
-const api = { build, M, MAT_NAMES, RIG, SPECS, SPECS_BY, POWER, bodyPt, station, roofPhases, cabinPt };
+const api = { build, buildText, M, FONT, textStrokes, MAT_NAMES, RIG, SPECS, SPECS_BY, POWER, bodyPt, station, roofPhases, cabinPt };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.CarHD = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -21,6 +21,7 @@ final class EngineSound implements Runnable {
     private float lump = 1, zap = 0, crk = 0, bp1 = 0;
     private double eph = 0, zph = 0, hum = 0;
     private int synType = 0;
+    private float tyreK = 0, burnK = 0, wob = 0; private double sqph = 0; private final float[] tb1 = new float[2], tb2 = new float[2], tb3 = new float[2];
     private boolean race = false; private float chronoK = 0, boom = 0, blp = 0; private double chph = 0, bph = 0;
     private float amp = 0, rpm = EngineSim.IDLE, load = 0, boost = 0, low = 0, band = 0, low2 = 0, hiss = 0, popEnv = 0, popAmp = 0, gain = 0;
 
@@ -55,7 +56,7 @@ final class EngineSound implements Runnable {
             if (pops > 0) { popQ += pops; popAmp = Math.max(popAmp, ps[0]); }
             float rpmT = sim.rpm, loadT = sim.load, boostT = sim.boostLvl, spd = sim.speed;
             if (synType != sim.type) { synType = sim.type; rpm = rpmT; }
-            race = sim.race; chronoK = sim.chrono; if (sim.takeBoom() > 0) { boom = 1; bph = 0; }
+            race = sim.race; tyreK = sim.tyre; burnK = sim.burn; chronoK = sim.chrono; if (sim.takeBoom() > 0) { boom = 1; bph = 0; }
             float gainT = (muted || sim.off || rpmT < 200) ? 0 : volume;
             for (int i = 0; i < frames; i++) buf[i] = (short) ((synType == 2 ? sampleMag(rpmT, loadT, boostT, gainT) : sample(rpmT, loadT, boostT, gainT, spd)) * 32000);
             track.write(buf, 0, frames);
@@ -101,7 +102,22 @@ final class EngineSound implements Runnable {
             y += popEnv * (race ? 1.35f : 1) * (noise() * (W ? 1.1f : 0.9f) + (float) Math.sin(popPh * 6.2831853) * (W ? 0.6f : 0.9f));
             popEnv *= 1 - (W ? 45f : 32f) / sr;
         }
-        return (float) Math.tanh(chronoMix(y * (race ? 1.2f : 1)) * 1.1f) * gain;
+        return (float) Math.tanh(tyreMix(chronoMix(y * (race ? 1.2f : 1))) * 1.1f) * gain;
+    }
+
+    private float bp(float[] st, float f, float q, float n) { float f1 = 2 * (float) Math.sin(Math.PI * f / sr); st[0] += f1 * st[1]; float hp = n - st[0] - q * st[1]; st[1] += f1 * hp; return st[1]; }
+    /** tyres: noise through two resonances + a wobbling squeal tone; burnout adds a rough low rasp */
+    private float tyreMix(float y) {
+        float k = tyreK, b = burnK;
+        if (k < 0.002f && b < 0.002f) return y;
+        float n = noise();
+        wob += noise() * 0.5f * 0.002f; wob *= 0.9995f;
+        sqph += (820 + 380 * k + 160 * wob + 90 * b) / sr; if (sqph > 1) sqph -= 1;
+        float tone = (float) (Math.sin(sqph * 6.2831853) + 0.35 * Math.sin(sqph * 12.566 + 0.4));
+        float lvl = (float) Math.pow(Math.max(k, b * 0.8f), 1.2);
+        y += (tone * 0.22f * (0.6f + 0.4f * Math.abs(bp(tb1, 1150, 0.25f, n) * 4)) + bp(tb2, 2500, 0.35f, n) * 0.25f) * lvl;
+        y += bp(tb3, 520, 0.6f, n) * 0.45f * b;
+        return y;
     }
 
     /** KAGE CHRONO layer: rising whine while charging, boom + crack at the jump */

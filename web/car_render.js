@@ -6,14 +6,17 @@ const PAINTS = {
   nero: [0.03, 0.03, 0.04], rosso: [0.42, 0.02, 0.04], perla: [0.72, 0.72, 0.76], oro: [0.55, 0.38, 0.08], ciano: [0.0, 0.30, 0.36], viola: [0.20, 0.03, 0.30]
 };
 /* id → colour, roughness, metalness, emissive, pattern */
-function materials(paint, a, b) {
+/* extra: { stripe:[r,g,b], rim:[r,g,b], disc:[r,g,b], caliper:[r,g,b] } */
+function materials(paint, a, b, extra) {
+  const X = extra || {};
   return [
     [paint, 0.18, 0.55, 0, 0], [[0.06, 0.06, 0.07], 0.3, 0.2, 0, 1], [[0.02, 0.02, 0.025], 0.6, 0, 0, 0], [[0.30, 0.31, 0.35], 0.12, 1, 0, 0],
     [[0.02, 0.03, 0.05], 0.05, 0, 0, 0], [[0.85, 0.95, 1.0], 0.2, 0, 1, 7], [[1.0, 0.06, 0.12], 0.2, 0, 1, 6], [a, 0.3, 0, 1, 9],
-    [[0.025, 0.025, 0.025], 0.9, 0, 0, 3], [[0.35, 0.35, 0.37], 0.35, 0.9, 0, 5], [b, 0.35, 0.2, 0.15, 0], [[0.05, 0.045, 0.05], 0.55, 0, 0, 2],
+    [[0.025, 0.025, 0.025], 0.9, 0, 0, 3], [X.disc || [0.35, 0.35, 0.37], 0.35, 0.9, 0, 5], [X.caliper || b, 0.35, 0.2, 0.15, 0], [[0.05, 0.045, 0.05], 0.55, 0, 0, 2],
     [[0.035, 0.035, 0.04], 0.95, 0, 0, 0], [[0.025, 0.027, 0.035], 0.7, 0, 0, 0], [[0, 0, 0], 0.3, 0, 1, 4], [[0.6, 0.6, 0.62], 0.35, 1, 0, 0],
     [b, 0.3, 0, 1, 9], [a, 0.3, 0, 0.8, 9], [[0.03, 0.03, 0.035], 0.5, 0.3, 0, 8], [[0.03, 0.03, 0.035], 1, 0, 0, 10],
-    [[0.62, 0.58, 0.60], 0.22, 1, 0, 11]
+    [[0.62, 0.58, 0.60], 0.22, 1, 0, 11],
+    [X.stripe || [0.9, 0.9, 0.92], 0.2, 0.3, 0, 0], [[0.92, 0.92, 0.88], 0.5, 0, 0.12, 0], [X.rim || [0.75, 0.6, 0.25], 0.18, 1, 0, 0]
   ];
 }
 
@@ -29,8 +32,12 @@ const RZ = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Arra
 const sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 function roofPhases(r) { return { win: sm(r / 0.2), lid: sm((r - 0.12) / 0.2) * (1 - sm((r - 0.80) / 0.18)), fold: sm((r - 0.25) / 0.25), flip: sm((r - 0.42) / 0.40) }; }
 const about = (p, R) => mul(T(p[0], p[1], p[2]), mul(R, T(-p[0], -p[1], -p[2])));
+const FOLLOW = { liv1H: 'hood', liv1A: 'roofA', liv1B: 'roofB', liv1T: 'tonneau', liv2L: 'doorL', liv2R: 'doorR' };
 function partMatrix(name, rig, car, st) {
   const pv = rig.hood.pivot;
+  if (FOLLOW[name]) return partMatrix(FOLLOW[name], rig, car, st);
+  if (name.startsWith('txt')) return partMatrix(name.endsWith('L') ? 'doorL' : 'doorR', rig, car, st);
+  if (name === 'handbrake') return mul(car, about(rig.handbrake.pivot, RX(rig.handbrake.pull * (st.hand || 0))));
   const ph = roofPhases(st.roof || 0);
   switch (name) {
     case 'roofB': return mul(car, about(rig.roof.pivotB, RX(-rig.roof.flip * ph.flip)));
@@ -47,7 +54,7 @@ function partMatrix(name, rig, car, st) {
     case 'steeringWheel': { const p = rig.steering.pivot; return mul(car, mul(T(p[0], p[1], p[2]), mul(RX(rig.steering.tilt), RZ(-st.steerWheel)))); }
     default:
       if (name.startsWith('sphere')) {
-        const key = name.slice(6), hub = rig.wheels[key], steer = key[0] === 'F' ? st.wheelSteer : 0, fl = st.fly || 0, out = hub[0] > 0 ? 1 : -1;
+        const key = name.slice(6), hub0 = rig.wheels[key], steer = key[0] === 'F' ? st.wheelSteer : 0, fl = st.fly || 0, out = hub0[0] > 0 ? 1 : -1, hub = [hub0[0] + out * (rig.kitTrack[st.kit || 0] || 0), hub0[1], hub0[2]];
         const bob = rig.sphere.lift + 0.006 * Math.sin((st.time || 0) * 2.3 + hub[2] * 3 + hub[0]);
         // flight: the pods swivel 90° (glow ring horizontal, thrusting down) and tuck out/up into the arches
         const roll = mul(RZ(-out * fl * Math.PI / 2), fl > 0.5 ? RY((st.time || 0) * 4) : RX(st.spin * 0.365 / rig.sphere.r));
@@ -58,11 +65,11 @@ function partMatrix(name, rig, car, st) {
         const R = k === 1 ? mul(RY(ph * 1.0), RX(0.35)) : k === 2 ? mul(RX(ph * -1.4), RZ(0.6)) : mul(RZ(ph * 1.9), RX(1.2));
         return mul(car, mul(T(c[0], c[1], c[2]), R));
       }
-      if (name.startsWith('wheel') || name.startsWith('caliper')) {
-        const key = name.slice(name.startsWith('wheel') ? 5 : 7), hub = rig.wheels[key];
+      if (name.startsWith('wheel') || name.startsWith('caliper') || name.startsWith('rim')) {
+        const key = name.slice(name.startsWith('wheel') ? 5 : name.startsWith('rim') ? 4 : 7), hub0 = rig.wheels[key], tw = (rig.kitTrack[st.kit || 0] || 0) * (hub0[0] > 0 ? 1 : -1);
         const steer = key[0] === 'F' ? st.wheelSteer : 0;
-        let m = mul(car, mul(T(hub[0], hub[1], hub[2]), RY(steer)));
-        if (name.startsWith('wheel')) m = mul(m, RX(st.spin));
+        let m = mul(car, mul(T(hub0[0] + tw, hub0[1], hub0[2]), RY(steer)));
+        if (!name.startsWith('caliper')) m = mul(m, RX(st.spin));
         return m;
       }
       return car;
@@ -82,9 +89,9 @@ function CarRender(gl, prog, model) {
     idx: p.idx.length ? buf(p.idx, true) : null, n: p.idx.length, gidx: p.gidx.length ? buf(p.gidx, true) : null, gn: p.gidx.length }));
   this.loc = { aPos: gl.getAttribLocation(prog.p, 'aPos'), aNorm: gl.getAttribLocation(prog.p, 'aNorm'), aUV: gl.getAttribLocation(prog.p, 'aUV'), aMat: gl.getAttribLocation(prog.p, 'aMat') };
 }
-CarRender.prototype.setMaterials = function (paint, a, b) {
-  const gl = this.gl, u = this.prog.u, mats = materials(PAINTS[paint] || PAINTS.nero, a, b);
-  const col = new Float32Array(63), par = new Float32Array(84);
+CarRender.prototype.setMaterials = function (paint, a, b, extra) {
+  const gl = this.gl, u = this.prog.u, mats = materials(PAINTS[paint] || PAINTS.nero, a, b, extra);
+  const col = new Float32Array(72), par = new Float32Array(96);
   mats.forEach((m, i) => { col.set(m[0], i * 3); par.set([m[1], m[2], m[3], m[4]], i * 4); });
   gl.useProgram(this.prog.p);
   gl.uniform3fv(u['uMatCol[0]'], col); gl.uniform4fv(u['uMatPar[0]'], par);
@@ -102,6 +109,10 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
     if ((n0 === 'exhaust' && race) || (n0 === 'exhaustR' && (!race || st.power === 'mag'))) continue;
     if (n0.startsWith('chrono') && !chrono) continue;
     if (n0 === 'magRings' && (flying || st.power !== 'mag')) continue;
+    if (n0 === 'kit1' && st.kit !== 1 || n0 === 'kit2' && st.kit !== 2) continue;
+    if (n0.startsWith('rim') && n0[3] !== (st.rim || 'A')) continue;
+    if (n0.startsWith('liv1') && st.livery !== 1 || n0.startsWith('liv2') && st.livery !== 2) continue;
+    if (n0.startsWith('txt') && n0.slice(3, -1) !== String(st.text === undefined ? 'none' : st.text)) continue;
     const ib = pass === 'glass' ? p.gidx : p.idx, n = pass === 'glass' ? p.gn : p.n;
     if (!ib) continue;
     gl.uniformMatrix4fv(u.uModel, false, partMatrix(p.name, this.rig, car, st));
@@ -113,6 +124,27 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
   for (const k in L) if (L[k] >= 0) gl.disableVertexAttribArray(L[k]);
 };
 
+/** add / replace parts at runtime (custom lettering) */
+CarRender.prototype.replaceParts = function (list) {
+  const gl = this.gl, buf = (arr, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; };
+  for (const p of list) {
+    this.parts = this.parts.filter(q => q.name !== p.name);
+    if (!p.idx.length) continue;
+    this.parts.push({ name: p.name, pos: buf(p.pos), norm: buf(p.norm), uv: buf(p.uv), mat: buf(p.mat), idx: buf(p.idx, true), n: p.idx.length, gidx: null, gn: 0 });
+  }
+};
+/* ===================================================================== car customisation shared by showroom + game (localStorage) */
+const KAGE_COLORS = { bianco: [0.92, 0.92, 0.94], nero: [0.03, 0.03, 0.035], rosso: [0.8, 0.05, 0.08], oro: [0.85, 0.62, 0.18], ciano: [0.0, 0.85, 0.85], viola: [0.55, 0.2, 0.85], arancio: [1.0, 0.45, 0.05] };
+const KAGE_BRAKES = [
+  { name: 'ACCIAIO · PINZE NEON', disc: [0.35, 0.35, 0.37], caliper: null },
+  { name: 'CARBOCERAMICA · GIALLO', disc: [0.10, 0.10, 0.11], caliper: [0.95, 0.75, 0.05] },
+  { name: 'ORO · ROSSO', disc: [0.62, 0.48, 0.20], caliper: [0.80, 0.04, 0.06] },
+  { name: 'BLU ANODIZZATO', disc: [0.18, 0.28, 0.55], caliper: [0.10, 0.35, 0.95] }
+];
+function kageLoad() { try { return Object.assign({ kit: 0, rim: 'A', livery: 0, text: 'none', customText: 'KAGE GT', stripe: 'bianco', rimcol: 'oro', brakes: 0 }, JSON.parse(localStorage.getItem('kageCar') || '{}')); } catch (e) { return { kit: 0, rim: 'A', livery: 0, text: 'none', customText: 'KAGE GT', stripe: 'bianco', rimcol: 'oro', brakes: 0 }; } }
+function kageSave(c) { try { localStorage.setItem('kageCar', JSON.stringify(c)); } catch (e) { } }
+function kageExtra(c) { const b = KAGE_BRAKES[c.brakes || 0] || KAGE_BRAKES[0]; return { stripe: KAGE_COLORS[c.stripe] || KAGE_COLORS.bianco, rim: KAGE_COLORS[c.rimcol] || KAGE_COLORS.oro, disc: b.disc, caliper: b.caliper || undefined }; }
+root.kageLoad = kageLoad; root.kageSave = kageSave; root.kageExtra = kageExtra; root.KAGE_COLORS = KAGE_COLORS; root.KAGE_BRAKES = KAGE_BRAKES;
 root.CarRender = CarRender;
 root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix, roofPhases, SKIP };
 })(typeof window !== 'undefined' ? window : globalThis);

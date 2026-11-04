@@ -129,6 +129,25 @@ public class GameHud extends View {
         p.setStyle(Paint.Style.FILL); p.setColor(0x26ffffff);
         c.drawRect(cx - rr, cy + rr * 0.9f, cx + rr, cy + rr * 0.9f + m * 0.014f, p);
         p.setColor(second); c.drawRect(cx - rr, cy + rr * 0.9f, cx - rr + 2 * rr * r.hudBoost, cy + rr * 0.9f + m * 0.014f, p);
+        // fuel / consumption
+        t.setTextAlign(Paint.Align.RIGHT); t.setTextSize(m * 0.024f); t.setColor(r.hudFuelK < 0.12f ? 0xffff3b5c : 0xffecfcff);
+        c.drawText("⛽ " + r.hudFuelCons + " · " + r.hudFuelTank, W - m * 0.04f, m * 0.42f, t);
+        // cockpit view: head-up display with live telemetry
+        if (r.view == 3) {
+            float hx = W / 2, hy = H * 0.09f;
+            p.setStyle(Paint.Style.FILL); p.setColor(0x59070b13); c.drawRect(hx - m * 0.34f, hy - m * 0.05f, hx + m * 0.34f, hy + m * 0.17f, p);
+            t.setTextAlign(Paint.Align.CENTER); t.setColor(0xffecfcff); t.setTextSize(m * 0.075f); c.drawText(String.valueOf(Math.round(r.hudKmh)), hx, hy + m * 0.05f, t);
+            t.setTextSize(m * 0.045f); t.setColor(second); c.drawText(r.hudGear == -2 ? "E" : r.hudGear < 0 ? "N" : String.valueOf(r.hudGear + 1), hx - m * 0.22f, hy + m * 0.05f, t);
+            float rk2 = Math.min(1, r.hudRpm / r.hudLim); p.setColor(0x26ffffff); c.drawRect(hx - m * 0.3f, hy - m * 0.035f, hx + m * 0.3f, hy - m * 0.023f, p);
+            p.setColor(rk2 > 0.9f ? 0xffff3b5c : accent); c.drawRect(hx - m * 0.3f, hy - m * 0.035f, hx - m * 0.3f + m * 0.6f * rk2, hy - m * 0.023f, p);
+            float gx0 = hx + m * 0.24f, gy0 = hy + m * 0.03f, gr = m * 0.045f;
+            p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(2); p.setColor(0x59ffffff); c.drawCircle(gx0, gy0, gr, p); c.drawCircle(gx0, gy0, gr / 2, p);
+            p.setStyle(Paint.Style.FILL); p.setColor(accent); c.drawCircle(gx0 + Math.max(-1.5f, Math.min(1.5f, -r.telGy)) * gr / 1.5f, gy0 - Math.max(-1.5f, Math.min(1.5f, r.telGx)) * gr / 1.5f, m * 0.008f, p);
+            t.setTextSize(m * 0.022f); t.setColor(0xffecfcff);
+            c.drawText(String.format(java.util.Locale.ITALY, "LONG %.2f g  LAT %.2f g", r.telGx, r.telGy), hx, hy + m * 0.095f, t);
+            c.drawText("0-100 " + (r.t100 > 0 ? String.format(java.util.Locale.ITALY, "%.2f s", r.t100) : "--") + "   0-200 " + (r.t200 > 0 ? String.format(java.util.Locale.ITALY, "%.2f s", r.t200) : "--"), hx, hy + m * 0.125f, t);
+            c.drawText("⛽ " + r.hudFuelCons, hx, hy + m * 0.155f, t);
+        }
         // KAGE CHRONO gauge + era label
         if (r.hudChrono >= 0) {
             float bw = m * 0.34f, bx = cx - bw / 2, by = cy - rr * 1.55f, kc = r.hudChrono;

@@ -43,6 +43,7 @@ void main(){
     col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.5;
     col += uFog * 0.10 * smoothstep(15.0, 300.0, vDist);
     col += vec3(0.5, 0.55, 0.7) * uFlash * 0.15;
+    col += headLight(vWP) * (0.35 + 0.65 * road) * 0.9;
     col = applyFog(col, vDist * 0.8, 0.0);
     gl_FragColor = vec4(col, 1.0);
 }

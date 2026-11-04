@@ -49,6 +49,7 @@ Showroom.prototype.frame = function (dt) {
   const pal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   this.t += dt; const t = this.t;
   const ease = (cur, target, k) => cur + (target - cur) * Math.min(1, dt * k);
+  const cc = this.carCfg = this.carCfg || kageLoad(); st.kit = cc.kit; st.rim = cc.rim; st.livery = cc.livery; st.text = cc.text; st.hand = this.tg.hand || 0;
   st.time = t; st.power = o.power || 'v8'; st.exhaust = o.exhaust || 'serie'; st.chrono = !!o.chrono;
   this.flyK += Math.max(-dt * 0.7, Math.min(dt * 0.7, (st.power === 'mag' && tg.fly ? 1 : 0) - this.flyK)); st.fly = this.flyK * this.flyK * (3 - 2 * this.flyK);
   this.chronoPh += dt * (1 + (tg.rev || 0) * 10); st.chronoPh = this.chronoPh; this.eng.race = st.exhaust === 'race'; if (this.eng.type !== st.power) this.eng.setType(st.power);
@@ -94,6 +95,7 @@ Showroom.prototype.frame = function (dt) {
     f1('uTime', t % 3600); f1('uL', 1e5); f1('uFar', 400); f1('uFogDen', 0.004); f1('uFlash', 0);
     v3('uFog', pal.fog.map(x => x * 0.6)); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
+    if (u.uHL && this.noseM) { const M = this.noseM; gl.uniform4f(u.uHL, M[8] * 2.3 + M[12], M[10] * 2.3 + M[14], M[8], M[10]); f1('uHLOn', tg.lights); }
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP);
   };
   gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -106,7 +108,9 @@ Showroom.prototype.frame = function (dt) {
   this.drawQuad(sp, this.quad);
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
   const cp = P.car;
-  set(cp); this.car.setMaterials(o.paint, pal.neonA, pal.neonB);
+  this.noseM = carM;
+  set(cp); this.car.setMaterials(o.paint, pal.neonA, pal.neonB, kageExtra(this.carCfg));
+  if (cp.u.uSpd) { gl.uniform1f(cp.u.uSpd, 0); gl.uniform1f(cp.u.uRpmK, this.eng.rpm / this.eng.T.limiter); gl.uniform1f(cp.u.uGear, this.eng.T.gears ? -1 : -2); gl.uniform1f(cp.u.uFuelK, this.eng.fuelK === undefined ? 1 : this.eng.fuelK); gl.uniform1f(cp.u.uGx, 0); }
   gl.uniform1f(cp.u.uKey, 1.15); gl.uniform1f(cp.u.uLights, tg.lights); gl.uniform1f(cp.u.uBrake, tg.lights * 0.3);
   // mirrored car = floor reflection
   const mir = U.mul(new Float32Array([1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1]), carM);

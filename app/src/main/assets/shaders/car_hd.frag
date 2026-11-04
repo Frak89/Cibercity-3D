@@ -2,6 +2,33 @@ uniform float uKey;        // key light strength (studio > street)
 uniform float uGlassPass;  // 1 while drawing the transparent glass
 uniform float uLights;     // headlights / tail lights on
 uniform float uBrake;
+uniform float uSpd;        // live data for the instrument cluster: km/h
+uniform float uRpmK;       // rpm / limiter
+uniform float uGear;       // -2 E, -1 N, 0.. gear index
+uniform float uFuelK;      // tank 0..1
+uniform float uGx;         // longitudinal g
+/* 7-segment digit d in a 1×2 cell (p in 0..1 × 0..2) */
+float seg7(vec2 p, float d){
+    float on = 0.0;
+    // segments a b c d e f g as bit flags of the digit
+    float bits = d < 0.5 ? 63.0 : d < 1.5 ? 6.0 : d < 2.5 ? 91.0 : d < 3.5 ? 79.0 : d < 4.5 ? 102.0 : d < 5.5 ? 109.0 : d < 6.5 ? 125.0 : d < 7.5 ? 7.0 : d < 8.5 ? 127.0 : d < 9.5 ? 111.0 : 121.0;  // 10 = E
+    float w = 0.16;
+    float a = step(abs(p.y - 1.9), w) * step(abs(p.x - 0.5), 0.36);
+    float g = step(abs(p.y - 1.0), w) * step(abs(p.x - 0.5), 0.36);
+    float dd = step(abs(p.y - 0.1), w) * step(abs(p.x - 0.5), 0.36);
+    float f = step(abs(p.x - 0.1), w) * step(abs(p.y - 1.45), 0.42);
+    float b = step(abs(p.x - 0.9), w) * step(abs(p.y - 1.45), 0.42);
+    float e = step(abs(p.x - 0.1), w) * step(abs(p.y - 0.55), 0.42);
+    float c = step(abs(p.x - 0.9), w) * step(abs(p.y - 0.55), 0.42);
+    on += a * mod(bits, 2.0);
+    on += b * mod(floor(bits / 2.0), 2.0);
+    on += c * mod(floor(bits / 4.0), 2.0);
+    on += dd * mod(floor(bits / 8.0), 2.0);
+    on += e * mod(floor(bits / 16.0), 2.0);
+    on += f * mod(floor(bits / 32.0), 2.0);
+    on += g * mod(floor(bits / 64.0), 2.0);
+    return clamp(on, 0.0, 1.0);
+}
 varying vec3 vN;
 varying vec3 vWP;
 varying vec2 vUV;
@@ -44,7 +71,7 @@ void main(){
             for (int g = 0; g < 2; g++) {                          // tachometer (left) and speed (right) dials
                 vec2 cc = vec2(g == 0 ? 0.85 : 3.35, 0.5), d = q - cc;
                 float r = length(d), a = atan(d.x, -d.y);           // 0 at the bottom
-                float val = 0.35 + 0.3 * sin(uTime * (g == 0 ? 1.3 : 0.4) + float(g));
+                float val = g == 0 ? clamp(uRpmK, 0.0, 1.0) : clamp(uSpd / 360.0, 0.0, 1.0);
                 float ang = (a + 3.14159) / 6.28318;
                 float arc = smoothstep(0.04, 0.0, abs(r - 0.40)) * step(0.12, ang) * step(ang, 0.88);
                 float lit = arc * step(ang, 0.12 + 0.76 * val);
@@ -53,9 +80,20 @@ void main(){
                 c += uNeonA * arc * 0.18 + mix(uNeonA, vec3(1.0, 0.15, 0.25), red) * lit * 0.9 + vec3(0.6) * tick * 0.5;
                 c += uNeonA * smoothstep(0.30, 0.0, r) * 0.08;
             }
-            // centre: gear / mode block and boost bars
-            float blk = step(abs(q.x - 2.1), 0.38) * step(abs(q.y - 0.55), 0.22);
-            c += uNeonB * blk * (0.12 + 0.5 * step(0.5, fract(q.x * 8.0)) * step(q.y, 0.45 + 0.2 * sin(uTime * 2.0)));
+            // centre: live speed (3 digits), gear, fuel bar, g-meter
+            float spd = floor(clamp(uSpd, 0.0, 999.0) + 0.5);
+            for (int k = 0; k < 3; k++) {
+                float dv = k == 0 ? floor(spd / 100.0) : k == 1 ? floor(mod(spd, 100.0) / 10.0) : mod(spd, 10.0);
+                vec2 cp = (q - vec2(1.62 + float(k) * 0.30, 0.30)) / vec2(0.25, 0.25);
+                if (cp.x > 0.0 && cp.x < 1.0 && cp.y > 0.0 && cp.y < 2.0 && (k > 0 || spd >= 100.0) && (k > 1 || spd >= 10.0)) c += vec3(0.85, 0.95, 1.0) * seg7(cp, dv) * 1.2;
+            }
+            float gd = uGear < -1.5 ? 10.0 : uGear < -0.5 ? 0.0 : uGear + 1.0;
+            vec2 gp = (q - vec2(1.95, 0.05)) / vec2(0.12, 0.12);
+            if (gp.x > 0.0 && gp.x < 1.0 && gp.y > 0.0 && gp.y < 2.0) c += uNeonB * seg7(gp, gd) * 1.3;
+            float fb = step(abs(q.y - 0.92), 0.03) * step(1.6, q.x) * step(q.x, 1.6 + 0.9 * clamp(uFuelK, 0.0, 1.0));
+            c += mix(vec3(1.0, 0.2, 0.2), uNeonA, step(0.15, uFuelK)) * fb * 0.9 + vec3(0.12) * step(abs(q.y - 0.92), 0.03) * step(1.6, q.x) * step(q.x, 2.5);
+            float gx = clamp(uGx, -1.5, 1.5);
+            c += uNeonA * smoothstep(0.03, 0.0, abs(q.x - (2.75 + 0.02 * 0.0))) * step(abs(q.y - 0.5 - gx * 0.25), 0.05) * 1.5;
         } else {
             vec2 q = vec2(uv.x - 2.0, uv.y) * vec2(3.0, 2.0) + vec2(uTime * 0.05, uTime * 0.12);
             vec2 gr = abs(fract(q * 3.0) - 0.5);

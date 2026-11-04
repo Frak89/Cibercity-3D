@@ -38,6 +38,7 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
     public volatile float rev = 0, tRoof = 0;
     public volatile int power = 0;
     public volatile boolean race = false, chrono = false, fly = false;
+    public volatile int kit, rim, livery, text = -1, stripeC = 0, rimC = 3, brakes = 0;
     private float flyK = 0, chronoPh = 0;
     private final float[] body = new float[16];
 
@@ -69,12 +70,14 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         p.v3("uFog", new float[]{pal.fog[0] * 0.6f, pal.fog[1] * 0.6f, pal.fog[2] * 0.6f}); p.v3("uSkyTop", pal.top);
         p.v3("uWinA", pal.winA); p.v3("uWinB", pal.winB); p.v3("uWinC", pal.winC); p.v3("uNeonA", pal.neonA); p.v3("uNeonB", pal.neonB); p.v3("uEye", eye);
         p.m4("uVP", VP);
+        int l = p.u("uHL"); if (l >= 0) { GLES20.glUniform4f(l, car[8] * 2.3f + car[12], car[10] * 2.3f + car[14], car[8], car[10]); p.f1("uHLOn", lights); }
     }
 
     @Override public void onDrawFrame(GL10 gl) {
         long now = SystemClock.uptimeMillis();
         float dt = last == 0 ? 1 / 60f : Math.min(0.05f, (now - last) / 1000f);
         last = now; t += dt;
+        st.kit = kit; st.rim = rim; st.livery = livery; st.text = text;
         eng.setType(power); st.power = power; st.time = t; st.race = race; st.chrono = chrono; eng.race = race;
         flyK += Math.max(-dt * 0.7f, Math.min(dt * 0.7f, (power == 2 && fly ? 1 : 0) - flyK)); st.fly = flyK * flyK * (3 - 2 * flyK);
         chronoPh += dt * (1 + rev * 10); st.chronoPh = chronoPh;
@@ -128,7 +131,9 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
             Matrix.rotateM(car, 0, (float) Math.toDegrees(rk * eng.load * 0.012f + shiver * 0.6f), 0, 0, 1);
         }
         common(hdProg, pal, eye);
+        hd.stripe = CarHd.COLORS[stripeC]; hd.rimCol = CarHd.COLORS[rimC]; hd.brakes = brakes;
         hd.setMaterials(paint, pal.neonA, pal.neonB);
+        hdProg.f1("uSpd", 0); hdProg.f1("uRpmK", eng.rpm / eng.limiter()); hdProg.f1("uGear", power == 2 ? -2 : -1); hdProg.f1("uFuelK", eng.fuelK); hdProg.f1("uGx", 0);
         hdProg.f1("uKey", 1.15f); hdProg.f1("uLights", lights); hdProg.f1("uBrake", lights * 0.3f);
         if (camMode != CAM_COCKPIT) {
             Matrix.setIdentityM(mir, 0); Matrix.scaleM(mir, 0, 1, -1, 1); Matrix.multiplyMM(mir, 0, mir.clone(), 0, car, 0);

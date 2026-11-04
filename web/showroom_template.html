@@ -20,6 +20,11 @@
   button.rev{border-color:#ff7a2e;color:#ffd2b0}
   button.rev.on{background:#ff7a2e;color:#070b13}
   #rpm{position:fixed;right:3vmin;top:12vmin;font:bold 3vmin monospace;color:var(--a);text-shadow:0 0 10px var(--a);pointer-events:none}
+  #cust{position:fixed;left:3vmin;top:14vmin;width:min(52vmin,440px);display:none;flex-wrap:wrap;gap:1vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);padding:1.6vmin}
+  #cust.open{display:flex}
+  #cust b{width:100%;color:var(--a);letter-spacing:.2em;font-size:1.5vmin}
+  #cust input{flex:1;background:#070b13;color:#ecfcff;border:1px solid var(--a);padding:1vmin;font:bold 1.6vmin monospace;text-transform:uppercase}
+  #cInfo{width:100%;font-size:1.4vmin;opacity:.75}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#ff6177}
 </style>
 </head>
@@ -32,9 +37,14 @@
   <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
   <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
-  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bExh">SCARICO: SERIE</button><button id="bChrono">MODULO CRONO</button><button id="bFly">VOLO</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
+  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bExh">SCARICO: SERIE</button><button id="bChrono">MODULO CRONO</button><button id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
+<div id="cust"><b>PERSONALIZZAZIONE</b>
+  <button id="cKit">KIT: SERIE</button><button id="cRim">CERCHI: A</button><button id="cRimC">COLORE CERCHI</button>
+  <button id="cLiv">LIVREA: NESSUNA</button><button id="cStr">COLORE LIVREA</button><button id="cTxt">SCRITTA: NESSUNA</button>
+  <input id="cTxtIn" maxlength="12" placeholder="SCRITTA PERSONALIZZATA"><button id="cTxtOk">APPLICA</button><button id="cBrk">FRENI</button>
+  <div id="cInfo">TARGA: KAGE 2789 GT</div></div>
 <div id="rpm"></div>
 <script>/*SHADERS*/</script>
 <script>/*ENGINE*/</script>
@@ -73,6 +83,20 @@
   $('bFly').onclick=()=>{ if(o.power!=='mag'){ o.power='mag'; $('bPower').textContent=CarHD.POWER[o.power]; specs(); } sr.tg.fly=sr.tg.fly?0:1; tog('bFly',!!sr.tg.fly); };
   const PW=['v8','wankel','mag']; $('bPower').textContent=CarHD.POWER[o.power];
   $('bPower').onclick=()=>{ o.power=PW[(PW.indexOf(o.power)+1)%PW.length]; $('bPower').textContent=CarHD.POWER[o.power]; specs(); sr.eng.rpm=sr.eng.T.idle; };
+  // customisation (shared with the game through localStorage)
+  const C=sr.carCfg=kageLoad(), presets=CarHD.RIG.textPresets, colK=Object.keys(KAGE_COLORS);
+  const lbl=()=>{ $('cKit').textContent='KIT: '+['SERIE','WIDEBODY I','WIDEBODY II GT'][C.kit]; $('cRim').textContent='CERCHI: '+{A:'SERIE',B:'FORGED Y',C:'TURBOFAN'}[C.rim];
+    $('cRimC').textContent='COLORE CERCHI: '+C.rimcol.toUpperCase(); $('cLiv').textContent='LIVREA: '+['NESSUNA','DOPPIA STRISCIA','LATERALE'][C.livery];
+    $('cStr').textContent='COLORE LIVREA: '+C.stripe.toUpperCase(); $('cTxt').textContent='SCRITTA: '+(C.text==='none'?'NESSUNA':C.text==='C'?C.customText:presets[+C.text]);
+    $('cBrk').textContent='FRENI: '+KAGE_BRAKES[C.brakes].name; kageSave(C); };
+  $('bCustom').onclick=()=>{ $('cust').classList.toggle('open'); tog('bCustom',$('cust').classList.contains('open')); };
+  $('cKit').onclick=()=>{ C.kit=(C.kit+1)%3; lbl(); }; $('cRim').onclick=()=>{ C.rim={A:'B',B:'C',C:'A'}[C.rim]; lbl(); };
+  $('cRimC').onclick=()=>{ C.rimcol=colK[(colK.indexOf(C.rimcol)+1)%colK.length]; lbl(); }; $('cLiv').onclick=()=>{ C.livery=(C.livery+1)%3; lbl(); };
+  $('cStr').onclick=()=>{ C.stripe=colK[(colK.indexOf(C.stripe)+1)%colK.length]; lbl(); };
+  $('cTxt').onclick=()=>{ const seq=['none','0','1','2','3']; C.text=seq[(seq.indexOf(String(C.text))+1)%seq.length]; lbl(); };
+  $('cTxtOk').onclick=()=>{ const t=($('cTxtIn').value||'').toUpperCase().replace(/[^A-Z0-9 .\-]/g,'').slice(0,12); if(!t) return; C.customText=t; C.text='C'; sr.car.replaceParts(CarHD.buildText(t)); lbl(); };
+  $('cBrk').onclick=()=>{ C.brakes=(C.brakes+1)%KAGE_BRAKES.length; lbl(); };
+  if(C.text==='C') sr.car.replaceParts(CarHD.buildText(C.customText)); lbl();
   // engine sound starts with the first touch (browser rule), SU DI GIRI: hold to rev, release for the crackle
   const snd=()=>sr.audio.start(); addEventListener('pointerdown',snd); addEventListener('keydown',snd);
   $('bMotor').onclick=()=>{ sr.tg.engine=!sr.tg.engine; tog('bMotor',sr.tg.engine); $('bMotor').textContent=sr.tg.engine?'MOTORE ON':'MOTORE OFF';
@@ -97,6 +121,7 @@
     if(q.has('mode')) sr.cam.mode=q.get('mode');
     if(q.has('steer')){ sr.st.wheelSteer=0.5; sr.st.steerWheel=2.4; }
     if(q.has('yaw')) sr.cam.yaw=parseFloat(q.get('yaw')); if(q.has('pitch')) sr.cam.pitch=parseFloat(q.get('pitch')); if(q.has('dist')) sr.cam.dist=parseFloat(q.get('dist'));
+    for(const k of ['kit','livery','brakes']) if(q.has(k)){ C[k]=+q.get(k); } for(const k of ['rim','rimcol','stripe']) if(q.has(k)) C[k]=q.get(k); if(q.has('text')) C.text=q.get('text'); if(q.has('hand')) sr.tg.hand=1;
     if(q.has('fly')){ sr.tg.fly=1; sr.flyK=1; }
     if(q.has('roof')){ sr.tg.roof=sr.st.roof=parseFloat(q.get('roof')); }
     if(q.has('tgt')) sr.cam.tgt=q.get('tgt').split(',').map(parseFloat);

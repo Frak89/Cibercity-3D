@@ -22,6 +22,7 @@ void main(){
     vec3 fcol = mix(vec3(1.0, 0.95, 0.3), vec3(0.95, 0.5, 0.85), step(0.5, h21(fc + 3.1)));
     col = mix(col, fcol, fl * (1.0 - dirt));
     col *= 0.55 + 0.6 * max(normalize(uSunDir).y, 0.0) * uSunCol;
+    col += headLight(vWP) * col * 2.2;
     col = applyFog(col, d, 0.0);
     gl_FragColor = vec4(col, 1.0);
 }

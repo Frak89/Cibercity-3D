@@ -22,6 +22,8 @@ final class CarPhysics {
     /** returns impact strength (0 = no crash) for haptics */
     /** set by the renderer: the meadow when we are in the past, altitude when flying */
     Meadow meadow = null; float y = 0;
+    /** last step: wheelspin (launch / burnout), hard braking, signed forward speed */
+    float wheelspin = 0, vFwd = 0; boolean brakeHard = false;
     float step(Input in, float dt, GameCity city) {
         float fx = (float) Math.sin(h), fz = (float) Math.cos(h), rx = (float) Math.cos(h), rz = (float) -Math.sin(h);
         float vF = vx * fx + vz * fz, vR = vx * rx + vz * rz;
@@ -50,6 +52,8 @@ final class CarPhysics {
         slip = Math.abs(vx * nrx + vz * nrz);
         if (slip > 4 && sp > 12) drift += slip * dt * 10;
         else if (drift > 0) { score += Math.round(drift); best = Math.max(best, Math.round(drift)); drift = 0; }
+        wheelspin = in.gas ? Math.min(1, Math.max(0, 1 - sp / 16) * (boosting ? 1.2f : 1) * (in.hand ? 1.3f : 1)) : 0;
+        brakeHard = in.brake && sp > 14; vFwd = vF;
         float impact = meadow != null ? (y < 1.0f ? meadow.collide(this) : 0) : collide(city);
         x = ((x % S) + S) % S; z = ((z % S) + S) % S;
         shake = Math.max(0, shake - dt * 3); hit = Math.max(0, hit - dt * 2.5f);

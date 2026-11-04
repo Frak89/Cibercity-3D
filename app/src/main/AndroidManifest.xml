@@ -40,6 +40,12 @@
         </activity>
 
         <activity
+            android:name=".game.TrackActivity"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:exported="false" />
+        <activity
             android:name=".game.ShowroomActivity"
             android:exported="false"
             android:label="Showroom"

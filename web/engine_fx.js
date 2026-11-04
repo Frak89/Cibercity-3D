@@ -12,9 +12,10 @@
   };
   /* power units: V8 biturbo hybrid, quad-rotor Wankel on hydrogen (hybrid), LEVITA electromagnetic (no gears) */
   const TYPES = {
-    v8: { idle: 900, red: 8900, limiter: 9100, final: 4.70, gears: true },
-    wankel: { idle: 1150, red: 10200, limiter: 10500, final: 5.40, gears: true },
-    mag: { idle: 600, red: 21000, limiter: 22000, final: 0, gears: false }
+    // fuel: tank, unit, peak power kW, consumption per mechanical kWh, idle flow per hour
+    v8: { idle: 900, red: 8900, limiter: 9100, final: 4.70, gears: true, tank: 80, unit: 'L', pmax: 735, perKWh: 0.336, idleH: 2.2 },
+    wankel: { idle: 1150, red: 10200, limiter: 10500, final: 5.40, gears: true, tank: 6.4, unit: 'kg H₂', pmax: 824, perKWh: 0.079, idleH: 0.25 },
+    mag: { idle: 600, red: 21000, limiter: 22000, final: 0, gears: false, tank: 120, unit: 'kWh', pmax: 1280, perKWh: 1.087, idleH: 1.5 }
   };
   let seed = 12345;
   const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
@@ -27,13 +28,27 @@
     this.pops = 0;          // pops fired this frame (consumed by sound + fx)
     this.popStrength = 0;
   }
-  EngineSim.prototype.setType = function (t) { this.type = TYPES[t] ? t : 'v8'; this.T = TYPES[this.type]; };
+  EngineSim.prototype.setType = function (t) { const was = this.type; this.type = TYPES[t] ? t : 'v8'; this.T = TYPES[this.type]; if (was !== this.type) this.refuel(1); };
+  EngineSim.prototype.refuel = function (k) { this.fuel = this.T.tank * (k === undefined ? 1 : k); };
+  /** fuel / energy: flow from the power actually delivered (≈ BSFC), regen on braking for LEVITA */
+  EngineSim.prototype.burnFuel = function (dt, o) {
+    const T = this.T; if (this.fuel === undefined) this.refuel(1);
+    const P = T.pmax * this.load * Math.pow(Math.min(1, this.rpm / T.red), 0.8) * (o.boost ? 1.15 : 1);
+    let flow = this.off ? 0 : T.idleH + P * T.perKWh;                 // units per hour
+    if (this.type === 'mag' && o.brake) flow -= 0.25 * T.pmax * T.perKWh * Math.min(1, (o.speed || 0) / 40);
+    this.fuel = Math.max(0, Math.min(T.tank, this.fuel - flow * dt / 3600));
+    this.flowH = this.flowH === undefined ? flow : this.flowH + (flow - this.flowH) * Math.min(1, dt * 2);
+    const kmh = Math.abs(o.speed || 0) * 3.6;
+    this.per100 = kmh > 5 ? this.flowH / kmh * 100 : -1;
+    this.fuelK = this.fuel / T.tank;
+  };
   EngineSim.prototype.firePop = function (s) { this.pops++; this.popStrength = Math.max(this.popStrength, s); };
   /** o: { speed (m/s, along the car), throttle 0..1, boost bool, free bool (neutral: showroom revs) } */
   EngineSim.prototype.update = function (dt, o) {
     this.pops = 0; this.popStrength = 0;
     const T = this.T, idle = T.idle;
-    const thrIn = Math.max(0, Math.min(1, o.throttle || 0));
+    let thrIn = Math.max(0, Math.min(1, o.throttle || 0));
+    if (this.fuel !== undefined && this.fuel <= 0) thrIn = Math.min(thrIn, 0.08);      // empty tank: limp mode
     this.thr += (thrIn - this.thr) * Math.min(1, dt * (thrIn > this.thr ? 14 : 9));
     let target;
     const v = Math.abs(o.speed || 0), wheelRpm = v / (2 * Math.PI * ENG.wheelR) * 60;
@@ -68,6 +83,12 @@
     const boostT = o.boost ? 1 : Math.max(0, (this.rpm - idle * 2.6) / (T.red * 0.68)) * this.thr;
     this.boost += (boostT - this.boost) * Math.min(1, dt * 3);
     this.speed = v;
+    // tyres: squeal from lateral slip / hard braking, burnout when launching hard from low speed
+    const slip = Math.abs(o.slip || 0), spinT = Math.max(0, Math.min(1, o.wheelspin || 0));
+    const sq = this.type === 'mag' || o.airborne ? 0 : Math.min(1, Math.max(0, (slip - 3.5) / 9) + (o.brakeHard ? 0.45 : 0));
+    this.tyre = (this.tyre || 0) + (sq - (this.tyre || 0)) * Math.min(1, dt * 10);
+    this.burn = (this.burn || 0) + ((this.type === 'mag' || o.airborne ? 0 : spinT) - (this.burn || 0)) * Math.min(1, dt * 8);
+    this.burnFuel(dt, o);
     // overrun crackle (combustion) / field discharge zaps (LEVITA)
     const race = !!this.race, hi = T.red * (race ? 0.36 : 0.47);
     if (this.thr > 0.6 && this.rpm > hi) this.armed = true;
@@ -134,10 +155,25 @@
         y += this.popEnv * (this.race ? 1.35 : 1) * (this.noise() * (W ? 1.1 : 0.9) + Math.sin(this.popPh * 6.2831853) * (W ? 0.6 : 0.9));
         this.popEnv *= 1 - (W ? 45 : 32) / sr;
       }
-      out[i] = Math.tanh(this.chronoMix(y * (this.race ? 1.2 : 1)) * 1.1) * this.vol;
+      out[i] = Math.tanh(this.tyreMix(this.chronoMix(y * (this.race ? 1.2 : 1))) * 1.1) * this.vol;
     }
   };
   /* KAGE CHRONO layer: rising chrono whine while charging, deep boom + crack at the jump */
+  /* tyre layer: noise through two resonances + a wobbling squeal tone; burnout adds a rough low rasp */
+  EngineSynth.prototype.tyreMix = function (y) {
+    const sr = this.sr, k = this.tyre || 0, b = this.burn || 0;
+    if (k < 0.002 && b < 0.002) return y;
+    const n = this.noise();
+    const bp = (st, f, q) => { const f1 = 2 * Math.sin(Math.PI * f / sr); st[0] += f1 * st[1]; const hp = n - st[0] - q * st[1]; st[1] += f1 * hp; return st[1]; };
+    this.tb1 = this.tb1 || [0, 0]; this.tb2 = this.tb2 || [0, 0]; this.tb3 = this.tb3 || [0, 0];
+    this.wob = (this.wob || 0) + (this.noise() * 0.5) * 0.002; this.wob *= 0.9995;
+    this.sqph = (this.sqph || 0) + (820 + 380 * k + 160 * this.wob + 90 * b) / sr; if (this.sqph > 1) this.sqph -= 1;
+    const tone = Math.sin(this.sqph * 6.2831853) + 0.35 * Math.sin(this.sqph * 12.566 + 0.4);
+    const lvl = Math.pow(Math.max(k, b * 0.8), 1.2);
+    y += (tone * 0.22 * (0.6 + 0.4 * Math.abs(bp(this.tb1, 1150, 0.25) * 4)) + bp(this.tb2, 2500, 0.35) * 0.25) * lvl;
+    y += bp(this.tb3, 520, 0.6) * 0.45 * b;
+    return y;
+  };
   EngineSynth.prototype.chronoMix = function (y) {
     const sr = this.sr, k = this.chrono;
     if (k > 0.001) {
@@ -200,7 +236,7 @@
       if (!s || !this.on) { out.fill(0); return; }
       syn.vol = this.master;
       if (syn.type !== s.type) { syn.type = s.type; syn.rpm = s.rpm; }
-      syn.race = !!s.race; syn.chrono = this.chronoLvl || 0; if (this.boomPend) { syn.boomQ = 1; this.boomPend = 0; }
+      syn.race = !!s.race; syn.tyre = s.tyre || 0; syn.burn = s.burn || 0; syn.chrono = this.chronoLvl || 0; if (this.boomPend) { syn.boomQ = 1; this.boomPend = 0; }
       syn.render(out, s.rpm, s.load, s.boost, pend.pops, pend.s, s.speed || 0); pend.pops = 0; pend.s = 0;
     };
     node.connect(ctx.destination); this.node = node;
@@ -331,6 +367,19 @@
       P.push({ k: 1, x: p[0], y: p[1], z: p[2], vx: vel[0] + (rnd() - 0.5) * 2, vy: (rnd() - 0.5) * 2, vz: vel[2] + (rnd() - 0.5) * 2, age: 0, life: 0.05 + rnd() * 0.1, s0: 0.10, s1: 0.03, seed: rnd(), hot: 1, mag: true });
     }
   };
+  /** white tyre smoke from the rear contact patches (amount 0..1) */
+  ExhaustFX.prototype.tyreSmoke = function (dt, M, amount, vel, track) {
+    if (amount < 0.05) return;
+    const P = this.p, tw = track || 0;
+    this.tacc = (this.tacc || 0) + amount * 70 * dt;
+    const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
+    while (this.tacc >= 1 && P.length < this.max) {
+      this.tacc -= 1;
+      const sx = rnd() < 0.5 ? -1 : 1, p = tr(sx * (0.92 + tw), 0.08, -1.45 - rnd() * 0.2);
+      P.push({ k: 0, x: p[0], y: p[1], z: p[2], vx: vel[0] * 0.25 + (rnd() - 0.5) * 1.5, vy: 0.25 + rnd() * 0.5, vz: vel[2] * 0.25 + (rnd() - 0.5) * 1.5,
+        age: 0, life: 1.6 + rnd() * 1.8, s0: 0.35, s1: 2.4 + rnd() * 1.4, c: 0.82 + rnd() * 0.12, a: 0.18 + 0.2 * amount, seed: rnd() });
+    }
+  };
   ExhaustFX.prototype.ring = function (M, radius, vel, n) {
     const P = this.p;
     const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
@@ -349,7 +398,13 @@
     return { tips, hubs, dir: [dir[0] / l, dir[1] / l, dir[2] / l] };
   }
 
-  const api = { ENG, TYPES, EngineSim, EngineSynth, EngineAudio, ExhaustFX, ExhaustGL, tipsFrom };
+  function fmtFuel(e) {
+    const T = e.T, u = T.unit, per = e.per100;
+    const unitPer = u === 'L' ? 'L/100 km' : u === 'kWh' ? 'kWh/100 km' : 'kg/100 km';
+    const cons = per < 0 ? (e.flowH || 0).toFixed(u === 'L' ? 1 : 2) + ' ' + (u === 'L' ? 'L/h' : u === 'kWh' ? 'kW' : 'kg/h') : per.toFixed(u === 'kg H₂' ? 2 : 1) + ' ' + unitPer;
+    return { cons, tank: (e.fuel || 0).toFixed(u === 'L' ? 0 : 1) + ' / ' + T.tank + ' ' + u, k: e.fuelK || 0 };
+  }
+  const api = { ENG, TYPES, fmtFuel, EngineSim, EngineSynth, EngineAudio, ExhaustFX, ExhaustGL, tipsFrom };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EngineFX = api;
 })(typeof window !== 'undefined' ? window : this);

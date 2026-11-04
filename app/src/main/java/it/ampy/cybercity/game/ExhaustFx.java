@@ -154,6 +154,19 @@ final class ExhaustFx {
                 velX * 0.3f + ox * M[0] + oz * M[8], 0.5f + r(), velZ * 0.3f + ox * M[2] + oz * M[10], 0.35f + r() * 0.35f, 0.35f, 0.08f, 0, 1);
         }
     }
+    private float tacc = 0;
+    /** white tyre smoke from the rear contact patches (amount 0..1) */
+    void tyreSmoke(float dt, float[] M, float amount, float velX, float velZ, float track) {
+        if (amount < 0.05f) return;
+        curH2 = false; curMag = false;
+        tacc += amount * 70 * dt;
+        while (tacc >= 1) {
+            tacc -= 1;
+            float sx = r() < 0.5f ? -1 : 1, x = sx * (0.92f + track), y = 0.08f, z = -1.45f - r() * 0.2f;
+            add(0, M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14],
+                velX * 0.25f + (r() - 0.5f) * 1.5f, 0.25f + r() * 0.5f, velZ * 0.25f + (r() - 0.5f) * 1.5f, 1.6f + r() * 1.8f, 0.35f, 2.4f + r() * 1.4f, 0.82f + r() * 0.12f, 0.18f + 0.2f * amount);
+        }
+    }
     void reset() { n = 0; smokeN = flameN = 0; }
 
     /** draw with the particle program already in use (common uniforms set); scale = H / (2 tan(fov / 2)). Leaves depth writes off. */

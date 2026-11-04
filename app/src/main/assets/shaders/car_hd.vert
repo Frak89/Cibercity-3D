@@ -4,8 +4,8 @@ attribute vec2 aUV;
 attribute float aMat;
 uniform mat4 uVP;
 uniform mat4 uModel;
-uniform vec3 uMatCol[21];
-uniform vec4 uMatPar[21];   // roughness, metalness, emissive, pattern id
+uniform vec3 uMatCol[24];
+uniform vec4 uMatPar[24];   // roughness, metalness, emissive, pattern id
 varying vec3 vN;
 varying vec3 vWP;
 varying vec2 vUV;

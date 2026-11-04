@@ -321,9 +321,11 @@ function stepCar(c, inp, dt, city) {
   let vF = c.vx * fx + c.vz * fz, vR = c.vx * rx + c.vz * rz;
   const boosting = inp.boost && c.boost > 0.02 && vF > 2;
   const pk = c.pk || 1;                           // power unit: V8 1 · Wankel 1.03 · LEVITA 1.1
+  const mu = c.mu === undefined ? 1 : c.mu;       // tyre-road friction (weather, compound, wear, surface)
   const maxF = (boosting ? 95 : 72) * pk;
-  if (inp.gas) vF += (boosting ? 30 : 17) * (pk * pk) * (1 - Math.max(0, vF) / (maxF + 8)) * dt;
-  if (inp.brake) vF -= (vF > 0.5 ? 34 : 10) * dt;
+  if (inp.gas) vF += (boosting ? 30 : 17) * (pk * pk) * Math.min(1, 0.45 + mu * 0.6) * (1 - Math.max(0, vF) / (maxF + 8)) * dt;
+  if (inp.brake) vF -= (vF > 0.5 ? 34 * Math.min(1.1, mu) : 10) * dt;
+  if (c.drag) vF -= vF * c.drag * dt;
   if (!inp.gas && !inp.brake) vF -= Math.sign(vF) * Math.min(Math.abs(vF), 3.5 * dt);
   vF = Math.max(-14, Math.min(maxF + 5, vF));
   vF -= vF * Math.abs(vF) * 0.00022 * dt * 60 * 0.016;
@@ -335,7 +337,7 @@ function stepCar(c, inp, dt, city) {
   if (inp.hand) yaw *= 1.45;
   c.h += yaw * dt;
   // lateral grip: low with handbrake → drift
-  const grip = inp.hand ? 1.3 : (sp > 50 ? 5.5 : 8);
+  const grip = (inp.hand ? 1.3 : (sp > 50 ? 5.5 : 8)) * Math.max(0.25, mu);
   vR *= Math.exp(-grip * dt);
   if (inp.hand) vF -= Math.sign(vF) * Math.min(Math.abs(vF), 6 * dt);
   const nfx = Math.sin(c.h), nfz = Math.cos(c.h), nrx = Math.cos(c.h), nrz = -Math.sin(c.h);
@@ -348,10 +350,13 @@ function stepCar(c, inp, dt, city) {
   // drift score
   const slip = Math.abs(c.vx * nrx + c.vz * nrz);
   if (slip > 4 && sp > 12) { c.drift += slip * dt * 10; } else if (c.drift > 0) { c.score += Math.round(c.drift); c.best = Math.max(c.best, Math.round(c.drift)); c.drift = 0; }
-  if (c.world === 'meadow') { if ((c.y || 0) < 1.0) collideMeadow(c, c.meadow); } else collide(c, city);
-  c.x = ((c.x % S) + S) % S; c.z = ((c.z % S) + S) % S;
+  if (c.world === 'track') { if (c.trackCollide) c.trackCollide(c); }
+  else { if (c.world === 'meadow') { if ((c.y || 0) < 1.0) collideMeadow(c, c.meadow); } else collide(c, city);
+    c.x = ((c.x % S) + S) % S; c.z = ((c.z % S) + S) % S; }
   c.shake = Math.max(0, c.shake - dt * 3); c.hit = Math.max(0, c.hit - dt * 2.5);
-  return { vF, slip, boosting };
+  // wheelspin on a hard launch (and with the handbrake held while on the gas: burnout on the spot)
+  const spinW = inp.gas ? Math.max(0, 1 - sp / 16) * (boosting ? 1.2 : 1) * (inp.hand ? 1.3 : 1) : 0;
+  return { vF, slip, boosting, wheelspin: Math.min(1, spinW), brakeHard: inp.brake && sp > 14 };
 }
 
 function collide(c, city) {
@@ -471,6 +476,10 @@ function Game(canvas, hud, opts) {
   this.M.nature = md.chunks.map(B => this.mesh({ aPos: [B.pos, 3], aCenter: [B.center, 2], aNorm: [B.norm, 3], aCol: [B.col, 4] }, B.idx));
   this.tj = { charge: 0, phase: 0, t: 0, cool: 0, white: 0, ring: 1 };
   this.world = 'city';
+  this.car = (window.kageLoad ? kageLoad() : {});
+  this.applyCar = () => { this.car = kageLoad(); if (this.hd && this.car.text === 'C') this.hd.replaceParts(CarHD.buildText(this.car.customText || 'KAGE GT')); };
+  this.applyCar();
+  addEventListener('focus', () => this.applyCar()); addEventListener('storage', () => this.applyCar());
   this.buildCar();
   this.c = newCar(); this.cam = { h: 0 }; this.t = 0; this.flash = 0; this.nextFlash = 3; this.view = 0;
   this.stats = { verts: city.chunks.reduce((a, B) => a + B.pos.length / 3, 0), chunks: city.chunks.length };
@@ -520,7 +529,19 @@ Game.prototype.frame = function (dt, inp) {
   if (this.eng) {
     if (this.eng.type !== (o.power || 'v8')) { this.eng.setType(o.power || 'v8'); this.eng.rpm = this.eng.T.idle; }
     this.eng.race = o.exhaust === 'race';
-    this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting });
+    this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting, slip: phys.slip, wheelspin: phys.wheelspin, brakeHard: phys.brakeHard, brake: inp.brake, airborne: (this.fly || 0) > 0.3 });
+    // live telemetry for the cockpit HUD + cluster: g forces, 0-100 / 0-200 timers
+    const T = this.tel = this.tel || { gx: 0, gy: 0, v0: 0, run: -1, t100: null, t200: null };
+    const vNow = Math.abs(phys.vF);
+    T.gx += ((vNow - T.v0) / Math.max(dt, 1e-3) / 9.81 - T.gx) * Math.min(1, dt * 6); T.v0 = vNow;
+    T.gy += ((c.steer * 2.5 * Math.min(1, vNow / 10) / (1 + vNow / 45)) * vNow / 9.81 - T.gy) * Math.min(1, dt * 6);
+    if (vNow < 0.3) { T.run = 0; T.d100 = T.d200 = false; }
+    else if (T.run >= 0) {
+      T.run += dt;
+      if (!T.d100 && vNow * 3.6 >= 100) { T.t100 = T.run; T.d100 = true; }
+      if (!T.d200 && vNow * 3.6 >= 200) { T.t200 = T.run; T.d200 = true; T.run = -1; }
+      if (inp.brake) T.run = -1;
+    }
     this.audio.feed(this.eng);
     // KAGE CHRONO: hold 300 km/h to charge the jump; the jump swaps Cybercity ⇄ the meadow
     const tj = this.tj, kmh = Math.abs(phys.vF) * 3.6;
@@ -553,6 +574,7 @@ Game.prototype.frame = function (dt, inp) {
     f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
+    if (u.uHL) { const fx = Math.sin(c.h), fz = Math.cos(c.h); gl.uniform4f(u.uHL, carRel[0] + fx * 2.3, carRel[2] + fz * 2.3, fx, fz); f1('uHLOn', past ? 0.35 : 1); }
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP); if (u.uV) gl.uniformMatrix4fv(u.uV, false, V.m); if (u.uP) gl.uniformMatrix4fv(u.uP, false, Pm);
   };
   gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -581,9 +603,11 @@ Game.prototype.frame = function (dt, inp) {
   this.roof = (this.roof || 0) + Math.max(-dt / 5, Math.min(dt / 5, (o.roof ? 1 : 0) - (this.roof || 0)));
   this.chronoPh = (this.chronoPh || 0) + dt * (1 + this.tj.charge * 14);
   const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
-    exhaust: o.exhaust || 'serie', chrono: !!o.chrono, chronoPh: this.chronoPh, fly: fsm };
+    exhaust: o.exhaust || 'serie', chrono: !!o.chrono, chronoPh: this.chronoPh, fly: fsm,
+    kit: this.car.kit, rim: this.car.rim, livery: this.car.livery, text: this.car.text, hand: (this.handK = (this.handK || 0) + ((inp.hand ? 1 : 0) - (this.handK || 0)) * Math.min(1, dt * 12)) };
   if (cv.drawCar && this.hd) {
-    gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB);
+    gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB, kageExtra(this.car));
+    { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
     gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
   } else if (cv.drawCar) {
@@ -600,6 +624,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.eng) {
     const tp = EngineFX.tipsFrom(carM, o.exhaust === 'race');
     this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, tp.hubs);
+    this.fx.tyreSmoke(dt, carM, Math.max(this.eng.burn || 0, (this.eng.tyre || 0) * 0.7), [c.vx, 0, c.vz], CarHD.RIG.kitTrack[this.car.kit || 0]);
     if (o.chrono && this.tj.charge > 0.05) this.fx.chronoArcs(carM, this.tj.charge, [c.vx, 0, c.vz]);
     if (this.tj.arrive) { this.tj.arrive = 0; this.fx.ring(carM, 2.2, [c.vx, 0, c.vz], 120); }
     gl.useProgram(P.fx.p); set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov / 2)));
@@ -639,6 +664,26 @@ Game.prototype.drawHud = function (inp) {
   const A = 'rgb(' + pal.neonA.map(v => v * 255 | 0) + ')', B = 'rgb(' + pal.neonB.map(v => v * 255 | 0) + ')';
   g.clearRect(0, 0, W, H);
   if (this.cv.cockpit) cockpit(g, W, H, c, A, B);
+  if (this.view === 3 && this.eng && this.tel) {        // head-up display with live telemetry
+    const e = this.eng, T = this.tel, kmh = Math.abs(this.phys.vF) * 3.6, cx2 = W / 2, y0 = H * 0.08;
+    g.save(); g.globalAlpha = 0.9; g.textAlign = 'center';
+    g.fillStyle = 'rgba(7,11,19,0.35)'; g.fillRect(cx2 - m * 0.32, y0 - m * 0.04, m * 0.64, m * 0.2);
+    g.fillStyle = '#ecfcff'; g.font = 'bold ' + (m * 0.07 | 0) + 'px monospace'; g.fillText(Math.round(kmh), cx2, y0 + m * 0.05);
+    g.font = (m * 0.018 | 0) + 'px monospace'; g.fillText('KM/H', cx2, y0 + m * 0.075);
+    g.font = 'bold ' + (m * 0.04 | 0) + 'px monospace'; g.fillStyle = B; g.fillText(e.gear === -2 ? 'E' : e.gear < 0 ? 'N' : e.gear + 1, cx2 - m * 0.2, y0 + m * 0.05);
+    const rk = Math.min(1, e.rpm / e.T.limiter); g.fillStyle = 'rgba(255,255,255,0.15)'; g.fillRect(cx2 - m * 0.3, y0 - m * 0.03, m * 0.6, m * 0.012);
+    g.fillStyle = rk > 0.9 ? '#ff3b5c' : A; g.fillRect(cx2 - m * 0.3, y0 - m * 0.03, m * 0.6 * rk, m * 0.012);
+    // g-meter
+    const gx0 = cx2 + m * 0.22, gy0 = y0 + m * 0.045, gr = m * 0.045;
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1; g.beginPath(); g.arc(gx0, gy0, gr, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.arc(gx0, gy0, gr / 2, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = A; g.beginPath(); g.arc(gx0 + Math.max(-1.5, Math.min(1.5, -T.gy)) * gr / 1.5, gy0 - Math.max(-1.5, Math.min(1.5, T.gx)) * gr / 1.5, m * 0.007, 0, Math.PI * 2); g.fill();
+    g.font = (m * 0.015 | 0) + 'px monospace'; g.fillStyle = '#ecfcff';
+    g.fillText('LONG ' + T.gx.toFixed(2) + ' g  LAT ' + T.gy.toFixed(2) + ' g', cx2, y0 + m * 0.105);
+    g.fillText('0-100 ' + (T.t100 ? T.t100.toFixed(2) + ' s' : '--') + '   0-200 ' + (T.t200 ? T.t200.toFixed(2) + ' s' : '--'), cx2, y0 + m * 0.128);
+    const ff = EngineFX.fmtFuel(e); g.fillText('⛽ ' + ff.cons + '   ' + ff.tank, cx2, y0 + m * 0.151);
+    g.restore();
+  }
+  if (this.eng && this.view !== 3) { const ff = EngineFX.fmtFuel(this.eng); g.font = (m * 0.016 | 0) + 'px monospace'; g.textAlign = 'center'; g.fillStyle = this.eng.fuelK < 0.12 ? '#ff3b5c' : '#ecfcff'; g.fillText('⛽ ' + ff.cons + ' · ' + ff.tank, W - m * 0.15, m * 0.29); }
   const kmh = Math.round(Math.hypot(c.vx, c.vz) * 3.6);
   // speedometer arc
   const cx = W - m * 0.16, cy = H - m * 0.16, r = m * 0.11;
@@ -718,5 +763,5 @@ function cockpit(g, W, H, c, A, B) {
   g.restore();
 }
 
-window.NeonRun = { Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar };
+window.NeonRun = { Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar, cameraFor, lookAt, perspective, mul, model };
 })();

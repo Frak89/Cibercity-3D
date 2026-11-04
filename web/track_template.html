@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>KAGE CIRCUIT — 11 km</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;color:#ff6177}
+  .tb{position:fixed;bottom:4vmin;width:15vmin;height:15vmin;border:2px solid rgba(0,255,226,.5);border-radius:50%;background:rgba(7,11,19,.35);color:#ecfcff;font:bold 2.8vmin monospace;display:none;align-items:center;justify-content:center;user-select:none}
+  body.touch .tb{display:flex}
+  .pane{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,6,12,.72);backdrop-filter:blur(4px)}
+  .pane.open{display:flex}
+  .card{background:rgba(7,11,19,.95);border:1px solid #00ffe3;padding:3vmin 3.5vmin;min-width:min(86vw,560px);max-height:88vh;overflow:auto}
+  .card h1{margin:0 0 1vmin;color:#00ffe3;letter-spacing:.2em;font-size:4vmin}
+  .card h2{margin:2vmin 0 .8vmin;font-size:1.8vmin;letter-spacing:.25em;opacity:.7}
+  .row{display:flex;flex-wrap:wrap;gap:1vmin}
+  .opt{background:#070b13;color:#ecfcff;border:1px solid #2a5a60;padding:1.1vmin 1.6vmin;font:bold 1.9vmin monospace;border-radius:1.5vmin}
+  .opt.on{background:#00ffe3;color:#070b13;border-color:#00ffe3}
+  .go{margin-top:2.5vmin;width:100%;padding:1.6vmin;font:bold 2.6vmin monospace;background:#00ffe3;color:#070b13;border:0;border-radius:1.5vmin;letter-spacing:.2em}
+  table{border-collapse:collapse;width:100%;font-size:1.8vmin} td{padding:.5vmin 1vmin;border-bottom:1px solid #1c2c34}
+  .me td{color:#00ffe3;font-weight:bold}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<canvas id="hud"></canvas>
+<div class="tb" id="tl" style="left:3vmin">◀</div>
+<div class="tb" id="tr" style="left:20vmin">▶</div>
+<div class="tb" id="tg" style="right:3vmin;bottom:22vmin">GAS</div>
+<div class="tb" id="tbk" style="right:20vmin">FRENO</div>
+<div class="tb" id="th" style="right:37vmin">FRENO A M.</div>
+<div class="tb" id="tn" style="right:3vmin;bottom:40vmin">N₂O</div>
+<div class="tb" id="tv" style="right:37vmin;bottom:22vmin">VISTA</div>
+<div class="tb" id="tm" style="left:3vmin;bottom:auto;top:3vmin;width:11vmin;height:11vmin">☰</div>
+<div class="pane open" id="menu"><div class="card">
+  <h1>KAGE CIRCUIT</h1><div style="opacity:.75;font-size:1.8vmin">11 km · 31 curve · pit lane con rifornimento e cambio gomme</div>
+  <h2>MODALITÀ</h2><div class="row" data-k="mode"><button class="opt on" data-v="race">GARA</button><button class="opt" data-v="tt">SFIDA A TEMPO</button></div>
+  <h2>GIRI</h2><div class="row" data-k="laps"><button class="opt" data-v="1">1</button><button class="opt on" data-v="3">3</button><button class="opt" data-v="5">5</button><button class="opt" data-v="10">10</button></div>
+  <h2>METEO</h2><div class="row" data-k="weather"><button class="opt on" data-v="sereno">SERENO</button><button class="opt" data-v="nuvoloso">NUVOLOSO</button><button class="opt" data-v="pioggerella">PIOGGERELLA</button><button class="opt" data-v="pioggia">PIOGGIA</button><button class="opt" data-v="temporale">TEMPORALE</button><button class="opt" data-v="nebbia">NEBBIA</button><button class="opt" data-v="variabile">VARIABILE</button></div>
+  <h2>ORARIO</h2><div class="row" data-k="night"><button class="opt on" data-v="0">GIORNO</button><button class="opt" data-v="1">NOTTE</button></div>
+  <h2>GOMME</h2><div class="row" data-k="tyre"><button class="opt" data-v="soft">SOFT</button><button class="opt on" data-v="medium">MEDIUM</button><button class="opt" data-v="hard">HARD</button><button class="opt" data-v="inter">INTER</button><button class="opt" data-v="wet">WET</button></div>
+  <h2>CARBURANTE</h2><div class="row" data-k="fuel"><button class="opt" data-v="0.3">30%</button><button class="opt" data-v="0.6">60%</button><button class="opt on" data-v="1">PIENO</button></div>
+  <h2>AVVERSARI</h2><div class="row" data-k="ai"><button class="opt" data-v="0">0</button><button class="opt" data-v="3">3</button><button class="opt" data-v="5">5</button><button class="opt on" data-v="7">7</button><button class="opt" data-v="9">9</button></div>
+  <h2>PROPULSIONE</h2><div class="row" data-k="power"><button class="opt on" data-v="v8">V8 BITURBO</button><button class="opt" data-v="wankel">WANKEL H₂</button><button class="opt" data-v="mag">LEVITA</button></div>
+  <button class="go" id="go">▶ VIA</button><button class="go" id="resume" style="display:none;background:#ffd23b">↺ RIPRENDI GARA SALVATA</button>
+  <h2>RISULTATI SALVATI</h2><div id="hist" style="font-size:1.7vmin;opacity:.85"></div>
+</div></div>
+<div class="pane" id="pit"><div class="card">
+  <h1>BOX · SQUADRA</h1>
+  <h2>CARBURANTE / ENERGIA</h2><div class="row" data-k="pfuel"><button class="opt" data-v="0">NIENTE</button><button class="opt" data-v="0.25">+25%</button><button class="opt on" data-v="0.5">+50%</button><button class="opt" data-v="1">PIENO</button></div>
+  <h2>GOMME</h2><div class="row" data-k="ptyre"><button class="opt on" data-v="">TIENI</button><button class="opt" data-v="soft">SOFT</button><button class="opt" data-v="medium">MEDIUM</button><button class="opt" data-v="hard">HARD</button><button class="opt" data-v="inter">INTER</button><button class="opt" data-v="wet">WET</button></div>
+  <div id="pitInfo" style="margin-top:1.6vmin;font-size:1.8vmin;opacity:.8"></div>
+  <button class="go" id="pitGo">🔧 VAI!</button>
+</div></div>
+<div class="pane" id="res"><div class="card"><h1>CLASSIFICA</h1><table id="resT"></table><button class="go" id="again">↺ NUOVA GARA</button></div></div>
+<div id="err"></div>
+<script>/*SHADERS*/</script>
+<script>/*ENGINE*/</script>
+<script>/*CARHD*/</script>
+<script>/*CARRENDER*/</script>
+<script>/*ENGINEFX*/</script>
+<script>/*GAME*/</script>
+<script>/*TRACK*/</script>
+<script>
+(function(){
+  const q=new URLSearchParams(location.search), $=id=>document.getElementById(id);
+  const cv=$('c'), hud=$('hud');
+  function resize(){ const s=Math.min(window.devicePixelRatio||1,2); cv.width=hud.width=Math.round(innerWidth*s); cv.height=hud.height=Math.round(innerHeight*s); } addEventListener('resize',resize); resize();
+  let cfg={mode:'race',laps:3,weather:'sereno',night:'0',tyre:'medium',fuel:1,ai:7,power:'v8'};
+  try{ Object.assign(cfg, JSON.parse(localStorage.getItem('kageTrackCfg')||'{}')); }catch(e){}
+  try{ const g=JSON.parse(localStorage.getItem('neonrun')||'{}'); cfg.paint=g.paint||'rosso'; cfg.exhaust=g.exhaust; cfg.roof=g.roof; }catch(e){}
+  if(q.has('car')) try{ localStorage.setItem('kageCar', q.get('car')); }catch(e){}
+  for(const k of ['paint','exhaust']) if(q.has(k)) cfg[k]=q.get(k); if(q.has('roof')) cfg.roof=q.get('roof')==='1';
+  for(const k of ['mode','weather','tyre','power','night']) if(q.has(k)) cfg[k]=q.get(k); for(const k of ['laps','ai','fuel']) if(q.has(k)) cfg[k]=+q.get(k);
+  const pick=(pane)=>{ pane.querySelectorAll('.row').forEach(r=>{ const k=r.dataset.k; r.querySelectorAll('.opt').forEach(b=>{ if(cfg[k]!==undefined) b.classList.toggle('on', String(cfg[k])===b.dataset.v); b.onclick=()=>{ r.querySelectorAll('.opt').forEach(x=>x.classList.remove('on')); b.classList.add('on'); cfg[k]=isNaN(+b.dataset.v)||b.dataset.v===''?b.dataset.v:+b.dataset.v; if(k==='mode'||k==='weather'||k==='tyre'||k==='power') cfg[k]=b.dataset.v; }; }); }); };
+  pick($('menu')); cfg.pfuel=0.5; cfg.ptyre=''; pick($('pit'));
+  let race;
+  const opts=()=>({mode:cfg.mode,laps:+cfg.laps,weather:cfg.weather,night:cfg.night==='1'||cfg.night===1,tyre:cfg.tyre,fuel:+cfg.fuel,ai:+cfg.ai,power:cfg.power,paint:cfg.paint,exhaust:cfg.exhaust,roof:cfg.roof,preserve:q.has('shot')});
+  try{ race=new KageTrack.Race(cv,hud,opts()); }catch(e){ const er=$('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
+  window.__race=race;
+  const hist=()=>{ const r=KageTrack.loadTrack(); $('resume').style.display=r.save?'block':'none';
+    $('hist').innerHTML=(r.results||[]).slice(0,6).map(x=>x.date.slice(0,10)+' · '+(x.mode==='race'?'GARA '+x.laps+' giri · P'+x.pos+'/'+x.of:'SFIDA')+' · '+x.weather+' · best '+KageTrack.fmt(x.best)).join('<br>')||'—';
+    const b=r.best||{}; const keys=Object.keys(b); if(keys.length) $('hist').innerHTML+='<br><br>RECORD: '+keys.map(k=>k.replace('|',' · ').toUpperCase()+' '+KageTrack.fmt(b[k].t)).join('<br>'); };
+  hist();
+  const start=(resume)=>{ localStorage.setItem('kageTrackCfg',JSON.stringify(cfg)); const o=opts(); race.o=o; race.setup(o, resume?KageTrack.loadTrack().save:null); $('menu').classList.remove('open'); race.audio.start(); };
+  $('go').onclick=()=>start(false); $('resume').onclick=()=>{ const sv=KageTrack.loadTrack().save; Object.assign(cfg,{mode:sv.mode,laps:sv.laps,weather:sv.weather,power:sv.power}); start(true); };
+  $('again').onclick=()=>{ $('res').classList.remove('open'); hist(); $('menu').classList.add('open'); };
+  race.onPit=()=>{ const e=race.eng; $('pitInfo').textContent='Serbatoio '+EngineFX.fmtFuel(e).tank+' · gomme '+KageTrack.COMPOUNDS[race.player.cmp].name+' usura '+Math.round(race.player.wear*100)+'% · pista '+race.wx.name; $('pit').classList.add('open'); };
+  $('pitGo').onclick=()=>{ const e=race.eng; race.pitService(e.T.tank*(+cfg.pfuel||0), cfg.ptyre||null); $('pit').classList.remove('open'); };
+  race.onFinish=res=>{ $('resT').innerHTML='<tr><td>POS</td><td>PILOTA</td><td>TEMPO</td><td>GIRO MIGLIORE</td></tr>'+res.map(r=>'<tr class="'+(r.name===race.player.name?'me':'')+'"><td>'+r.pos+'</td><td>'+r.name+'</td><td>'+(r.total?KageTrack.fmt(r.total):'+'+(race.laps-r.laps)+' giri')+'</td><td>'+KageTrack.fmt(r.best)+'</td></tr>').join(''); setTimeout(()=>$('res').classList.add('open'),2500); };
+  // input
+  const inp={gas:false,brake:false,steer:0,hand:false,boost:false}, keys={};
+  addEventListener('keydown',e=>{ keys[e.code]=true; race.audio.start(); if(e.code==='KeyC') race.view=(race.view+1)%NeonRun.VIEWS.length; if(e.code==='Escape'){ $('menu').classList.toggle('open'); hist(); } if(e.code==='KeyB') race.audio.toggle(); });
+  addEventListener('keyup',e=>{ keys[e.code]=false; });
+  if('ontouchstart' in window) document.body.classList.add('touch');
+  const tb={}; for(const id of ['tl','tr','tg','tbk','th','tn','tv','tm']){ const el=$(id);
+    el.addEventListener('touchstart',e=>{ e.preventDefault(); tb[id]=true; race.audio.start(); if(id==='tv') race.view=(race.view+1)%NeonRun.VIEWS.length; if(id==='tm'){ $('menu').classList.add('open'); hist(); } });
+    el.addEventListener('touchend',e=>{ e.preventDefault(); tb[id]=false; }); }
+  let tilt=0; addEventListener('deviceorientation',e=>{ if(e.beta==null) return; const a=(screen.orientation&&screen.orientation.angle)||0; const v=a===90?e.beta:a===270||a===-90?-e.beta:e.gamma; tilt=Math.max(-1,Math.min(1,-(v||0)/28)); });
+  function readInput(){ inp.gas=keys.KeyW||keys.ArrowUp||tb.tg; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk;
+    const kb=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0); inp.steer=kb||(document.body.classList.contains('touch')&&!tb.tl&&!tb.tr?(Math.abs(tilt)>0.05?tilt:0):0);
+    inp.hand=keys.Space||tb.th; inp.boost=keys.ShiftLeft||keys.ShiftRight||tb.tn; }
+  if(q.has('shot')){ $('menu').classList.remove('open'); race.setup(opts()); race.state='run'; const T=parseFloat(q.get('t')||'2'); for(let i=0;i<T*30;i++) race.frame(1/30,{gas:true,brake:false,steer:0,hand:false,boost:false}); window.__done=true; return; }
+  let prev=performance.now();
+  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; readInput(); const paused=$('menu').classList.contains('open')||$('pit').classList.contains('open'); if(!paused) race.frame(dt,inp); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

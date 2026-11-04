@@ -50,3 +50,16 @@ vec3 applyFog(vec3 col, float d, float y){
     vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02)) + vec3(0.55, 0.6, 0.8) * uFlash;
     return mix(col, fc, f);
 }
+
+/* headlight beams on the ground: uHL = (nose x, nose z, forward x, forward z) in the frame of vWP */
+uniform vec4 uHL;
+uniform float uHLOn;
+vec3 headLight(vec3 wp){
+    if (uHLOn < 0.01) return vec3(0.0);
+    vec2 d = wp.xz - uHL.xy, f = normalize(uHL.zw + 1e-6), r = vec2(-f.y, f.x);
+    float along = dot(d, f), lat = dot(d, r), w = 0.45 + max(along, 0.0) * 0.26;
+    float cone = max(smoothstep(w, 0.0, abs(lat - 0.62)), smoothstep(w, 0.0, abs(lat + 0.62)));
+    float fall = smoothstep(0.3, 3.5, along) * exp(-max(along, 0.0) * 0.032) * (1.0 - smoothstep(55.0, 85.0, along));
+    float pool = exp(-dot(d - f * 2.2, d - f * 2.2) * 0.35) * 0.35;           // spill right in front of the bumper
+    return vec3(1.0, 0.95, 0.86) * (cone * fall * 1.25 + pool) * uHLOn;
+}

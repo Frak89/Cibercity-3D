@@ -33,6 +33,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private final ExhaustFx exhaust = new ExhaustFx();
     private Gl.Prog fxProg;
     private float fxOx, fxOz; private boolean fxInit = false;
+    public volatile float telGx, telGy, t100 = -1, t200 = -1; private float telV0 = 0, telRun = -1, handK = 0; private boolean d100, d200;
+    public volatile int kit, rim, livery, text = -1, stripeC = 0, rimC = 3, brakes = 0;
+    public volatile String hudFuelCons = "", hudFuelTank = ""; public volatile float hudFuelK = 1;
     public volatile float hudRpm, hudRed = 8900, hudLim = 9100; public volatile int hudGear;
     public volatile int power = 0; public volatile boolean roofOpen = false;
     /* KAGE CHRONO + race exhaust + LEVITA flight */
@@ -147,6 +150,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         p.v3("uFog", curFog != null ? curFog : pal.fog); p.v3("uSkyTop", curTop != null ? curTop : pal.top); p.v3("uWinA", pal.winA); p.v3("uWinB", pal.winB); p.v3("uWinC", pal.winC);
         p.v3("uNeonA", pal.neonA); p.v3("uNeonB", pal.neonB); p.v3("uEye", eye);
         p.m4("uVP", VP); p.m4("uV", V); p.m4("uP", P);
+        { float fx = (float) Math.sin(car.h), fz = (float) Math.cos(car.h); int l = p.u("uHL"); if (l >= 0) { GLES20.glUniform4f(l, -e[0] + fx * 2.3f, -e[2] + fz * 2.3f, fx, fz); p.f1("uHLOn", past ? 0.35f : 1); } }
     }
 
     @Override public void onDrawFrame(GL10 gl) {
@@ -168,7 +172,14 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             if (imp > 3) lastImpact = imp;
             eng.race = race;
             eng.setType(power); car.pk = power == 0 ? 1 : power == 1 ? 1.03f : 1.1f;
-            eng.update(dt, car.speed(), input.gas ? 1 : 0, car.boosting, false);
+            eng.update(dt, car.speed(), input.gas ? 1 : 0, car.boosting, false, car.slip, car.wheelspin, car.brakeHard, input.brake, flyK > 0.3f);
+            // telemetry for the cockpit HUD: g forces and 0-100 / 0-200
+            float vNow = Math.abs(car.vFwd);
+            telGx += ((vNow - telV0) / Math.max(dt, 1e-3f) / 9.81f - telGx) * Math.min(1, dt * 6); telV0 = vNow;
+            telGy += ((car.steer * 2.5f * Math.min(1, vNow / 10) / (1 + vNow / 45)) * vNow / 9.81f - telGy) * Math.min(1, dt * 6);
+            if (vNow < 0.3f) { telRun = 0; d100 = d200 = false; }
+            else if (telRun >= 0) { telRun += dt; if (!d100 && vNow * 3.6f >= 100) { t100 = telRun; d100 = true; } if (!d200 && vNow * 3.6f >= 200) { t200 = telRun; d200 = true; telRun = -1; } if (input.brake) telRun = -1; }
+            handK += ((input.hand ? 1 : 0) - handK) * Math.min(1, dt * 12);
             roofT += Math.max(-dt / 5, Math.min(dt / 5, (roofOpen ? 1 : 0) - roofT));
             // KAGE CHRONO: hold 300 km/h to charge; the jump swaps Cybercity and the meadow
             float kmh = car.speed() * 3.6f;
@@ -232,12 +243,15 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         Matrix.rotateM(M, 0, (float) Math.toDegrees(pitch), 1, 0, 0);
         Matrix.rotateM(M, 0, (float) Math.toDegrees(bank), 0, 0, 1);
         hdState.roof = roofT; hdState.power = power; hdState.time = t;
+        hdState.kit = kit; hdState.rim = rim; hdState.livery = livery; hdState.text = text; hdState.hand = handK;
         hdState.race = race; hdState.chrono = chronoOn; hdState.chronoPh = chronoPh; hdState.fly = fsm;
         hdState.wheelSteer = car.steer * 0.5f; hdState.steerWheel = car.steer * 2.6f; hdState.spin = car.spin;
         if (drawCar && hd != null) {
             common(hdProg, pal, fogDen, camX, camZ, eye);
+            hd.stripe = CarHd.COLORS[stripeC]; hd.rimCol = CarHd.COLORS[rimC]; hd.brakes = brakes;
             hd.setMaterials(paint, pal.neonA, pal.neonB);
-            hdProg.f1("uKey", past ? 1.0f : 0.35f); hdProg.f1("uLights", 1); hdProg.f1("uBrake", input.brake ? 1 : 0);
+            hdProg.f1("uKey", past ? 1.0f : 0.35f);
+            hdProg.f1("uSpd", Math.abs(car.vFwd) * 3.6f); hdProg.f1("uRpmK", eng.rpm / eng.limiter()); hdProg.f1("uGear", eng.gear); hdProg.f1("uFuelK", eng.fuelK); hdProg.f1("uGx", telGx); hdProg.f1("uLights", 1); hdProg.f1("uBrake", input.brake ? 1 : 0);
             hd.draw(M, hdState, false);
         } else if (drawCar) {
             common(solid, pal, fogDen, camX, camZ, eye);
@@ -253,6 +267,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         }
         if (!paused) {
             exhaust.update(dt, M, car.vx, car.vz, eng);
+            exhaust.tyreSmoke(dt, M, Math.max(eng.burn, eng.tyre * 0.7f), car.vx, car.vz, CarHd.KIT_TRACK[Math.max(0, Math.min(2, kit))]);
             if (chronoOn && tjCharge > 0.05f) exhaust.chronoArcs(M, tjCharge, car.vx, car.vz);
             if (arrive) { arrive = false; exhaust.ring(M, 2.2f, car.vx, car.vz, 120); }
         }
@@ -289,11 +304,12 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         GLES20.glDepthMask(true); GLES20.glDisable(GLES20.GL_BLEND);
 
         hudChrono = chronoOn ? tjCharge : -1; hudCool = tjCool; hudPast = past;
+        hudFuelCons = eng.fuelCons(); hudFuelTank = eng.fuelTank(); hudFuelK = eng.fuelK;
         hudRpm = eng.rpm; hudGear = eng.gear; hudRed = eng.red(); hudLim = eng.limiter();
         hudKmh = car.speed() * 3.6f; hudBoost = car.boost; hudBoosting = car.boosting; hudDrift = car.drift; hudSteer = car.steer;
         hudH = car.h; hudX = car.x; hudZ = car.z; hudDist = car.dist; hudScore = car.score; hudBest = car.best; hudCockpit = view == 3 && hd == null;
     }
 
-    public void resetCar() { car.reset(); camH = 0; exhaust.reset(); fxInit = false; }
+    public void resetCar() { car.reset(); camH = 0; exhaust.reset(); fxInit = false; eng.refuel(1); }
     public void toPresent() { past = false; tjCharge = 0; }
 }

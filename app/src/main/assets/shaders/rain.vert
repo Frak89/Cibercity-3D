@@ -8,6 +8,7 @@ uniform float uCamZ;
 uniform float uRainSpeed;
 uniform float uSnow;
 uniform float uWind;
+uniform float uRainCenter;   // 1: rain all around the eye (free cameras), 0: ahead (city)
 varying vec2 vC;
 varying float vDist;
 void main(){
@@ -15,7 +16,7 @@ void main(){
     pos.x = uEye.x + (aSeed.x - 0.5) * 70.0;
     float fall = uRainSpeed * (0.8 + aSeed.z * 0.4) * mix(1.0, 0.07, uSnow);
     pos.y = uEye.y - 25.0 + mod(aSeed.y * 60.0 - uTime * fall, 60.0);
-    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0;
+    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0 - uRainCenter * 38.0;
     pos.x += uSnow * sin(uTime * (0.6 + aSeed.x) + aSeed.y * 30.0) * 1.2 + uWind * 0.02 * mod(uTime * 7.0 + aSeed.z * 50.0, 60.0);
     vec3 vel = mix(vec3(-0.08 - uWind * 0.02, -1.0, 0.0), vec3(0.0, -0.06, 0.0), uSnow);
     vec3 a = (uV * vec4(pos, 1.0)).xyz;
