@@ -371,6 +371,12 @@ function Game(canvas, hud, opts) {
     ground: this.mesh({ aPos: [[-S / 2, -S / 2, S / 2, -S / 2, S / 2, S / 2, -S / 2, S / 2], 2] }, [0, 1, 2, 0, 2, 3]),
     quad: this.mesh({ aPos: [[-1, -1, 1, -1, 1, 1, -1, 1], 2] }, [0, 1, 2, 0, 2, 3])
   };
+  if (window.EngineFX) {
+    const F = window.EngineFX;
+    this.P.fx = prog('particle.vert', 'particle.frag');
+    this.eng = new F.EngineSim(); this.fx = new F.ExhaustFX(700); this.fxgl = new F.ExhaustGL(gl, this.P.fx); this.audio = new F.EngineAudio();
+    this.fxO = null;
+  }
   this.buildCar();
   this.c = newCar(); this.cam = { h: 0 }; this.t = 0; this.flash = 0; this.nextFlash = 3; this.view = 0;
   this.stats = { verts: city.chunks.reduce((a, B) => a + B.pos.length / 3, 0), chunks: city.chunks.length };
@@ -408,6 +414,14 @@ Game.prototype.frame = function (dt, inp) {
   const c = this.c;
   const cv = cameraFor(this.view, c, this.cam, dt, t);
   this.cv = cv;
+  if (this.eng) {
+    this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting });
+    this.audio.feed(this.eng);
+    // particles live in the camera-relative frame: move them when the camera origin moves (torus-wrapped)
+    const ox = c.x + cv.e[0], oz = c.z + cv.e[2];
+    if (this.fxO) { let dx = ox - this.fxO[0], dz = oz - this.fxO[1]; dx -= Math.round(dx / S) * S; dz -= Math.round(dz / S) * S; this.fx.shift(-dx, 0, -dz); }
+    this.fxO = [ox, oz];
+  }
   // camera-relative world: eye at (0, ey, 0); uCamX / uCamZ = eye position on the torus
   const camX = ((c.x + cv.e[0]) % S + S) % S, camZ = ((c.z + cv.e[2]) % S + S) % S;
   const eye = [0, cv.e[1], 0];
@@ -456,6 +470,12 @@ Game.prototype.frame = function (dt, inp) {
   if (cv.drawCar && this.hd) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.hd.p); set(P.hd); this.hd.draw(carM, hdState, "glass"); gl.blendFunc(gl.ONE, gl.ONE);
   }
+  if (this.eng) {
+    const tp = EngineFX.tipsFrom(carM);
+    this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng);
+    gl.useProgram(P.fx.p); set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov / 2)));
+    gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  }
   gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car);
   gl.useProgram(P.glow.p); set(P.glow);
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
@@ -498,6 +518,14 @@ Game.prototype.drawHud = function (inp) {
   g.fillStyle = 'rgba(255,255,255,0.15)'; g.fillRect(cx - r, cy + r * 0.95, r * 2, m * 0.012);
   g.fillStyle = B; g.fillRect(cx - r, cy + r * 0.95, r * 2 * c.boost, m * 0.012);
   g.font = (m * 0.016 | 0) + 'px monospace'; g.fillStyle = '#ecfcff'; g.fillText('NITRO', cx, cy + r * 0.95 + m * 0.035);
+  if (this.eng) {   // rev counter: thin inner arc + gear
+    const e = this.eng, kr = Math.min(1, e.rpm / 9000);
+    g.lineWidth = m * 0.006; g.strokeStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.arc(cx, cy, r * 0.8, Math.PI * 0.75, Math.PI * 2.25); g.stroke();
+    g.strokeStyle = e.rpm > 8000 ? '#ff3b5c' : B; g.beginPath(); g.arc(cx, cy, r * 0.8, Math.PI * 0.75, Math.PI * (0.75 + 1.5 * kr)); g.stroke();
+    g.font = 'bold ' + (m * 0.026 | 0) + 'px monospace'; g.fillStyle = e.rpm > 8000 ? '#ff3b5c' : '#ecfcff';
+    g.fillText((e.gear < 0 ? 'N' : e.gear + 1) + '  ' + (Math.round(e.rpm / 100) * 100), cx, cy - r * 0.38);
+    if (!this.audio.ctx) { g.font = (m * 0.016 | 0) + 'px monospace'; g.fillStyle = 'rgba(236,252,255,0.6)'; g.fillText('🔊 tocca / premi un tasto per il suono', W / 2, H - m * 0.03); }
+  }
   // top-left: view + score
   g.textAlign = 'left'; g.font = 'bold ' + (m * 0.022 | 0) + 'px monospace'; g.fillStyle = A;
   g.fillText('NEON RUN · ' + VIEWS[this.view], m * 0.03, m * 0.05);
@@ -522,7 +550,7 @@ Game.prototype.drawHud = function (inp) {
   g.fillStyle = '#ecfcff'; g.font = (m * 0.016 | 0) + 'px monospace'; g.textAlign = 'center'; g.fillText('N', mx, my - mr + m * 0.022);
   if (this.o.help) {
     g.textAlign = 'left'; g.fillStyle = 'rgba(236,252,255,0.7)'; g.font = (m * 0.017 | 0) + 'px monospace';
-    ['W/↑ accelera · S/↓ frena · A D/← → sterza', 'SPAZIO derapata · SHIFT nitro · C vista', 'P atmosfera · M meteo · V colore auto · R riparti · H aiuto']
+    ['W/↑ accelera · S/↓ frena · A D/← → sterza', 'SPAZIO derapata · SHIFT nitro · C vista', 'P atmosfera · M meteo · V colore auto · B suono · R riparti · H aiuto']
       .forEach((s, i) => g.fillText(s, m * 0.03, H - m * 0.12 + i * m * 0.03));
   }
 };

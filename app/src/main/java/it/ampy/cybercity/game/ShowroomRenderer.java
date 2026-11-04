@@ -30,6 +30,13 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
     private int W = 1, H = 1;
     private final float[] V = new float[16], P = new float[16], VP = new float[16], car = new float[16], mir = new float[16];
     public volatile String error = null;
+    /** engine: idles by itself; rev = throttle held with SU DI GIRI (neutral) */
+    final EngineSim eng = new EngineSim();
+    private final ExhaustFx fx = new ExhaustFx();
+    private Gl.Prog fxProg;
+    public volatile boolean engineOn = true;
+    public volatile float rev = 0;
+    private final float[] body = new float[16];
 
     public ShowroomRenderer(Context c) { ctx = c.getApplicationContext(); }
 
@@ -38,6 +45,7 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         sky = Gl.prog(ctx, "sky.vert", "sky.frag", common);
         floor = Gl.prog(ctx, "ground.vert", "studio_floor.frag", common);
         hdProg = Gl.prog(ctx, "car_hd.vert", "car_hd.frag", common);
+        fxProg = Gl.prog(ctx, "particle.vert", "particle.frag", common); fx.glLost();
         try { hd = new CarHd(ctx, hdProg); } catch (Exception e) { error = e.getMessage(); }
         quad = Gl.mesh(new String[]{"aPos"}, new float[][]{{-1, -1, 1, -1, 1, 1, -1, 1}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3});
         ground = Gl.mesh(new String[]{"aPos"}, new float[][]{{-40, -40, 40, -40, 40, 40, -40, 40}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3});
@@ -64,6 +72,8 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         long now = SystemClock.uptimeMillis();
         float dt = last == 0 ? 1 / 60f : Math.min(0.05f, (now - last) / 1000f);
         last = now; t += dt;
+        eng.off = !engineOn;
+        eng.update(dt, 0, rev, false, true);
         Palette pal = Palette.of(palette);
         st.hood = ease(st.hood, tHood, 3, dt); st.doorL = ease(st.doorL, tDoors, 2.6f, dt); st.doorR = ease(st.doorR, tDoors, 2.4f, dt);
         float steer = steerDemo ? (float) Math.sin(t * 1.4f) : 0;
@@ -102,6 +112,12 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         if (hd == null) return;
         GLES20.glEnable(GLES20.GL_DEPTH_TEST); GLES20.glDepthMask(true);
         Matrix.setIdentityM(car, 0); Matrix.rotateM(car, 0, (float) Math.toDegrees(turn), 0, 1, 0);
+        {   // the body rocks on its mounts with the torque and shivers at idle
+            float rk = engineOn ? Math.min(1, Math.max(0, (eng.rpm - 900) / 8000)) : 0;
+            float shiver = engineOn ? (float) Math.sin(t * eng.rpm / 60 * 0.5f * 6.283f) * 0.0012f * (1 - rk * 0.6f) : 0;
+            Matrix.translateM(car, 0, 0, shiver + rk * 0.004f, 0);
+            Matrix.rotateM(car, 0, (float) Math.toDegrees(rk * eng.load * 0.012f + shiver * 0.6f), 0, 0, 1);
+        }
         common(hdProg, pal, eye);
         hd.setMaterials(paint, pal.neonA, pal.neonB);
         hdProg.f1("uKey", 1.15f); hdProg.f1("uLights", lights); hdProg.f1("uBrake", lights * 0.3f);
@@ -116,6 +132,9 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         hd.draw(car, st, false);
         GLES20.glEnable(GLES20.GL_BLEND); GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA); GLES20.glDepthMask(false);
         hd.draw(car, st, true);
+        fx.update(dt, car, 0, 0, eng);
+        common(fxProg, pal, eye);
+        fx.draw(fxProg, H / (2 * (float) Math.tan(Math.toRadians(fov) / 2)));
         GLES20.glDepthMask(true); GLES20.glDisable(GLES20.GL_BLEND);
     }
 }

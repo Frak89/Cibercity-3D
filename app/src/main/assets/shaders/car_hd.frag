@@ -75,18 +75,34 @@ void main(){
     vec3 env = mix(uFog * 1.2 + vec3(0.02), uSkyTop * 1.4 + vec3(0.05, 0.06, 0.09), smoothstep(-0.3, 0.6, r.y));
     env += mix(uNeonA, uNeonB, step(0.0, r.x)) * band * 0.55 + vec3(0.9, 0.85, 0.8) * smoothstep(0.985, 1.0, dot(r, L)) * 2.0;
     env += vec3(0.85, 0.9, 1.0) * uKey * 0.5 * smoothstep(0.75, 0.9, r.y) * (0.6 + 0.4 * step(0.5, fract(r.x * 2.5 + 0.25)));  // overhead softboxes
+    // crisp horizon line: dark floor below, bright rim just above — gives the body its "liquid" definition
+    env = mix(env * 0.35, env, smoothstep(-0.02, 0.02, r.y));
+    env += vec3(0.55, 0.6, 0.75) * (uKey * 0.6 + 0.25) * smoothstep(0.0, 0.03, r.y) * (1.0 - smoothstep(0.03, 0.12, r.y));
+    // long side softbox strip
+    env += vec3(1.0) * uKey * 0.45 * smoothstep(0.86, 0.9, abs(r.x)) * smoothstep(0.05, 0.15, r.y) * (1.0 - smoothstep(0.35, 0.45, r.y));
     float ndv = max(dot(n, v), 0.0);
     float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
     vec3 F0 = mix(vec3(0.04), base, metal);
     float shin = mix(220.0, 6.0, rough);
     float spec = pow(max(dot(reflect(-L, n), v), 0.0), shin) * (1.0 - rough) * 1.6;
-    vec3 col = base * (1.0 - metal) * (amb + diff * uKey * 0.9);
+    // cheap ambient occlusion: darker toward the ground, the sills and inside the wheel arches
+    float ao = 0.45 + 0.55 * smoothstep(0.12, 0.62, vWP.y);
+    vec3 col = base * (1.0 - metal) * (amb + diff * uKey * 0.9) * ao;
     col += env * mix(vec3(fres), base, metal) * (1.0 - rough * 0.8);
     col += spec * mix(vec3(1.0), base, metal) * uKey;
+    // clear coat on painted panels: a second, razor-sharp lobe on top of the base paint
+    if (pat < 0.5 && rough < 0.5 && uGlassPass < 0.5) {
+        float cc = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
+        col += env * cc * 0.9 * ao;
+        col += vec3(1.0) * pow(max(dot(reflect(-L, n), v), 0.0), 900.0) * 3.0 * uKey;
+    }
     col += base * emis * 2.4;
     col += vec3(0.6, 0.65, 0.8) * uFlash * 0.25;
     col = applyFog(col, length(uEye - vWP), vWP.y);
     float alpha = 1.0;
-    if (uGlassPass > 0.5) alpha = clamp(0.22 + 0.7 * fres + spec * 0.5, 0.0, 0.92);
+    if (uGlassPass > 0.5) {                  // tinted glass: you see the cabin, but it clearly is a closed coupé
+        col = col * 0.8 + env * (0.10 + fres * 0.9);
+        alpha = clamp(0.48 + 0.5 * fres + spec * 0.5, 0.0, 0.95);
+    }
     gl_FragColor = vec4(col, alpha);
 }

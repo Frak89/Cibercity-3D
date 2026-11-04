@@ -26,11 +26,14 @@ function Showroom(canvas, opts) {
   this.model = CarHD.build();
   this.buildMs = performance.now() - t0;
   this.car = new CarRender(gl, this.P.car, this.model);
+  const F = window.EngineFX;
+  this.P.fx = prog('particle.vert', 'particle.frag');
+  this.eng = new F.EngineSim(); this.fx = new F.ExhaustFX(700); this.fxgl = new F.ExhaustGL(gl, this.P.fx); this.audio = new F.EngineAudio();
   const b = (arr, ix) => { const x = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, x); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return x; };
   this.quad = { a: b([-1, -1, 1, -1, 1, 1, -1, 1]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.ground = { a: b([-40, -40, 40, -40, 40, 40, -40, 40]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0 };
-  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1 };
+  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0 };
   this.cam = { yaw: 0.7, pitch: 0.18, dist: 7.2, mode: 'orbit', auto: true, look: 0, lookP: 0 };
   this.t = 0; this.turn = 0;
 }
@@ -51,7 +54,16 @@ Showroom.prototype.frame = function (dt) {
   const W = this.canvas.width, H = this.canvas.height; gl.viewport(0, 0, W, H);
   // camera
   let eye, tgt, fov = 40;
-  const carM = U.RY(this.turn);
+  // engine: idles by itself, SU DI GIRI holds the throttle (neutral)
+  const eng = this.eng;
+  if (tg.engine) { eng.off = false; eng.update(dt, { free: true, throttle: tg.rev }); }
+  else { eng.off = true; eng.pops = 0; eng.rpm = Math.max(0, eng.rpm - dt * 4000); eng.load = 0; }
+  this.audio.on = tg.engine; this.audio.feed(eng);
+  // the body rocks on its mounts with the torque, and shivers at idle
+  const rk = tg.engine ? Math.min(1, Math.max(0, (eng.rpm - 900) / 8000)) : 0;
+  const shiver = tg.engine ? Math.sin(t * eng.rpm / 60 * 0.5 * 6.283) * 0.0012 * (1 - rk * 0.6) : 0;
+  const body = U.mul(U.T(0, shiver + rk * 0.004, 0), U.RZ(rk * eng.load * 0.012 + shiver * 0.6));
+  const carM = U.mul(U.RY(this.turn), body);
   const toWorld = p => { const c = Math.cos(this.turn), s = Math.sin(this.turn); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; };
   if (cam.mode === 'cockpit') {
     const e = CarHD.RIG.driverEye; eye = toWorld(e);
@@ -63,7 +75,7 @@ Showroom.prototype.frame = function (dt) {
     eye = toWorld([0.9, 2.0, 3.4]); tgt = toWorld([0, 0.45, 1.5]); fov = 45;
   } else {
     const d = cam.dist, ce = Math.cos(cam.yaw), se = Math.sin(cam.yaw);
-    eye = [se * d * Math.cos(cam.pitch), 0.6 + d * Math.sin(cam.pitch), ce * d * Math.cos(cam.pitch)]; tgt = [0, 0.55, 0];
+    const T0 = cam.tgt || [0, 0.55, 0]; eye = [T0[0] + se * d * Math.cos(cam.pitch), T0[1] + 0.05 + d * Math.sin(cam.pitch), T0[2] + ce * d * Math.cos(cam.pitch)]; tgt = T0;
   }
   const V = lookAt(eye, tgt, [0, 1, 0]), Pm = perspective(fov * Math.PI / 180, W / H, 0.03, 200), VP = new Float32Array(16);
   { const a = Pm, bb = V.m; for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * bb[c * 4 + k]; VP[c * 4 + r] = s; } }
@@ -98,6 +110,9 @@ Showroom.prototype.frame = function (dt) {
   this.car.draw(carM, st, 'opaque');
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   this.car.draw(carM, st, 'glass');
+  const tp = EngineFX.tipsFrom(carM);
+  this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng);
+  set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov * Math.PI / 360)));
   gl.depthMask(true); gl.disable(gl.BLEND);
 };
 window.Showroom = Showroom;

@@ -167,11 +167,17 @@ function bodyPt(u, v) {
     for (const ax of AXLES) { const dz = z - ax; if (Math.abs(dz) < ARCH_R) yb = Math.max(yb, 0.36 + Math.sqrt(ARCH_R * ARCH_R - dz * dz) * (1 - 0.0)); }
     yb = Math.min(yb, Ys - 0.07);
     x = side * W * (0.955 + 0.045 * Math.sin(k * Math.PI / 2));
+    // feature line: a crisp crease along the doors that catches a sharp reflection
+    const cz = smooth((z + 1.9) / 0.5) * (1 - smooth((z - 1.75) / 0.4));
+    x += side * W * 0.014 * Math.exp(-Math.pow((k - 0.62) / 0.05, 2)) * cz;
     y = yb + (Ys - yb) * k;
   } else {
     const k = (vv - 0.45) / 0.55, ph = k * Math.PI / 2;
     x = side * W * Math.pow(Math.cos(ph), 0.55);
     y = Ys + (Yt - Ys) * Math.pow(Math.sin(ph), 0.75);
+    // hood power bulge between the front fenders
+    const hz = smooth((z - 1.0) / 0.25) * (1 - smooth((z - 2.05) / 0.2));
+    y += 0.03 * hz * Math.exp(-Math.pow(x / 0.32, 2));
   }
   return [x, y, z];
 }
@@ -179,18 +185,20 @@ const zOf = u => lerp(Z0, Z1, u);
 const uOf = z => (z - Z0) / (Z1 - Z0);
 
 // cabin / greenhouse
-const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.55, 1.10], [0.98, 0.84]];
+const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.55, 1.10], [0.98, 0.795]];
 const CZ0 = -1.30, CZ1 = 0.98;
 function roofY(z) {
   let k = 0; while (k < CB.length - 2 && z > CB[k + 1][0]) k++;
   const a = CB[k], b = CB[k + 1], t = smooth((z - a[0]) / (b[0] - a[0]));
   return lerp(a[1], b[1], t);
 }
+// height of the body surface where the greenhouse meets it (x = 0.88 W): glass grows out of the body, no slit
+function beltY(z) { const [, , Ys, Yt] = station(z); return Ys + (Yt - Ys) * 0.69 - 0.012; }
 function cabinPt(u, v) {
   const z = lerp(CZ0, CZ1, u);
   const side = v < 0.5 ? -1 : 1, vv = v < 0.5 ? v * 2 : (1 - v) * 2;
   const [W] = station(z);
-  const Wb = W * 0.88, Wr = 0.62 + 0.04 * Math.sin(u * Math.PI), yb = 0.86, Yr = Math.max(yb + 0.01, roofY(z));
+  const Wb = W * 0.88, Wr = 0.62 + 0.04 * Math.sin(u * Math.PI), yb = beltY(z), Yr = Math.max(yb + 0.01, roofY(z));
   let x, y;
   if (vv < 0.6) { const k = vv / 0.6; x = side * lerp(Wb, Wr, Math.pow(k, 0.9)); y = lerp(yb, Yr - 0.05, k); }
   else { const k = (vv - 0.6) / 0.4; x = side * Wr * (1 - k); y = Yr - 0.05 + 0.05 * Math.sin(k * Math.PI / 2); }
@@ -205,11 +213,15 @@ function build(opt) {
   const P = (name, pivot) => (parts[name] = parts[name] || Part(name, pivot));
   const body = P('body'), hood = P('hood', RIG.hood.pivot), doorL = P('doorL', RIG.doorL.pivot), doorR = P('doorR', RIG.doorR.pivot);
   const interior = P('interior'), engine = P('engine'), wheel = P('steeringWheel', RIG.steering.pivot);
-  const NU = Math.round(110 * q), NV = Math.round(72 * q);
-  const DZ0 = -0.62, DZ1 = 0.40;                         // door cut
-  const HZ0 = 0.96, HZ1 = 2.16;                           // hood cut
-  const inDoor = (z, vv) => z > DZ0 && z < DZ1 && vv > 0.07 && vv < 0.72;
-  const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > 0.80;
+  const NU = Math.round(170 * q), NV = Math.round(104 * q);
+  // cut lines snapped to grid lines so the panels split exactly where the gap lines are drawn
+  const snapZ = z => lerp(Z0, Z1, Math.round(uOf(z) * NU) / NU);
+  const snapVV = vv => Math.round(vv * NV / 2) / (NV / 2);
+  const DZ0 = snapZ(-0.62), DZ1 = snapZ(0.40);            // door cut
+  const HZ0 = snapZ(0.96), HZ1 = snapZ(2.16);              // hood cut
+  const DV0 = snapVV(0.07), DV1 = snapVV(0.72), HV0 = snapVV(0.80);
+  const inDoor = (z, vv) => z > DZ0 && z < DZ1 && vv > DV0 && vv < DV1;
+  const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > HV0;
   const inCabin = (u, v) => {
     const p = bodyPt(u, v), z = p[2];
     if (z < CZ0 + 0.03 || z > CZ1 - 0.03) return false;
@@ -235,16 +247,41 @@ function build(opt) {
     if (inHood(z, vv)) return { part: hood, mat: M.TRIM, offset: -0.02 };
     return null;
   }, [5, 3], { id: 'inner' });
-  // panel gaps: thin dark frames around the door and hood cuts (slightly proud of the surface)
-  const seam = (z, vv, cut0, cut1, v0, v1) => {
-    const du = 0.008, dv = 0.006;
-    return (Math.abs(z - cut0) < du || Math.abs(z - cut1) < du) && vv > v0 && vv < v1 || (z > cut0 && z < cut1 && (Math.abs(vv - v0) < dv || Math.abs(vv - v1) < dv));
+  // panel gaps: crisp dark ribbons exactly on the cut lines (both sides of the car)
+  const bodyN = (u, v) => { const e = 1e-4; return norm(cross(sub(bodyPt(Math.min(1, u + e), v), bodyPt(Math.max(0, u - e), v)), sub(bodyPt(u, Math.min(1, v + e)), bodyPt(u, Math.max(0, v - e))))); };
+  const vOf = (vv, left) => left ? vv / 2 : 1 - vv / 2;
+  const gap = (part, uvFn, n, w, mat, lift) => {
+    const pts = []; for (let i = 0; i <= n; i++) { const [u, v] = uvFn(i / n); pts.push([bodyPt(u, v), bodyN(u, v)]); }
+    let prev = -1, prev2 = -1;
+    for (let i = 0; i <= n; i++) {
+      const [p, nn0] = pts[i], q2 = pts[Math.min(n, i + 1)][0], q0 = pts[Math.max(0, i - 1)][0];
+      const nn = scl(nn0, Math.sign(nn0[0] * p[0] + nn0[1] * (p[1] - 0.5) + 1e-6) || 1);
+      const side = norm(cross(sub(q2, q0), nn));
+      const a1 = vert(part, add(add(p, scl(side, w / 2)), scl(nn, lift)), nn, [i / n, 0], mat), a2 = vert(part, add(sub(p, scl(side, w / 2)), scl(nn, lift)), nn, [i / n, 1], mat);
+      if (prev >= 0) { tri(part, prev, a1, a2, mat); tri(part, prev, a2, prev2, mat); }
+      prev = a1; prev2 = a2;
+    }
   };
-  surface(bodyPt, NU * 3, NV * 3, (u, v) => {
-    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
-    if (seam(z, vv, DZ0, DZ1, 0.07, 0.72) || seam(z, vv, HZ0, HZ1, 0.80, 1.01)) return { part: body, mat: M.TRIM, offset: 0.002 };
-    return null;
-  }, [1, 1], { id: 'seam' });
+  for (const left of [true, false]) {
+    const D = left ? doorL : doorR;
+    gap(body, t => [uOf(DZ0), vOf(lerp(DV0, DV1, t), left)], 30, 0.006, M.TRIM, 0.0025);
+    gap(body, t => [uOf(DZ1), vOf(lerp(DV0, DV1, t), left)], 30, 0.006, M.TRIM, 0.0025);
+    gap(D, t => [uOf(lerp(DZ0, DZ1, t)), vOf(DV0, left)], 40, 0.006, M.TRIM, 0.0025);
+    gap(D, t => [uOf(lerp(DZ0, DZ1, t)), vOf(DV1, left)], 40, 0.006, M.TRIM, 0.0025);
+    gap(hood, t => [uOf(lerp(HZ0, HZ1, t)), vOf(HV0, left)], 50, 0.006, M.TRIM, 0.0025);
+    // wheel-arch lips (carbon) following the arch cut-out
+    for (const ax of AXLES) {
+      const pts = [];
+      for (let i = 0; i <= 28; i++) {
+        const a = Math.PI * (0.02 + 0.96 * i / 28), z = ax + Math.cos(a) * ARCH_R;
+        const [W, , Ys] = station(z), y = Math.min(Ys - 0.07, 0.36 + Math.sin(a) * ARCH_R);
+        pts.push([(left ? -1 : 1) * W * 0.962, y, z]);
+      }
+      tube(body, pts, 0.018, 8, M.CARBON);
+    }
+  }
+  gap(body, t => [uOf(HZ0), lerp(1 - HV0 / 2, HV0 / 2, t) < 0.5 ? lerp(1 - HV0 / 2, HV0 / 2, t) : lerp(1 - HV0 / 2, HV0 / 2, t)], 40, 0.006, M.TRIM, 0.0025);
+  gap(body, t => [uOf(HZ1), lerp(1 - HV0 / 2, HV0 / 2, t)], 40, 0.006, M.TRIM, 0.0025);
   // shoulder neon line, door handles, hood vents
   surface(bodyPt, NU * 2, NV * 4, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
@@ -256,8 +293,10 @@ function build(opt) {
   // headlights (follow the nose surface) and full-width segmented tail light
   surface(bodyPt, NU * 3, NV * 3, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
-    if (z > 2.24 && z < 2.31 && vv > 0.60 && vv < 0.84) return { part: body, mat: M.HEAD, offset: 0.004 };
-    if (z > 2.31 && z < 2.345 && vv > 0.40 && vv < 0.6) return { part: body, mat: M.NEON, offset: 0.004 };   // DRL hook
+    // headlight: a dark lens pocket with a thin diagonal LED blade inside
+    const blade = Math.abs((z - 2.30) + (vv - 0.62) * 0.42);
+    if (z > 2.22 && z < 2.315 && vv > 0.60 && vv < 0.86) return { part: body, mat: blade < 0.007 ? M.HEAD : M.GLASS === 4 && blade < 0.03 ? M.TRIM : M.PAINT, offset: blade < 0.03 ? 0.003 : 0 } ;
+    if (z > 2.315 && z < 2.335 && vv > 0.42 && vv < 0.62) return { part: body, mat: M.NEON, offset: 0.004 };   // DRL hook
     if (z < -2.27 && vv > 0.42) return { part: body, mat: M.TAIL, offset: 0.004 };
     return null;
   }, [8, 4], { id: 'lights' });
@@ -301,21 +340,54 @@ function build(opt) {
     lathe(body, [ex, 0.33, -2.38], [[0, 0.052], [0.12, 0.052], [0.12, 0.044], [0.0, 0.044]], 20, M.CHROME, 'z');
     lathe(body, [ex, 0.33, -2.35], [[0, 0.0], [0, 0.044]], 20, M.ENGNEON, 'z');
   }
+  // ---- side mirrors: aero housing (paint over carbon), LED repeater, carbon bezel, real mirror glass,
+  //      and a swan-neck blade support that grows out of the door top
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const se = (a, e) => Math.sign(a) * Math.pow(Math.abs(a), e);
+  const bez = (a, b, c, d, t) => { const m = 1 - t; return [0, 1, 2].map(i => m * m * m * a[i] + 3 * m * m * t * b[i] + 3 * m * t * t * c[i] + t * t * t * d[i]); };
   for (const [door, sx] of [[doorL, -1], [doorR, 1]]) {
-    blob(door, [sx * 1.04, 0.95, 0.30], [0.09, 0.05, 0.11], 0.6, M.PAINT, 0, 0, 10, 14);
-    box(door, [sx * 1.00, 0.92, 0.32], [0.04, 0.012, 0.02], M.TRIM);
-    box(door, [sx * 1.115, 0.95, 0.27], [0.004, 0.04, 0.08], M.CHROME);   // mirror glass
+    const C = [sx * 1.105, 0.935, 0.235], HW = 0.108, HH = 0.050, HD = 0.085, Z0m = C[2] - HD * 0.28;
+    // cross-section of the housing at depth k (0 = rear rim, 1 = nose)
+    const sec = (th, k, sc) => {
+      const s = Math.pow(Math.max(0, 1 - Math.pow(k, 2.4)), 0.5) * sc, c = Math.cos(th), sn = Math.sin(th);
+      const outer = c * sx > 0 ? 1.06 : 0.94;                       // fuller outboard, slimmer towards the glass
+      return [C[0] - sx * 0.025 * k * k + se(c, 0.42) * HW * s * outer, C[1] - 0.008 * k + se(sn, 0.62) * HH * s * (sn > 0 ? 1 : 0.85), Z0m + k * HD * 1.28];
+    };
+    surface((u, v) => sec(u * Math.PI * 2, v, 1), 56, 26, (u, v) => {
+      const th = u * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
+      if (c * sx > 0.55 && Math.abs(sn) < 0.05 && v > 0.14 && v < 0.6) return { part: door, mat: M.NEON, offset: 0.0015 };   // LED repeater
+      return { part: door, mat: sn < -0.35 ? M.CARBON : M.PAINT };
+    }, [4, 2], { id: 'mirrorShell' + sx, flip: sx > 0 });
+    // rolled rear lip, carbon bezel and the glass itself (facing the driver, slightly recessed)
+    surface((u, v) => { const p0 = sec(u * Math.PI * 2, 0, 1), p1 = sec(u * Math.PI * 2, 0, 0.93); return [lerp(p0[0], p1[0], v), lerp(p0[1], p1[1], v), lerp(p0[2], p1[2], v) - 0.006 * Math.sin(v * Math.PI / 2)]; },
+      56, 3, () => ({ part: door, mat: M.TRIM }), [1, 1], { id: 'mirrorLip' + sx, flip: sx < 0 });
+    surface((u, v) => { const p0 = sec(u * Math.PI * 2, 0, 0.93), p1 = sec(u * Math.PI * 2, 0, 0.88); return [lerp(p0[0], p1[0], v), lerp(p0[1], p1[1], v), p0[2] - 0.006 + 0.004 * v]; },
+      56, 2, () => ({ part: door, mat: M.CARBON }), [6, 1], { id: 'mirrorBezel' + sx, flip: sx < 0 });
+    surface((u, v) => { const p = sec(u * Math.PI * 2, 0, 0.88 * (1 - v)); return [lerp(p[0], C[0], 0) , p[1], Z0m - 0.002 - 0.004 * v * v]; },
+      56, 6, () => ({ part: door, mat: M.CHROME }), [1, 1], { id: 'mirrorGlass' + sx, flip: sx < 0 });
+    // swan-neck blade: airfoil section swept along a bezier, wide foot blending into the door
+    const F = [sx * 0.878, 0.742, 0.305], Hm = [sx * 1.045, C[1] - HH * 0.75, C[2] + 0.01];
+    const B1 = [sx * 0.95, 0.80, 0.30], B2 = [sx * 1.02, C[1] - HH * 1.6, C[2] + 0.02];
+    surface((u, v) => {
+      const t = u, p = bez(F, B1, B2, Hm, t), q = bez(F, B1, B2, Hm, Math.min(1, t + 0.01)), q0 = bez(F, B1, B2, Hm, Math.max(0, t - 0.01));
+      const T = norm(sub(q, q0)); let Z = [0, 0, 1]; Z = norm(sub(Z, scl(T, dot(Z, T)))); const X = cross(T, Z);
+      const chord = lerp(0.12, 0.068, smooth(t * 1.6)), thick = lerp(0.042, 0.021, smooth(t * 1.8));
+      const a = v * Math.PI * 2, cz = Math.cos(a), cx = Math.sin(a);
+      // airfoil: round leading edge (front, +z), sharp trailing edge (rear)
+      const zz = cz * chord / 2, xx = cx * thick / 2 * (cz > 0 ? 1 : 0.3 + 0.7 * Math.sqrt(Math.max(0, 1 + cz)));
+      return add(add(p, scl(Z, zz - chord * 0.08)), scl(X, xx));
+    }, 34, 20, (u) => ({ part: door, mat: u < 0.22 ? M.PAINT : M.CARBON }), [1, 3], { id: 'mirrorArm' + sx, flip: sx > 0 });
   }
   // ---- interior
   // floor, firewall, rear bulkhead, tunnel, sills
   box(interior, [0, 0.30, -0.10], [0.86, 0.01, 1.0], M.CARPET);
-  box(interior, [0, 0.55, 0.93], [0.88, 0.25, 0.02], M.DASH);
+  box(interior, [0, 0.52, 0.93], [0.80, 0.22, 0.02], M.DASH);
   box(interior, [0, 0.62, -1.07], [0.88, 0.32, 0.02], M.ALCANTARA);
   blob(interior, [0, 0.40, -0.05], [0.13, 0.10, 0.9], 0.25, M.CARBON);
   for (const sx of [-0.86, 0.86]) box(interior, [sx, 0.42, -0.1], [0.04, 0.12, 0.62], M.CARBON);
   // dashboard: lofted wave across the cabin, screen, vents, binnacle
   surface((u, v) => {
-    const x = lerp(-0.9, 0.9, u), a = v * Math.PI;
+    const x = lerp(-0.81, 0.81, u), a = v * Math.PI;
     const z = 0.62 + Math.cos(a) * 0.28 - 0.04 * Math.cos(x * 3);
     const y = 0.64 + Math.sin(a) * 0.25 + 0.015 * Math.sin(x * 6);
     return [x, y, z];
@@ -361,8 +433,10 @@ function build(opt) {
   }
   // ---- engine bay + twin-turbo V8 hybrid (visible with the hood open)
   box(engine, [0, 0.30, 1.56], [0.86, 0.01, 0.58], M.TRIM);
-  for (const sx of [-0.86, 0.86]) box(engine, [sx, 0.52, 1.56], [0.01, 0.22, 0.58], M.TRIM);
-  box(engine, [0, 0.52, 0.99], [0.86, 0.22, 0.01], M.TRIM);
+  // bay walls follow the underside of the hood/fenders so nothing pokes through the bodywork
+  const topAt = (z, X) => { for (let v = 0.5; v > 0; v -= 0.002) { const p = bodyPt(uOf(z), v); if (Math.abs(p[0]) >= X) return p[1]; } return 0.6; };
+  for (const sx of [-1, 1]) surface((u, v) => { const z = lerp(0.99, 2.12, u); return [sx * 0.84, lerp(0.30, topAt(z, 0.84) - 0.04, v), z]; }, 16, 2, () => ({ part: engine, mat: M.TRIM }), [1, 1], { id: 'bay' + sx });
+  surface((u, v) => { const x = lerp(-0.84, 0.84, u); return [x, lerp(0.30, topAt(0.99, Math.abs(x)) - 0.04, v), 0.99]; }, 16, 2, () => ({ part: engine, mat: M.TRIM }), [1, 1], { id: 'bayF' });
   box(engine, [0, 0.42, 2.10], [0.74, 0.11, 0.02], M.GRILLE);                 // radiator
   blob(engine, [0, 0.38, 1.52], [0.24, 0.08, 0.44], 0.2, M.ALU);              // block
   for (const sx of [-1, 1]) {

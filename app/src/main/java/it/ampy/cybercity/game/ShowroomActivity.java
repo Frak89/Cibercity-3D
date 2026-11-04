@@ -45,7 +45,7 @@ public class ShowroomActivity extends Activity {
         accent = Palette.argb(Palette.of(r.palette).neonA);
         glv = new GLSurfaceView(this);
         glv.setEGLContextClientVersion(2);
-        glv.setEGLConfigChooser(8, 8, 8, 8, 24, 0);
+        glv.setEGLConfigChooser(new it.ampy.cybercity.CityView.Chooser());   // 4x MSAA when available
         glv.setPreserveEGLContextOnPause(true);
         glv.setRenderer(r);
         FrameLayout root = new FrameLayout(this);
@@ -87,7 +87,32 @@ public class ShowroomActivity extends Activity {
         HorizontalScrollView hs = new HorizontalScrollView(this); hs.setHorizontalScrollBarEnabled(false); hs.addView(bar);
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM); blp.bottomMargin = dp(18);
         root.addView(hs, blp);
+        // engine controls: MOTORE on/off, SU DI GIRI (hold to rev, release for the crackle) and the rev counter
+        LinearLayout eb = new LinearLayout(this); eb.setGravity(Gravity.CENTER_VERTICAL);
+        rpmText = text("900 RPM", 16, accent, true); rpmText.setShadowLayer(dp(8), 0, 0, accent);
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-2, -2); rp.rightMargin = dp(12); eb.addView(rpmText, rp);
+        add(eb, "motor", "MOTORE ON", true, v -> {
+            r.engineOn = !r.engineOn; sel("motor", r.engineOn); btn.get("motor").setText(r.engineOn ? "MOTORE ON" : "MOTORE OFF");
+            if (r.engineOn) { r.eng.rpm = 300; r.rev = 0.45f; glv.postDelayed(() -> { if (!revHeld) r.rev = 0; }, 260); }
+        });
+        TextView revB = text("🔥 SU DI GIRI", 14, 0xffffd2b0, true);
+        revB.setPadding(dp(18), dp(12), dp(18), dp(12));
+        revBg(revB, false);
+        revB.setOnTouchListener((v, e) -> {
+            int a = e.getActionMasked();
+            if (a == MotionEvent.ACTION_DOWN) {
+                revHeld = true; v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                if (!r.engineOn) { r.engineOn = true; sel("motor", true); btn.get("motor").setText("MOTORE ON"); }
+                r.rev = 1; revBg(revB, true);
+            } else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) { revHeld = false; r.rev = 0; revBg(revB, false); }
+            return true;
+        });
+        eb.addView(revB);
+        FrameLayout.LayoutParams elp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END); elp.setMargins(0, 0, dp(14), dp(72));
+        root.addView(eb, elp);
         setContentView(root);
+        sound = new EngineSound(r.eng);
+        rpmText.post(rpmTick);
 
         ScaleGestureDetector sg2 = new ScaleGestureDetector(this, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
             @Override public boolean onScale(ScaleGestureDetector d) { r.dist = Math.max(4, Math.min(14, r.dist / d.getScaleFactor())); return true; }
@@ -104,6 +129,19 @@ public class ShowroomActivity extends Activity {
             }
             return true;
         });
+    }
+
+    private TextView rpmText;
+    private boolean revHeld = false;
+    private EngineSound sound;
+    private final Runnable rpmTick = new Runnable() { @Override public void run() {
+        rpmText.setText(r.engineOn ? (Math.round(r.eng.rpm / 50) * 50) + " RPM" : "");
+        rpmText.setTextColor(r.eng.rpm > 8000 ? 0xffff3b5c : accent);
+        rpmText.postDelayed(this, 80);
+    } };
+    private void revBg(TextView t, boolean on) {
+        GradientDrawable g = new GradientDrawable(); g.setColor(on ? 0xffff7a2e : 0xb3070b13); g.setStroke(dp(2), 0xffff7a2e); g.setCornerRadius(dp(22));
+        t.setBackground(g); t.setTextColor(on ? 0xff070b13 : 0xffffd2b0);
     }
 
     private String specsText() {
@@ -142,8 +180,8 @@ public class ShowroomActivity extends Activity {
     }
 
     @Override protected void onResume() {
-        super.onResume(); glv.onResume();
+        super.onResume(); glv.onResume(); sound.start();
         glv.postDelayed(() -> { if (r.error != null) android.widget.Toast.makeText(this, "Auto HD non caricata: " + r.error, android.widget.Toast.LENGTH_LONG).show(); }, 2500);
     }
-    @Override protected void onPause() { glv.onPause(); super.onPause(); }
+    @Override protected void onPause() { sound.stop(); r.rev = 0; glv.onPause(); super.onPause(); }
 }

@@ -17,6 +17,9 @@
     font-size:1.6vmin;line-height:1.55;display:none;backdrop-filter:blur(6px)}
   #specs.open{display:block}
   #specs b{color:var(--a);display:block;font-size:1.3vmin;letter-spacing:.2em;margin-top:1vmin}
+  button.rev{border-color:#ff7a2e;color:#ffd2b0}
+  button.rev.on{background:#ff7a2e;color:#070b13}
+  #rpm{position:fixed;right:3vmin;top:12vmin;font:bold 3vmin monospace;color:var(--a);text-shadow:0 0 10px var(--a);pointer-events:none}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#ff6177}
 </style>
 </head>
@@ -29,12 +32,15 @@
   <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
   <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
+  <button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
+<div id="rpm"></div>
 <script>/*SHADERS*/</script>
 <script>/*ENGINE*/</script>
 <script>/*CARHD*/</script>
 <script>/*CARRENDER*/</script>
+<script>/*ENGINEFX*/</script>
 <script>/*SHOWROOM*/</script>
 <script>
 (function(){
@@ -61,6 +67,17 @@
   $('bPaint').onclick=()=>{ const ks=Object.keys(CarRenderUtil.PAINTS); o.paint=ks[(ks.indexOf(o.paint)+1)%ks.length]; };
   $('bPal').onclick=()=>{ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; accent(); };
   $('bSpecs').onclick=()=>{ $('specs').classList.toggle('open'); tog('bSpecs',$('specs').classList.contains('open')); };
+  // engine sound starts with the first touch (browser rule), SU DI GIRI: hold to rev, release for the crackle
+  const snd=()=>sr.audio.start(); addEventListener('pointerdown',snd); addEventListener('keydown',snd);
+  $('bMotor').onclick=()=>{ sr.tg.engine=!sr.tg.engine; tog('bMotor',sr.tg.engine); $('bMotor').textContent=sr.tg.engine?'MOTORE ON':'MOTORE OFF';
+    if(sr.tg.engine){ sr.eng.rpm=300; sr.tg.rev=0.45; setTimeout(()=>{ if(!revHeld) sr.tg.rev=0; },260); } };
+  let revHeld=false;
+  const rev=on=>{ revHeld=on; if(on&&!sr.tg.engine) $('bMotor').onclick(); sr.tg.rev=on?1:0; tog('bRev',on); };
+  $('bRev').addEventListener('pointerdown',e=>{ e.stopPropagation(); snd(); rev(true); });
+  for(const ev of ['pointerup','pointerleave','pointercancel']) $('bRev').addEventListener(ev,()=>rev(false));
+  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat) rev(true); });
+  addEventListener('keyup',e=>{ if(e.code==='Space') rev(false); });
+  setInterval(()=>{ $('rpm').textContent=sr.tg.engine?(Math.round(sr.eng.rpm/50)*50)+' RPM':''; },80);
   // orbit / look around with drag, zoom with wheel / pinch
   let drag=null;
   cv.addEventListener('pointerdown',e=>{ drag=[e.clientX,e.clientY]; });
@@ -74,8 +91,12 @@
     if(q.has('mode')) sr.cam.mode=q.get('mode');
     if(q.has('steer')){ sr.st.wheelSteer=0.5; sr.st.steerWheel=2.4; }
     if(q.has('yaw')) sr.cam.yaw=parseFloat(q.get('yaw')); if(q.has('pitch')) sr.cam.pitch=parseFloat(q.get('pitch')); if(q.has('dist')) sr.cam.dist=parseFloat(q.get('dist'));
+    if(q.has('tgt')) sr.cam.tgt=q.get('tgt').split(',').map(parseFloat);
     if(q.has('specs')) $('specs').classList.add('open');
-    sr.cam.auto=false; sr.frame(0.001); window.__done=true; return;
+    sr.cam.auto=false;
+    if(q.has('fx')){ const fx=q.get('fx'), M=CarRenderUtil.RY(0), tp=EngineFX.tipsFrom(M), stp=th=>{ sr.eng.update(1/60,{free:true,throttle:th}); sr.fx.update(1/60,tp.tips,tp.dir,[0,0,0],sr.eng); };
+      for(let i=0;i<70;i++) stp(1); for(let i=0;i<4;i++) stp(0); if(fx==='smoke') for(let i=0;i<60;i++) stp(0); else for(let i=0;i<60&&sr.fx.flameN<8;i++) stp(0); sr.turn=0; }
+    sr.frame(0.001); window.__done=true; return;
   }
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; sr.frame(dt); requestAnimationFrame(loop); }

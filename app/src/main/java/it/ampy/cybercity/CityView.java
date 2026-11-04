@@ -38,7 +38,7 @@ public class CityView extends GLSurfaceView {
         else getHolder().setFixedSize(Math.max(1, w * scalePct / 100), Math.max(1, h * scalePct / 100));
     }
 
-    static final class Chooser implements EGLConfigChooser {
+    public static final class Chooser implements EGLConfigChooser {
         private static final int EGL_OPENGL_ES2_BIT = 4;
         @Override public EGLConfig chooseConfig(EGL10 egl, EGLDisplay d) {
             int[][] attempts = {

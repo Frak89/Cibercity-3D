@@ -51,7 +51,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         r.view = sp.getInt("gView", 0);
         glv = new GLSurfaceView(this);
         glv.setEGLContextClientVersion(2);
-        glv.setEGLConfigChooser(8, 8, 8, 8, 24, 0);
+        glv.setEGLConfigChooser(new it.ampy.cybercity.CityView.Chooser());   // 4x MSAA when available
         glv.setPreserveEGLContextOnPause(true);
         glv.setRenderer(r);
         hud = new GameHud(this, r);
@@ -76,18 +76,20 @@ public class GameActivity extends Activity implements SensorEventListener {
         r.weather = w;
     }
 
+    private EngineSound sound;
     private void menu() {
         r.paused = true;
-        String[] items = {"▶ RIPRENDI", "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
+        String[] items = {"▶ RIPRENDI", "SUONO MOTORE: " + (sp.getBoolean("gSound", true) ? "ON" : "OFF"), "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
             "METEO: " + weatherName(sp.getString("gWeather", "")), "COLORE AUTO: " + CarModel.PAINT_NAMES[CarModel.paintIndex(r.paint)],
             "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI", "🏁 SHOWROOM (garage)"};
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
             .setTitle("NEON RUN · PAUSA")
             .setItems(items, (d, i) -> {
                 switch (i) {
-                    case 1: pick("VISTA", GameRenderer.VIEWS, r.view, k -> { r.view = k; sp.edit().putInt("gView", k).apply(); }); return;
-                    case 2: pick("ATMOSFERA", Palette.NAMES, Palette.index(r.palette), k -> { r.palette = Palette.KEYS[k]; hud.setPalette(Palette.of(r.palette)); sp.edit().putString("gPalette", r.palette).apply(); }); return;
-                    case 3: {
+                    case 1: { boolean on = !sp.getBoolean("gSound", true); sp.edit().putBoolean("gSound", on).apply(); if (sound != null) sound.muted = !on; r.paused = false; return; }
+                    case 2: pick("VISTA", GameRenderer.VIEWS, r.view, k -> { r.view = k; sp.edit().putInt("gView", k).apply(); }); return;
+                    case 3: pick("ATMOSFERA", Palette.NAMES, Palette.index(r.palette), k -> { r.palette = Palette.KEYS[k]; hud.setPalette(Palette.of(r.palette)); sp.edit().putString("gPalette", r.palette).apply(); }); return;
+                    case 4: {
                         String[] keys = {"", "auto", "clear", "cloudy", "fog", "drizzle", "rain", "storm", "snow"};
                         String[] names = new String[keys.length];
                         int sel = 0;
@@ -95,11 +97,11 @@ public class GameActivity extends Activity implements SensorEventListener {
                         pick("METEO", names, sel, k -> { sp.edit().putString("gWeather", keys[k]).apply(); applyWeather(); });
                         return;
                     }
-                    case 4: pick("COLORE AUTO", CarModel.PAINT_NAMES, CarModel.paintIndex(r.paint), k -> { r.paint = CarModel.PAINT_KEYS[k]; sp.edit().putString("gPaint", r.paint).apply(); }); return;
-                    case 5: hud.tilt = !hud.tilt; sp.edit().putBoolean("gTilt", hud.tilt).apply(); registerTilt(); r.paused = false; return;
-                    case 6: r.resetCar(); r.paused = false; return;
-                    case 7: finish(); return;
-                    case 8: startActivity(new android.content.Intent(this, ShowroomActivity.class)); return;
+                    case 5: pick("COLORE AUTO", CarModel.PAINT_NAMES, CarModel.paintIndex(r.paint), k -> { r.paint = CarModel.PAINT_KEYS[k]; sp.edit().putString("gPaint", r.paint).apply(); }); return;
+                    case 6: hud.tilt = !hud.tilt; sp.edit().putBoolean("gTilt", hud.tilt).apply(); registerTilt(); r.paused = false; return;
+                    case 7: r.resetCar(); r.paused = false; return;
+                    case 8: finish(); return;
+                    case 9: startActivity(new android.content.Intent(this, ShowroomActivity.class)); return;
                     default: r.paused = false;
                 }
             })
@@ -138,6 +140,8 @@ public class GameActivity extends Activity implements SensorEventListener {
         super.onResume();
         glv.onResume();
         registerTilt();
+        if (sound == null) sound = new EngineSound(r.eng);
+        sound.muted = !sp.getBoolean("gSound", true); sound.start();
         hud.post(haptics);
         View d = getWindow().getDecorView();
         if (Build.VERSION.SDK_INT >= 30 && getWindow().getInsetsController() != null) {
@@ -150,6 +154,7 @@ public class GameActivity extends Activity implements SensorEventListener {
     @Override protected void onPause() {
         sm.unregisterListener(this);
         hud.removeCallbacks(haptics);
+        if (sound != null) sound.stop();
         glv.onPause();
         super.onPause();
     }

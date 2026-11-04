@@ -1,0 +1,122 @@
+package it.ampy.cybercity.game;
+
+import android.opengl.GLES20;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
+import java.util.Random;
+
+/** Exhaust smoke + backfire flames as point sprites (particle.vert / particle.frag). Port of ExhaustFX in web/engine_fx.js. */
+final class ExhaustFx {
+    private static final int STRIDE = 9, MAX = 700;
+    // particle arrays (struct of arrays, swap-remove)
+    private final int[] k = new int[MAX];
+    private final float[] x = new float[MAX], y = new float[MAX], z = new float[MAX], vx = new float[MAX], vy = new float[MAX], vz = new float[MAX];
+    private final float[] age = new float[MAX], life = new float[MAX], s0 = new float[MAX], s1 = new float[MAX], c = new float[MAX], al = new float[MAX], seed = new float[MAX], hot = new float[MAX];
+    private int n = 0, smokeN = 0, flameN = 0;
+    private float acc = 0;
+    private final float[] data = new float[MAX * STRIDE];
+    private final FloatBuffer fb = ByteBuffer.allocateDirect(MAX * STRIDE * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+    private final Random rnd = new Random();
+    private int vbo = 0;
+    private final float[][] tips = new float[4][3];
+    private final float[] dir = new float[3];
+
+    void shift(float dx, float dy, float dz) { for (int i = 0; i < n; i++) { x[i] += dx; y[i] += dy; z[i] += dz; } }
+
+    private float r() { return rnd.nextFloat(); }
+
+    private void add(int kind, float px, float py, float pz, float ux, float uy, float uz, float lf, float a0, float a1, float col, float alpha) {
+        if (n >= MAX) return;
+        int i = n++;
+        k[i] = kind; x[i] = px; y[i] = py; z[i] = pz; vx[i] = ux; vy[i] = uy; vz[i] = uz; age[i] = 0; life[i] = lf; s0[i] = a0; s1[i] = a1; c[i] = col; al[i] = alpha; seed[i] = r(); hot[i] = r();
+    }
+
+    /** M: car model matrix (column major); vel: car velocity in world (m/s) */
+    void update(float dt, float[] M, float velX, float velZ, EngineSim sim) {
+        for (int t = 0; t < 4; t++) {
+            float[] p = EngineSim.TIPS[t];
+            tips[t][0] = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12];
+            tips[t][1] = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13];
+            tips[t][2] = M[2] * p[0] + M[6] * p[1] + M[10] * p[2] + M[14];
+        }
+        float dx = -M[8], dy = -M[9] + 0.04f, dz = -M[10], dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        dir[0] = dx / dl; dir[1] = dy / dl; dir[2] = dz / dl;
+        float speed = (float) Math.hypot(velX, velZ), load = sim.load, rpm = sim.rpm;
+        float rate = sim.off ? 0 : (6 + load * 22 + Math.max(0, rpm - 3000) / 6000 * 6) / (1 + speed * 0.06f);
+        acc += rate * dt;
+        while (acc >= 1) {
+            acc -= 1;
+            for (float[] t : tips) {
+                float ex = 0.8f + load * 2.6f + r() * 0.6f;
+                add(0, t[0] + (r() - 0.5f) * 0.03f, t[1] + (r() - 0.5f) * 0.03f, t[2] + (r() - 0.5f) * 0.03f,
+                    velX + dir[0] * ex + (r() - 0.5f) * 0.3f, dir[1] * ex + 0.15f + r() * 0.2f, velZ + dir[2] * ex + (r() - 0.5f) * 0.3f,
+                    1.3f + r() * 1.3f - Math.min(0.8f, speed * 0.02f), 0.07f, 0.75f + r() * 0.55f + load * 0.4f, 0.55f + r() * 0.15f - load * 0.12f, 0.13f + load * 0.08f);
+            }
+        }
+        if (sim.pops > 0) {
+            float st = Math.max(0.35f, sim.popStrength);
+            for (float[] t : tips) {
+                if (r() < 0.25f && st < 0.7f) continue;
+                int cnt = 3 + (int) (r() * 3 + st * 3);
+                for (int i = 0; i < cnt; i++) {
+                    float ex = 3 + r() * 5 * st, off = r() * 0.12f;
+                    add(1, t[0] + dir[0] * off, t[1] + dir[1] * off, t[2] + dir[2] * off,
+                        velX + dir[0] * ex + (r() - 0.5f) * 0.8f, dir[1] * ex + (r() - 0.3f) * 0.6f, velZ + dir[2] * ex + (r() - 0.5f) * 0.8f,
+                        0.05f + r() * 0.09f * (0.6f + st), 0.06f + 0.07f * st, 0.13f + 0.17f * st * r(), 0, 1);
+                }
+                add(0, t[0], t[1], t[2], velX + dir[0] * 2, 0.3f, velZ + dir[2] * 2, 0.9f + r() * 0.6f, 0.15f, 0.9f, 0.3f, 0.32f);
+            }
+        }
+        for (int i = n - 1; i >= 0; i--) {
+            age[i] += dt;
+            if (age[i] >= life[i]) { remove(i); continue; }
+            float drag = (float) Math.exp(-(k[i] == 1 ? 7 : 2.6f) * dt);
+            vx[i] *= drag; vz[i] *= drag; vy[i] = vy[i] * drag + (k[i] == 1 ? 0.6f : 0.35f) * dt;
+            x[i] += vx[i] * dt; y[i] += vy[i] * dt; z[i] += vz[i] * dt;
+            if (y[i] < 0.05f) { y[i] = 0.05f; vy[i] = Math.abs(vy[i]) * 0.2f; }
+        }
+        int sN = 0, fN = 0;
+        for (int pass = 0; pass < 2; pass++) for (int i = 0; i < n; i++) {
+            if (k[i] != pass) continue;
+            float f = age[i] / life[i]; int o = (sN + fN) * STRIDE;
+            data[o] = x[i]; data[o + 1] = y[i]; data[o + 2] = z[i];
+            if (pass == 0) {
+                float a = al[i] * Math.min(1, f * 6) * (1 - f) * (1 - f);
+                data[o + 3] = c[i]; data[o + 4] = c[i]; data[o + 5] = c[i] * 1.05f; data[o + 6] = a;
+                data[o + 7] = s0[i] + (s1[i] - s0[i]) * (float) Math.sqrt(f); data[o + 8] = seed[i] * 0.9f; sN++;
+            } else {
+                data[o + 3] = 1; data[o + 4] = 0.5f - f * 0.32f + hot[i] * 0.12f; data[o + 5] = Math.max(0, 0.35f - f * 1.6f) + 0.03f; data[o + 6] = 0.75f * (1 - f) * (1 - f * 0.5f);
+                data[o + 7] = s0[i] + (s1[i] - s0[i]) * f; data[o + 8] = 1 + seed[i] * 0.9f; fN++;
+            }
+        }
+        smokeN = sN; flameN = fN;
+    }
+    private void remove(int i) {
+        int j = --n; if (i == j) return;
+        k[i] = k[j]; x[i] = x[j]; y[i] = y[j]; z[i] = z[j]; vx[i] = vx[j]; vy[i] = vy[j]; vz[i] = vz[j]; age[i] = age[j]; life[i] = life[j];
+        s0[i] = s0[j]; s1[i] = s1[j]; c[i] = c[j]; al[i] = al[j]; seed[i] = seed[j]; hot[i] = hot[j];
+    }
+    void reset() { n = 0; smokeN = flameN = 0; }
+
+    /** draw with the particle program already in use (common uniforms set); scale = H / (2 tan(fov / 2)). Leaves depth writes off. */
+    void draw(Gl.Prog p, float scale) {
+        int cnt = smokeN + flameN; if (cnt == 0) return;
+        if (vbo == 0) { int[] b = new int[1]; GLES20.glGenBuffers(1, b, 0); vbo = b[0]; }
+        fb.clear(); fb.put(data, 0, cnt * STRIDE); fb.position(0);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vbo);
+        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, cnt * STRIDE * 4, fb, GLES20.GL_DYNAMIC_DRAW);
+        p.f1("uScale", scale);
+        int aP = p.a("aPos"), aC = p.a("aCol"), aI = p.a("aInfo"), S = STRIDE * 4;
+        GLES20.glEnableVertexAttribArray(aP); GLES20.glVertexAttribPointer(aP, 3, GLES20.GL_FLOAT, false, S, 0);
+        GLES20.glEnableVertexAttribArray(aC); GLES20.glVertexAttribPointer(aC, 4, GLES20.GL_FLOAT, false, S, 12);
+        GLES20.glEnableVertexAttribArray(aI); GLES20.glVertexAttribPointer(aI, 2, GLES20.GL_FLOAT, false, S, 28);
+        GLES20.glEnable(GLES20.GL_BLEND); GLES20.glDepthMask(false);
+        if (smokeN > 0) { GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA); GLES20.glDrawArrays(GLES20.GL_POINTS, 0, smokeN); }
+        if (flameN > 0) { GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE); GLES20.glDrawArrays(GLES20.GL_POINTS, smokeN, flameN); }
+        GLES20.glDisableVertexAttribArray(aP); GLES20.glDisableVertexAttribArray(aC); GLES20.glDisableVertexAttribArray(aI);
+        GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
+    }
+    void glLost() { vbo = 0; }
+}

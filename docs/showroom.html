@@ -17,6 +17,9 @@
     font-size:1.6vmin;line-height:1.55;display:none;backdrop-filter:blur(6px)}
   #specs.open{display:block}
   #specs b{color:var(--a);display:block;font-size:1.3vmin;letter-spacing:.2em;margin-top:1vmin}
+  button.rev{border-color:#ff7a2e;color:#ffd2b0}
+  button.rev.on{background:#ff7a2e;color:#070b13}
+  #rpm{position:fixed;right:3vmin;top:12vmin;font:bold 3vmin monospace;color:var(--a);text-shadow:0 0 10px var(--a);pointer-events:none}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#ff6177}
 </style>
 </head>
@@ -29,9 +32,11 @@
   <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
   <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
+  <button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
-<script>const SHADERS={"billboard.frag": "varying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\n\n/* 5x5 symmetric pseudo glyph (kanji / katakana feel) */\nfloat glyph(vec2 cell, vec2 f){\n    vec2 g = floor(f * 5.0);\n    g.x = min(g.x, 4.0 - g.x);\n    float on = step(0.52, h21(cell * 1.37 + g * 0.71));\n    vec2 inner = fract(f * 5.0);\n    return on * step(0.12, inner.x) * step(0.12, inner.y);\n}\n\nvoid main(){\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, ratio = vMisc.z;\n    vec2 uv = vUV;\n    float gt = floor(uTime * 9.0);\n    float glitch = step(0.94, h21(vec2(gt, id)));\n    uv.x += glitch * (h21(vec2(floor(uv.y * 14.0), gt)) - 0.5) * 0.25;\n    vec3 cA = mix(uNeonA, uNeonB, fract(seed * 3.3));\n    vec3 cB = mix(uNeonB, uWinA, fract(seed * 5.7));\n    vec3 col;\n    if (kind < 0.5) {\n        // vertical scrolling glyph column\n        vec2 grid = vec2(2.0, 2.0 * ratio);\n        vec2 q = uv * grid + vec2(0.0, uTime * 0.8 + seed * 10.0);\n        vec2 cell = floor(q);\n        col = mix(cA, cB, uv.y) * glyph(cell + id, fract(q)) * 1.6;\n    } else if (kind < 1.5) {\n        // equalizer bars / ad pulses\n        float bx = floor(uv.x * 12.0);\n        float hgt = 0.25 + 0.7 * abs(sin(uTime * (1.5 + h21(vec2(bx, id)) * 3.0) + bx));\n        float bar = step(uv.y, hgt) * step(0.15, fract(uv.x * 12.0));\n        col = mix(cB, cA, uv.y / max(hgt, 0.01)) * bar * 1.3;\n        col += cA * 0.15;\n    } else {\n        // pulsing ring logo with glyph caption\n        vec2 p = (uv - vec2(0.5, 0.62)) * vec2(1.0, ratio);\n        float r = length(p);\n        float ring = smoothstep(0.03, 0.0, abs(r - 0.28 - 0.03 * sin(uTime * 3.0)));\n        float core = smoothstep(0.13, 0.1, r) * (0.6 + 0.4 * sin(uTime * 5.0 + seed));\n        vec2 q = vec2(uv.x * 6.0, uv.y * 6.0 * ratio);\n        float cap = step(uv.y, 0.25) * glyph(floor(q) + id + floor(uTime * 0.5), fract(q));\n        col = cA * (ring + core) * 1.5 + cB * cap * 1.4;\n    }\n    // frame + scanlines + panel background\n    float fr = 1.0 - step(0.035, uv.x) * step(uv.x, 0.965) * step(0.02, uv.y) * step(uv.y, 0.98);\n    col += cA * fr * 1.2;\n    col += cA * 0.04;\n    col *= 0.82 + 0.18 * sin(vUV.y * 300.0);\n    col *= 1.0 - glitch * 0.5 * step(0.5, h21(vec2(gt, 7.0)));\n    col = applyFog(col, vDist, vY);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "billboard.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vUV = aUV; vMisc = aMisc; vY = wp.y;\n    vDist = length(wp - uEye);\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "building.frag": "varying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, fw = vMisc.z, top = vMisc.w;\n    vec3 base = vec3(0.016, 0.018, 0.028) + uFog * 0.06;\n    vec3 nA = mix(uNeonA, uNeonB, step(0.5, fract(seed * 7.31)));\n    vec3 col;\n    if (vN.y > 0.5) {\n        vec2 g = abs(fract(vUV * 0.2) - 0.5);\n        col = base * 0.7 + nA * 0.06 * step(0.46, max(g.x, g.y));\n        float blink = step(0.82, fract(uTime * 0.6 + seed * 3.1));\n        col += vec3(1.0, 0.12, 0.1) * blink * smoothstep(1.4, 0.0, length(vUV)) * 3.0;\n        if (kind > 0.5) col += nA * 0.22;\n    } else {\n        float density = 0.22 + 0.5 * fract(seed * 3.71);\n        vec2 cs = kind > 1.5 ? vec2(1.25, 1.5) : vec2(1.9, 2.7);\n        vec2 q = vUV / cs;\n        vec2 c = floor(q);\n        vec2 f = fract(q);\n        float m = step(0.16, f.x) * step(f.x, 0.84) * step(0.24, f.y) * step(f.y, 0.80);\n        float r = h21(c * 0.731 + vec2(id * 1.37, floor(dot(vN, vec3(3.0, 0.0, 7.0)) + 0.5) * 11.0));\n        float lit = step(1.0 - density, r);\n        float flick = h21(c + vec2(floor(uTime * 0.08 + r * 20.0), id));\n        lit *= step(0.035, flick);\n        float pal = fract(r * 13.7 + seed);\n        vec3 wc = pal < 0.62 ? uWinA : (pal < 0.86 ? uWinB : uWinC);\n        wc *= 0.5 + 0.9 * fract(r * 91.1);\n        // whole lit floors (offices)\n        float floorLit = step(0.93, h21(vec2(c.y * 1.3, id)));\n        vec3 detail = base + m * max(lit, floorLit) * wc;\n        float lod = smoothstep(55.0, 210.0, vDist);\n        vec3 far = base + wc * density * 0.30;\n        col = mix(detail, far, lod);\n        col *= 0.7 + 0.3 * smoothstep(0.0, top, vWP.y);\n        if (kind > 0.5) {\n            float e = min(vUV.x, fw - vUV.x);\n            float pulse = 0.78 + 0.22 * sin(uTime * 2.0 + seed * 10.0);\n            col += nA * (exp(-e * 2.2) * 0.9 + exp(-max(0.0, top - vWP.y) * 1.1) * 1.5) * pulse;\n            float band = exp(-abs(fract(vWP.y / 23.0 + seed) - 0.5) * 70.0);\n            col += nA * band * 0.7 * step(0.45, fract(seed * 5.1));\n        }\n        // street-level shop glow\n        col += mix(uNeonA, uWinA, fract(seed * 9.0)) * exp(-vWP.y * 0.22) * 0.55;\n    }\n    col = applyFog(col, vDist, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "building.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vN = aNorm; vUV = aUV; vMisc = aMisc; vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "car.frag": "varying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    float side = exp(-vC.y * vC.y * 3.5);\n    float along = mix(0.25, 1.0, vC.x);\n    vec3 tailCol = vec3(1.0, 0.12, 0.18);\n    vec3 headCol = mix(vec3(0.85, 0.95, 1.0), uNeonA, step(0.8, fract(vSeed * 13.0)));\n    vec3 col = mix(headCol, tailCol, vAway);\n    col += vec3(1.0) * pow(vC.x, 8.0) * 0.6;\n    float fade = 1.0 - fogAmount(vDist) * 0.85;\n    gl_FragColor = vec4(col * side * along * fade * 1.3, 1.0);\n}\n", "car.vert": "attribute vec4 aLane;   // origin x, y, z, speed (m/s)\nattribute vec4 aDir;    // dir x, dir z, trail length, seed\nattribute vec2 aCorner; // x: 0 = tail, 1 = head ; y: side -1..1\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nuniform float uWidth;\nvarying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    vec3 d = vec3(aDir.x, 0.0, aDir.y);\n    float p = mod(aDir.w * 977.0 + aLane.w * uTime, 2.0 * uL);\n    vec3 head = aLane.xyz + d * p;\n    head.x = mod(head.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5;\n    head.z = mod(head.z - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    head.y += sin(uTime * 0.7 + aDir.w * 50.0) * 0.4;\n    vec3 tail = head - d * aDir.z;\n    vec3 h = (uV * vec4(head, 1.0)).xyz;\n    vec3 t = (uV * vec4(tail, 1.0)).xyz;\n    vec3 seg = h - t;\n    vec3 P = mix(t, h, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    float sl = length(seg);\n    vec3 sdir = sl > 1e-4 ? seg / sl : vec3(0.0, 1.0, 0.0);\n    float w = uWidth * (1.0 + 0.004 * length(P));\n    P += perp * aCorner.y * w + sdir * (aCorner.x * 2.0 - 1.0) * w;\n    vC = aCorner;\n    vAway = step(0.0, dot(d, head - uEye));\n    vDist = length(head - uEye);\n    vSeed = aDir.w;\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "car_hd.frag": "uniform float uKey;        // key light strength (studio > street)\nuniform float uGlassPass;  // 1 while drawing the transparent glass\nuniform float uLights;     // headlights / tail lights on\nuniform float uBrake;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec2 vUV;\nvarying vec3 vCol;\nvarying vec4 vPar;\n\n/* Procedural PBR-ish car materials: carbon twill, stitched leather, tyre tread, drilled discs, HUD screens, LED lights, grille. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;\n    float rough = vPar.x, metal = vPar.y, em = vPar.z, pat = vPar.w;\n    vec3 base = vCol;\n    vec2 uv = vUV;\n    float emis = em;\n    if (pat > 0.5 && pat < 1.5) {            // carbon fibre twill\n        vec2 q = uv * 60.0;\n        float a = mod(floor(q.x) + floor(q.y), 2.0);\n        float w = abs(fract(a > 0.5 ? q.x : q.y) - 0.5);\n        base *= 0.55 + 0.9 * (0.4 + 0.6 * w) * (0.7 + 0.3 * a);\n        rough = mix(rough, 0.15, a * 0.5);\n    } else if (pat > 1.5 && pat < 2.5) {     // leather: grain + accent stitching\n        float g = h21(floor(uv * 260.0)) * 0.12;\n        base *= 0.9 + g;\n        float st = (1.0 - smoothstep(0.0, 0.04, abs(fract(uv.y * 6.0) - 0.5))) * step(0.5, fract(uv.x * 90.0));\n        base = mix(base, uNeonB * 0.9, st * 0.8);\n    } else if (pat > 2.5 && pat < 3.5) {     // tyre: tread blocks on the crown, lettering band on the sidewall\n        float crown = smoothstep(0.30, 0.38, uv.y) * (1.0 - smoothstep(0.62, 0.70, uv.y));\n        float groove = step(0.82, fract(uv.x + (uv.y - 0.5) * 3.0)) + step(0.92, fract(uv.y * 5.0));\n        base *= 1.0 - crown * clamp(groove, 0.0, 1.0) * 0.7;\n        float side = 1.0 - crown;\n        float letters = side * step(0.6, h21(vec2(floor(uv.x * 12.0), floor(uv.y * 9.0)))) * step(0.12, uv.y) * step(uv.y, 0.22);\n        base += vec3(0.08) * letters;\n        rough = 0.9;\n    } else if (pat > 3.5 && pat < 4.5) {     // HUD screen\n        vec2 q = uv;\n        float bars = step(0.5, fract(q.x * 18.0)) * step(q.y, 0.25 + 0.6 * h21(vec2(floor(q.x * 18.0), floor(uTime * 2.0))));\n        float ring = smoothstep(0.02, 0.0, abs(length((q - vec2(0.22, 0.5)) * vec2(3.0, 1.0)) - 0.32));\n        float scan = 0.85 + 0.15 * sin(q.y * 300.0);\n        base = (uNeonA * (0.25 + ring * 1.2) + uNeonB * bars * 0.6) * scan;\n        emis = 1.0;\n    } else if (pat > 4.5 && pat < 5.5) {     // drilled + slotted brake disc\n        vec2 q = vec2(uv.x * 48.0, uv.y * 3.0);\n        float hole = 1.0 - smoothstep(0.18, 0.24, length(fract(q) - 0.5));\n        base *= 1.0 - hole * 0.85;\n        base += vec3(0.04) * step(0.97, fract(uv.x * 12.0 + uv.y));\n    } else if (pat > 5.5 && pat < 6.5) {     // segmented tail light bar\n        float seg = step(0.18, fract(uv.x * 46.0));\n        emis = em * seg * (uLights * 0.8 + uBrake * 1.6 + 0.15);\n    } else if (pat > 6.5 && pat < 7.5) {     // LED headlight dots\n        vec2 q = fract(uv * vec2(90.0, 30.0)) - 0.5;\n        float led = 1.0 - smoothstep(0.2, 0.35, length(q));\n        base = mix(base * 0.35, base, led);\n        emis = em * (0.25 + 0.95 * uLights) * (0.4 + 0.6 * led);\n    } else if (pat > 7.5 && pat < 8.5) {     // hexagonal grille\n        vec2 q = uv * vec2(60.0, 34.0);\n        q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;\n        float hex = smoothstep(0.32, 0.4, length(fract(q) - 0.5));\n        base *= 0.15 + 0.85 * hex;\n    } else if (pat > 8.5 && pat < 9.5) {     // neon: gentle pulse\n        emis = em * (0.85 + 0.15 * sin(uTime * 2.2 + vWP.x * 2.0));\n    } else if (pat > 9.5) {                  // carpet\n        base *= 0.8 + 0.3 * h21(floor(uv * 400.0));\n    }\n    vec3 L = normalize(vec3(0.35, 0.8, 0.45));\n    float diff = max(dot(n, L), 0.0);\n    vec3 amb = uFog * 0.7 + uSkyTop * 0.6 + vec3(0.035) + (n.y * 0.5 + 0.5) * vec3(0.05, 0.05, 0.07);\n    amb += uKey * 0.22 * (n.y * 0.5 + 0.5) + uKey * 0.08;            // soft studio / street fill\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.75, 1.0, sin(r.x * 9.0 + r.z * 5.0 + r.y * 3.0) * 0.5 + 0.5);\n    vec3 env = mix(uFog * 1.2 + vec3(0.02), uSkyTop * 1.4 + vec3(0.05, 0.06, 0.09), smoothstep(-0.3, 0.6, r.y));\n    env += mix(uNeonA, uNeonB, step(0.0, r.x)) * band * 0.55 + vec3(0.9, 0.85, 0.8) * smoothstep(0.985, 1.0, dot(r, L)) * 2.0;\n    env += vec3(0.85, 0.9, 1.0) * uKey * 0.5 * smoothstep(0.75, 0.9, r.y) * (0.6 + 0.4 * step(0.5, fract(r.x * 2.5 + 0.25)));  // overhead softboxes\n    float ndv = max(dot(n, v), 0.0);\n    float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);\n    vec3 F0 = mix(vec3(0.04), base, metal);\n    float shin = mix(220.0, 6.0, rough);\n    float spec = pow(max(dot(reflect(-L, n), v), 0.0), shin) * (1.0 - rough) * 1.6;\n    vec3 col = base * (1.0 - metal) * (amb + diff * uKey * 0.9);\n    col += env * mix(vec3(fres), base, metal) * (1.0 - rough * 0.8);\n    col += spec * mix(vec3(1.0), base, metal) * uKey;\n    col += base * emis * 2.4;\n    col += vec3(0.6, 0.65, 0.8) * uFlash * 0.25;\n    col = applyFog(col, length(uEye - vWP), vWP.y);\n    float alpha = 1.0;\n    if (uGlassPass > 0.5) alpha = clamp(0.22 + 0.7 * fres + spec * 0.5, 0.0, 0.92);\n    gl_FragColor = vec4(col, alpha);\n}\n", "car_hd.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute float aMat;\nuniform mat4 uVP;\nuniform mat4 uModel;\nuniform vec3 uMatCol[20];\nuniform vec4 uMatPar[20];   // roughness, metalness, emissive, pattern id\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec2 vUV;\nvarying vec3 vCol;\nvarying vec4 vPar;\nvoid main(){\n    int m = int(aMat + 0.5);\n    vCol = uMatCol[m];\n    vPar = uMatPar[m];\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = (uModel * vec4(aNorm, 0.0)).xyz;\n    vUV = aUV;\n    gl_Position = uVP * wp;\n}\n", "common.glsl": "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform float uTime;\nuniform float uL;\nuniform float uFar;    // distance where everything has faded into the fog\nuniform float uFogDen;\nuniform vec3 uEye;\nuniform vec3 uFog;\nuniform vec3 uSkyTop;\nuniform vec3 uWinA;\nuniform vec3 uWinB;\nuniform vec3 uWinC;\nuniform vec3 uNeonA;\nuniform vec3 uNeonB;\nuniform float uFlash;   // lightning\n\nfloat h21(vec2 p){\n    p = fract(p * vec2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return fract(p.x * p.y);\n}\n\nfloat vnoise(vec2 p){\n    vec2 i = floor(p), f = fract(p);\n    f = f * f * (3.0 - 2.0 * f);\n    float a = h21(i), b = h21(i + vec2(1.0, 0.0)), c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));\n    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\nfloat fbm(vec2 p){\n    float v = 0.0, a = 0.5;\n    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }\n    return v;\n}\n\n/* Integer id from an interpolated per-vertex seed: varyings are not bit-exact,\n   so hashing the raw float produces per-pixel noise. */\nfloat sid(float s){ return floor(s * 251.0 + 0.5); }\n\n/* Exponential fog plus a hard fade near the end of the wrapped city chunk,\n   so buildings re-entering at the horizon never pop. */\nfloat fogAmount(float d){\n    float f = 1.0 - exp(-d * uFogDen);\n    return max(f, smoothstep(uFar * 0.60, uFar * 0.84, d));\n}\nvec3 applyFog(vec3 col, float d, float y){\n    float f = fogAmount(d);\n    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02)) + vec3(0.55, 0.6, 0.8) * uFlash;\n    return mix(col, fc, f);\n}\n", "glow.frag": "uniform float uGlow;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\n/* Additive soft light: underglow, headlight pools, tail-light bloom. */\nvoid main(){\n    float f = exp(-dot(vUV, vUV) * 2.6) * (1.0 - smoothstep(0.85, 1.0, max(abs(vUV.x), abs(vUV.y))));\n    float d = length(uEye - vWP);\n    float fade = 1.0 - fogAmount(d) * 0.9;\n    gl_FragColor = vec4(vCol.rgb * f * vCol.a * uGlow * fade, 1.0);\n}\n", "glow.vert": "attribute vec3 aPos;\nattribute vec2 aUV;\nattribute vec4 aCol;\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz; vUV = aUV; vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "ground.frag": "uniform float uCamZ;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float wz = vWP.z + uCamZ;\n    float ax = abs(vWP.x);\n    vec3 col = vec3(0.010, 0.012, 0.018);\n    // dashed lane lines on the avenue\n    float lane = (1.0 - smoothstep(0.05, 0.16, abs(mod(vWP.x + 2.0, 4.0) - 2.0)))\n               * step(ax, 13.0) * step(0.55, fract(wz / 6.0));\n    col += vec3(0.55, 0.58, 0.7) * lane * 0.18;\n    // sidewalk curbs glow\n    col += uNeonA * exp(-abs(ax - 14.5) * 3.0) * 0.35;\n    // cross streets\n    float cz = abs(mod(wz, 84.0) - 7.0);\n    float cross = step(cz, 6.0);\n    col += vec3(0.6, 0.6, 0.7) * cross * step(0.6, fract(vWP.x / 5.0)) * 0.05 * step(ax, 400.0);\n    // wet asphalt: vertical streak reflections of the neon\n    float n = h21(vec2(floor(vWP.x * 0.7), 3.0));\n    float streak = pow(n, 5.0) * (0.55 + 0.45 * sin(wz * 0.045 + n * 40.0 + uTime * 0.3));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.55 * (0.6 + 0.4 * step(13.0, ax));\n    // reflection of the fog / skyline\n    col += uFog * 0.12 * smoothstep(20.0, 300.0, vDist);\n    col = applyFog(col, vDist * 0.7, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "ground.vert": "attribute vec2 aPos;\nuniform mat4 uVP;\nuniform vec3 uEye;\nvarying vec3 vWP;\nvoid main(){\n    vec3 wp = vec3(aPos.x, 0.0, aPos.y);\n    vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "ground_game.frag": "uniform float uCamX;\nuniform float uCamZ;\nuniform float uPitch;   // block pitch (road every uPitch metres)\nuniform float uRoad;    // road width\nvarying vec3 vWP;\n\n/* Game ground: a grid of wet neon streets with lanes, crossings and sidewalks. */\nvoid main(){\n    float vDist = length(vWP - uEye);\n    vec2 w = vWP.xz + vec2(uCamX, uCamZ);                 // world position on the torus\n    vec2 q = mod(w + uPitch * 0.5, uPitch) - uPitch * 0.5; // distance to the nearest road axis (signed)\n    vec2 a = abs(q);\n    float hr = uRoad * 0.5;\n    float onX = step(a.x, hr), onZ = step(a.y, hr);   // inside a road running along z / along x\n    float road = max(onX, onZ);\n    float inter = onX * onZ;\n    vec3 col = vec3(0.012, 0.014, 0.02);\n    // sidewalks and block floor\n    float walk = 1.0 - road;\n    vec2 tl = abs(fract(w * 0.5) - 0.5);\n    col += walk * (vec3(0.028, 0.03, 0.042) + 0.012 * step(0.47, max(tl.x, tl.y)));\n    // curb neon lines\n    float curb = max(onX * (1.0 - onZ) * exp(-abs(a.x - hr) * 4.0), onZ * (1.0 - onX) * exp(-abs(a.y - hr) * 4.0));\n    col += uNeonA * curb * 0.5;\n    // centre double line and dashed lanes (not inside crossings)\n    float alongZ = onX * (1.0 - onZ), alongX = onZ * (1.0 - onX);\n    float centre = alongZ * (1.0 - smoothstep(0.08, 0.16, abs(a.x - 0.25))) + alongX * (1.0 - smoothstep(0.08, 0.16, abs(a.y - 0.25)));\n    col += vec3(1.0, 0.75, 0.25) * centre * 0.35;\n    float lane = alongZ * (1.0 - smoothstep(0.06, 0.14, abs(a.x - 4.6))) * step(0.5, fract(w.y / 6.0))\n               + alongX * (1.0 - smoothstep(0.06, 0.14, abs(a.y - 4.6))) * step(0.5, fract(w.x / 6.0));\n    col += vec3(0.7, 0.75, 0.85) * lane * 0.22;\n    // zebra crossings at the edge of each intersection\n    float zx = onX * step(hr, a.y) * step(a.y, hr + 3.0) * step(0.5, fract(w.x * 0.8));\n    float zz = onZ * step(hr, a.x) * step(a.x, hr + 3.0) * step(0.5, fract(w.y * 0.8));\n    col += vec3(0.6, 0.62, 0.7) * max(zx, zz) * 0.18;\n    // wet asphalt: neon streak reflections\n    // streaks run along the road: thin across, long and slowly varying along\n    float nz = h21(vec2(floor(w.x * 0.8), floor(w.y / 26.0)));\n    float nx = h21(vec2(floor(w.y * 0.8) + 91.0, floor(w.x / 26.0)));\n    float n = alongZ > 0.5 ? nz : nx;\n    float along = alongZ > 0.5 ? w.y : w.x;\n    float streak = pow(n, 6.0) * road * (0.55 + 0.45 * sin(along * 0.07 + n * 40.0));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.5;\n    col += uFog * 0.10 * smoothstep(15.0, 300.0, vDist);\n    col += vec3(0.5, 0.55, 0.7) * uFlash * 0.15;\n    col = applyFog(col, vDist * 0.8, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "mist.frag": "uniform float uMist;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Drifting ground mist / fog banks over the whole frame (alpha-blended). */\nvoid main(){\n    vec2 p = vUV * vec2(uRes.x / uRes.y, 1.0);\n    float n1 = fbm(p * 2.2 + vec2(uTime * 0.035, uTime * 0.008));\n    float n2 = fbm(p * 4.5 - vec2(uTime * 0.06, -uTime * 0.01) + n1);\n    float band = smoothstep(0.85, 0.15, vUV.y);           // denser low, near the street\n    float m = (n1 * 0.65 + n2 * 0.45) * (0.45 + 0.75 * band);\n    m = smoothstep(0.18, 0.8, m) * uMist;\n    vec3 col = uFog * 1.7 + vec3(0.05) + uNeonA * 0.03 + vec3(0.6, 0.65, 0.8) * uFlash;\n    gl_FragColor = vec4(col, m * 0.92);\n}\n", "post.frag": "uniform float uFade;\nuniform float uScan;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Vignette, CRT scanlines and fade-to-black (alpha-blended over the frame). */\nvoid main(){\n    vec2 p = vUV - 0.5;\n    float vig = smoothstep(0.35, 0.85, length(p * vec2(1.0, 0.85)));\n    float scan = uScan * 0.18 * step(0.5, fract(vUV.y * uRes.y / 3.0));\n    float a = clamp(max(uFade, vig * 0.75 + scan), 0.0, 1.0);\n    gl_FragColor = vec4(0.0, 0.0, 0.0, a);\n}\n", "post.vert": "attribute vec2 aPos;\nvarying vec2 vUV;\nvoid main(){\n    vUV = aPos * 0.5 + 0.5;\n    gl_Position = vec4(aPos, 0.0, 1.0);\n}\n", "rain.frag": "uniform float uRain;\nuniform float uSnow;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    float a = (1.0 - abs(vC.y)) * smoothstep(0.0, 0.4, vC.x) * uRain;\n    a *= smoothstep(1.0, 5.0, vDist) * (1.0 - smoothstep(30.0, 70.0, vDist));\n    vec3 col = mix(vec3(0.6, 0.7, 0.85), uFog * 2.2 + uNeonA * 0.2, 0.4);\n    if (uSnow > 0.5) {\n        a = (1.0 - abs(vC.y)) * (1.0 - abs(vC.x * 2.0 - 1.0)) * uRain;\n        a *= smoothstep(0.5, 3.0, vDist) * (1.0 - smoothstep(25.0, 60.0, vDist));\n        col = vec3(0.9, 0.93, 1.0) + uNeonA * 0.08;\n        gl_FragColor = vec4(col * a * 0.9, 1.0);\n        return;\n    }\n    col += vec3(0.6) * uFlash;\n    gl_FragColor = vec4(col * a * 0.35, 1.0);\n}\n", "rain.vert": "attribute vec3 aSeed;\nattribute vec2 aCorner;\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uRainSpeed;\nuniform float uSnow;\nuniform float uWind;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    vec3 pos;\n    pos.x = uEye.x + (aSeed.x - 0.5) * 70.0;\n    float fall = uRainSpeed * (0.8 + aSeed.z * 0.4) * mix(1.0, 0.07, uSnow);\n    pos.y = uEye.y - 25.0 + mod(aSeed.y * 60.0 - uTime * fall, 60.0);\n    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0;\n    pos.x += uSnow * sin(uTime * (0.6 + aSeed.x) + aSeed.y * 30.0) * 1.2 + uWind * 0.02 * mod(uTime * 7.0 + aSeed.z * 50.0, 60.0);\n    vec3 vel = mix(vec3(-0.08 - uWind * 0.02, -1.0, 0.0), vec3(0.0, -0.06, 0.0), uSnow);\n    vec3 a = (uV * vec4(pos, 1.0)).xyz;\n    vec3 b = (uV * vec4(pos + vel * 0.9, 1.0)).xyz;\n    vec3 seg = b - a;\n    vec3 P = mix(a, b, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    P += perp * aCorner.y * mix(0.018, 0.05, uSnow) + (uSnow > 0.5 ? normalize(seg + vec3(1e-4)) * (aCorner.x * 2.0 - 1.0) * 0.04 : vec3(0.0));\n    vC = aCorner;\n    vDist = length(P);\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "sky.frag": "uniform vec3 uSunDir;\nuniform vec3 uSunCol;\nuniform float uSunStripes;\nuniform float uCloud;\nvarying vec3 vDir;\n\nvoid main(){\n    vec3 d = normalize(vDir);\n    float y = d.y;\n    vec3 col = mix(uFog * 1.15, uSkyTop, smoothstep(-0.05, 0.55, y));\n    // stars\n    vec2 sp = d.xz / (abs(y) + 0.25) * 260.0;\n    float st = step(0.9965, h21(floor(sp)));\n    col += (1.0 - uCloud) * vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));\n    // moon / sun\n    float dd = distance(d, normalize(uSunDir));\n    float disk = smoothstep(0.075, 0.070, dd) * (1.0 - 0.75 * uCloud);\n    if (uSunStripes > 0.5) {\n        float sy = (d.y - uSunDir.y) / 0.075;\n        float stripe = step(0.0, sin(sy * 26.0 + uTime * 1.5)) + step(0.25, sy);\n        disk *= clamp(stripe, 0.0, 1.0);\n        col += mix(uSunCol, uNeonB, smoothstep(0.07, -0.07, d.y - uSunDir.y)) * disk * 1.4;\n    } else {\n        col += uSunCol * disk * 1.2;\n    }\n    col += uSunCol * 0.35 * exp(-dd * (7.0 + 6.0 * uCloud)) * (1.0 - 0.5 * uCloud);\n    // weather: moving cloud deck lit by the city glow (and by lightning)\n    if (uCloud > 0.01) {\n        vec2 cp = d.xz / (max(y, 0.0) + 0.18) * 1.6 + vec2(uTime * 0.03, uTime * 0.012);\n        float cl = smoothstep(0.35, 0.85, fbm(cp)) * smoothstep(-0.02, 0.18, y);\n        vec3 cc = uFog * 1.5 + uNeonB * 0.05 + vec3(0.7, 0.75, 0.95) * uFlash * 1.5;\n        float hide = uCloud * 0.85;\n        col = mix(col, uFog * 1.2 + vec3(0.5, 0.55, 0.7) * uFlash, hide * 0.55);\n        col = mix(col, cc, cl * uCloud);\n    }\n    // slow haze bands\n    float band = h21(vec2(floor(y * 40.0 + uTime * 0.02), 1.0));\n    col += uFog * 0.06 * band * smoothstep(0.35, 0.0, y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "sky.vert": "attribute vec2 aPos;\nuniform vec3 uFwd;\nuniform vec3 uRight;\nuniform vec3 uUp;\nuniform vec2 uTan;\nvarying vec3 vDir;\nvoid main(){\n    vDir = uFwd + aPos.x * uTan.x * uRight + aPos.y * uTan.y * uUp;\n    gl_Position = vec4(aPos, 0.9999, 1.0);\n}\n", "solid.frag": "uniform float uGloss;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\n/* Player car: dark metallic paint lit by the city: ambient fog, neon rim light, sliding light streaks. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;            // two-sided: the loft faces are not all wound the same way\n    float d = length(uEye - vWP);\n    vec3 base = vCol.rgb;\n    vec3 amb = uFog * 0.9 + vec3(0.05, 0.05, 0.07);\n    float up = n.y * 0.5 + 0.5;\n    vec3 lit = base * (amb + up * 0.25 + vec3(0.6, 0.65, 0.8) * uFlash);\n    float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);\n    vec3 rim = mix(uNeonA, uNeonB, step(0.0, n.x)) * fres * 0.55;\n    // reflections of city lights sliding over the body\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.92, 1.0, sin(r.y * 22.0 + r.x * 7.0 + uTime * 0.3) * 0.5 + 0.5);\n    vec3 refl = (mix(uFog * 1.4, uSkyTop, clamp(r.y, 0.0, 1.0)) + mix(uWinA, uNeonA, band) * band * 0.7) * uGloss;\n    vec3 col = lit + rim * uGloss + refl * (0.25 + 0.6 * fres);\n    col = mix(col, base * 2.4, vCol.a);\n    col = applyFog(col, d, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "solid.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec4 aCol;   // rgb, a = emissive amount\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = normalize((uModel * vec4(aNorm, 0.0)).xyz);\n    vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "studio_floor.frag": "uniform float uAlpha;\nvarying vec3 vWP;\n/* Showroom floor: glossy dark (the mirrored car shows through), neon turntable ring and a faint grid. */\nvoid main(){\n    vec2 p = vWP.xz + uEye.xz * 0.0;\n    float r = length(vWP.xz);\n    vec3 col = vec3(0.012, 0.013, 0.02) + uFog * 0.08;\n    float ring = exp(-abs(r - 3.6) * 18.0) + 0.5 * exp(-abs(r - 3.75) * 40.0);\n    col += uNeonA * ring * 0.9;\n    float sweep = smoothstep(0.96, 1.0, sin(atan(vWP.z, vWP.x) * 1.0 - uTime * 1.2) * 0.5 + 0.5) * step(r, 3.6);\n    col += uNeonA * sweep * 0.06;\n    vec2 g = abs(fract(vWP.xz * 0.5) - 0.5);\n    col += uNeonB * 0.05 * step(0.48, max(g.x, g.y)) * smoothstep(14.0, 4.0, r);\n    col *= smoothstep(26.0, 5.0, r) * 0.9 + 0.1;\n    float a = mix(uAlpha, 1.0, smoothstep(3.0, 9.0, r));\n    gl_FragColor = vec4(col, a);\n}\n"};</script>
+<div id="rpm"></div>
+<script>const SHADERS={"billboard.frag": "varying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\n\n/* 5x5 symmetric pseudo glyph (kanji / katakana feel) */\nfloat glyph(vec2 cell, vec2 f){\n    vec2 g = floor(f * 5.0);\n    g.x = min(g.x, 4.0 - g.x);\n    float on = step(0.52, h21(cell * 1.37 + g * 0.71));\n    vec2 inner = fract(f * 5.0);\n    return on * step(0.12, inner.x) * step(0.12, inner.y);\n}\n\nvoid main(){\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, ratio = vMisc.z;\n    vec2 uv = vUV;\n    float gt = floor(uTime * 9.0);\n    float glitch = step(0.94, h21(vec2(gt, id)));\n    uv.x += glitch * (h21(vec2(floor(uv.y * 14.0), gt)) - 0.5) * 0.25;\n    vec3 cA = mix(uNeonA, uNeonB, fract(seed * 3.3));\n    vec3 cB = mix(uNeonB, uWinA, fract(seed * 5.7));\n    vec3 col;\n    if (kind < 0.5) {\n        // vertical scrolling glyph column\n        vec2 grid = vec2(2.0, 2.0 * ratio);\n        vec2 q = uv * grid + vec2(0.0, uTime * 0.8 + seed * 10.0);\n        vec2 cell = floor(q);\n        col = mix(cA, cB, uv.y) * glyph(cell + id, fract(q)) * 1.6;\n    } else if (kind < 1.5) {\n        // equalizer bars / ad pulses\n        float bx = floor(uv.x * 12.0);\n        float hgt = 0.25 + 0.7 * abs(sin(uTime * (1.5 + h21(vec2(bx, id)) * 3.0) + bx));\n        float bar = step(uv.y, hgt) * step(0.15, fract(uv.x * 12.0));\n        col = mix(cB, cA, uv.y / max(hgt, 0.01)) * bar * 1.3;\n        col += cA * 0.15;\n    } else {\n        // pulsing ring logo with glyph caption\n        vec2 p = (uv - vec2(0.5, 0.62)) * vec2(1.0, ratio);\n        float r = length(p);\n        float ring = smoothstep(0.03, 0.0, abs(r - 0.28 - 0.03 * sin(uTime * 3.0)));\n        float core = smoothstep(0.13, 0.1, r) * (0.6 + 0.4 * sin(uTime * 5.0 + seed));\n        vec2 q = vec2(uv.x * 6.0, uv.y * 6.0 * ratio);\n        float cap = step(uv.y, 0.25) * glyph(floor(q) + id + floor(uTime * 0.5), fract(q));\n        col = cA * (ring + core) * 1.5 + cB * cap * 1.4;\n    }\n    // frame + scanlines + panel background\n    float fr = 1.0 - step(0.035, uv.x) * step(uv.x, 0.965) * step(0.02, uv.y) * step(uv.y, 0.98);\n    col += cA * fr * 1.2;\n    col += cA * 0.04;\n    col *= 0.82 + 0.18 * sin(vUV.y * 300.0);\n    col *= 1.0 - glitch * 0.5 * step(0.5, h21(vec2(gt, 7.0)));\n    col = applyFog(col, vDist, vY);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "billboard.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying float vDist;\nvarying float vY;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vUV = aUV; vMisc = aMisc; vY = wp.y;\n    vDist = length(wp - uEye);\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "building.frag": "varying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float seed = vMisc.x, id = sid(vMisc.x), kind = vMisc.y, fw = vMisc.z, top = vMisc.w;\n    vec3 base = vec3(0.016, 0.018, 0.028) + uFog * 0.06;\n    vec3 nA = mix(uNeonA, uNeonB, step(0.5, fract(seed * 7.31)));\n    vec3 col;\n    if (vN.y > 0.5) {\n        vec2 g = abs(fract(vUV * 0.2) - 0.5);\n        col = base * 0.7 + nA * 0.06 * step(0.46, max(g.x, g.y));\n        float blink = step(0.82, fract(uTime * 0.6 + seed * 3.1));\n        col += vec3(1.0, 0.12, 0.1) * blink * smoothstep(1.4, 0.0, length(vUV)) * 3.0;\n        if (kind > 0.5) col += nA * 0.22;\n    } else {\n        float density = 0.22 + 0.5 * fract(seed * 3.71);\n        vec2 cs = kind > 1.5 ? vec2(1.25, 1.5) : vec2(1.9, 2.7);\n        vec2 q = vUV / cs;\n        vec2 c = floor(q);\n        vec2 f = fract(q);\n        float m = step(0.16, f.x) * step(f.x, 0.84) * step(0.24, f.y) * step(f.y, 0.80);\n        float r = h21(c * 0.731 + vec2(id * 1.37, floor(dot(vN, vec3(3.0, 0.0, 7.0)) + 0.5) * 11.0));\n        float lit = step(1.0 - density, r);\n        float flick = h21(c + vec2(floor(uTime * 0.08 + r * 20.0), id));\n        lit *= step(0.035, flick);\n        float pal = fract(r * 13.7 + seed);\n        vec3 wc = pal < 0.62 ? uWinA : (pal < 0.86 ? uWinB : uWinC);\n        wc *= 0.5 + 0.9 * fract(r * 91.1);\n        // whole lit floors (offices)\n        float floorLit = step(0.93, h21(vec2(c.y * 1.3, id)));\n        vec3 detail = base + m * max(lit, floorLit) * wc;\n        float lod = smoothstep(55.0, 210.0, vDist);\n        vec3 far = base + wc * density * 0.30;\n        col = mix(detail, far, lod);\n        col *= 0.7 + 0.3 * smoothstep(0.0, top, vWP.y);\n        if (kind > 0.5) {\n            float e = min(vUV.x, fw - vUV.x);\n            float pulse = 0.78 + 0.22 * sin(uTime * 2.0 + seed * 10.0);\n            col += nA * (exp(-e * 2.2) * 0.9 + exp(-max(0.0, top - vWP.y) * 1.1) * 1.5) * pulse;\n            float band = exp(-abs(fract(vWP.y / 23.0 + seed) - 0.5) * 70.0);\n            col += nA * band * 0.7 * step(0.45, fract(seed * 5.1));\n        }\n        // street-level shop glow\n        col += mix(uNeonA, uWinA, fract(seed * 9.0)) * exp(-vWP.y * 0.22) * 0.55;\n    }\n    col = applyFog(col, vDist, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "building.vert": "attribute vec3 aPos;\nattribute vec2 aCenter;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute vec4 aMisc;\nuniform mat4 uVP;\nuniform vec3 uEye;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nvarying vec3 vN;\nvarying vec2 vUV;\nvarying vec4 vMisc;\nvarying vec3 vWP;\nvoid main(){\n    float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    float x = uWrapX > 0.0 ? mod(aCenter.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5 : aCenter.x;\n    vec3 wp = vec3(x, 0.0, z) + aPos;\n    vN = aNorm; vUV = aUV; vMisc = aMisc; vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "car.frag": "varying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    float side = exp(-vC.y * vC.y * 3.5);\n    float along = mix(0.25, 1.0, vC.x);\n    vec3 tailCol = vec3(1.0, 0.12, 0.18);\n    vec3 headCol = mix(vec3(0.85, 0.95, 1.0), uNeonA, step(0.8, fract(vSeed * 13.0)));\n    vec3 col = mix(headCol, tailCol, vAway);\n    col += vec3(1.0) * pow(vC.x, 8.0) * 0.6;\n    float fade = 1.0 - fogAmount(vDist) * 0.85;\n    gl_FragColor = vec4(col * side * along * fade * 1.3, 1.0);\n}\n", "car.vert": "attribute vec4 aLane;   // origin x, y, z, speed (m/s)\nattribute vec4 aDir;    // dir x, dir z, trail length, seed\nattribute vec2 aCorner; // x: 0 = tail, 1 = head ; y: side -1..1\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uL;\nuniform float uCamX;   // game: camera position on the torus world\nuniform float uWrapX;  // > 0: wrap x too (game world), 0: no x wrap (screensaver)\nuniform float uZOff;   // where the z wrap seam sits (0.08 screensaver, 0.5 game)\nuniform float uWidth;\nvarying vec2 vC;\nvarying float vAway;\nvarying float vDist;\nvarying float vSeed;\nvoid main(){\n    vec3 d = vec3(aDir.x, 0.0, aDir.y);\n    float p = mod(aDir.w * 977.0 + aLane.w * uTime, 2.0 * uL);\n    vec3 head = aLane.xyz + d * p;\n    head.x = mod(head.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5;\n    head.z = mod(head.z - uCamZ + uL * uZOff, uL) - uL * uZOff;\n    head.y += sin(uTime * 0.7 + aDir.w * 50.0) * 0.4;\n    vec3 tail = head - d * aDir.z;\n    vec3 h = (uV * vec4(head, 1.0)).xyz;\n    vec3 t = (uV * vec4(tail, 1.0)).xyz;\n    vec3 seg = h - t;\n    vec3 P = mix(t, h, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    float sl = length(seg);\n    vec3 sdir = sl > 1e-4 ? seg / sl : vec3(0.0, 1.0, 0.0);\n    float w = uWidth * (1.0 + 0.004 * length(P));\n    P += perp * aCorner.y * w + sdir * (aCorner.x * 2.0 - 1.0) * w;\n    vC = aCorner;\n    vAway = step(0.0, dot(d, head - uEye));\n    vDist = length(head - uEye);\n    vSeed = aDir.w;\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "car_hd.frag": "uniform float uKey;        // key light strength (studio > street)\nuniform float uGlassPass;  // 1 while drawing the transparent glass\nuniform float uLights;     // headlights / tail lights on\nuniform float uBrake;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec2 vUV;\nvarying vec3 vCol;\nvarying vec4 vPar;\n\n/* Procedural PBR-ish car materials: carbon twill, stitched leather, tyre tread, drilled discs, HUD screens, LED lights, grille. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;\n    float rough = vPar.x, metal = vPar.y, em = vPar.z, pat = vPar.w;\n    vec3 base = vCol;\n    vec2 uv = vUV;\n    float emis = em;\n    if (pat > 0.5 && pat < 1.5) {            // carbon fibre twill\n        vec2 q = uv * 60.0;\n        float a = mod(floor(q.x) + floor(q.y), 2.0);\n        float w = abs(fract(a > 0.5 ? q.x : q.y) - 0.5);\n        base *= 0.55 + 0.9 * (0.4 + 0.6 * w) * (0.7 + 0.3 * a);\n        rough = mix(rough, 0.15, a * 0.5);\n    } else if (pat > 1.5 && pat < 2.5) {     // leather: grain + accent stitching\n        float g = h21(floor(uv * 260.0)) * 0.12;\n        base *= 0.9 + g;\n        float st = (1.0 - smoothstep(0.0, 0.04, abs(fract(uv.y * 6.0) - 0.5))) * step(0.5, fract(uv.x * 90.0));\n        base = mix(base, uNeonB * 0.9, st * 0.8);\n    } else if (pat > 2.5 && pat < 3.5) {     // tyre: tread blocks on the crown, lettering band on the sidewall\n        float crown = smoothstep(0.30, 0.38, uv.y) * (1.0 - smoothstep(0.62, 0.70, uv.y));\n        float groove = step(0.82, fract(uv.x + (uv.y - 0.5) * 3.0)) + step(0.92, fract(uv.y * 5.0));\n        base *= 1.0 - crown * clamp(groove, 0.0, 1.0) * 0.7;\n        float side = 1.0 - crown;\n        float letters = side * step(0.6, h21(vec2(floor(uv.x * 12.0), floor(uv.y * 9.0)))) * step(0.12, uv.y) * step(uv.y, 0.22);\n        base += vec3(0.08) * letters;\n        rough = 0.9;\n    } else if (pat > 3.5 && pat < 4.5) {     // HUD screen\n        vec2 q = uv;\n        float bars = step(0.5, fract(q.x * 18.0)) * step(q.y, 0.25 + 0.6 * h21(vec2(floor(q.x * 18.0), floor(uTime * 2.0))));\n        float ring = smoothstep(0.02, 0.0, abs(length((q - vec2(0.22, 0.5)) * vec2(3.0, 1.0)) - 0.32));\n        float scan = 0.85 + 0.15 * sin(q.y * 300.0);\n        base = (uNeonA * (0.25 + ring * 1.2) + uNeonB * bars * 0.6) * scan;\n        emis = 1.0;\n    } else if (pat > 4.5 && pat < 5.5) {     // drilled + slotted brake disc\n        vec2 q = vec2(uv.x * 48.0, uv.y * 3.0);\n        float hole = 1.0 - smoothstep(0.18, 0.24, length(fract(q) - 0.5));\n        base *= 1.0 - hole * 0.85;\n        base += vec3(0.04) * step(0.97, fract(uv.x * 12.0 + uv.y));\n    } else if (pat > 5.5 && pat < 6.5) {     // segmented tail light bar\n        float seg = step(0.18, fract(uv.x * 46.0));\n        emis = em * seg * (uLights * 0.8 + uBrake * 1.6 + 0.15);\n    } else if (pat > 6.5 && pat < 7.5) {     // LED headlight dots\n        vec2 q = fract(uv * vec2(90.0, 30.0)) - 0.5;\n        float led = 1.0 - smoothstep(0.2, 0.35, length(q));\n        base = mix(base * 0.35, base, led);\n        emis = em * (0.25 + 0.95 * uLights) * (0.4 + 0.6 * led);\n    } else if (pat > 7.5 && pat < 8.5) {     // hexagonal grille\n        vec2 q = uv * vec2(60.0, 34.0);\n        q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;\n        float hex = smoothstep(0.32, 0.4, length(fract(q) - 0.5));\n        base *= 0.15 + 0.85 * hex;\n    } else if (pat > 8.5 && pat < 9.5) {     // neon: gentle pulse\n        emis = em * (0.85 + 0.15 * sin(uTime * 2.2 + vWP.x * 2.0));\n    } else if (pat > 9.5) {                  // carpet\n        base *= 0.8 + 0.3 * h21(floor(uv * 400.0));\n    }\n    vec3 L = normalize(vec3(0.35, 0.8, 0.45));\n    float diff = max(dot(n, L), 0.0);\n    vec3 amb = uFog * 0.7 + uSkyTop * 0.6 + vec3(0.035) + (n.y * 0.5 + 0.5) * vec3(0.05, 0.05, 0.07);\n    amb += uKey * 0.22 * (n.y * 0.5 + 0.5) + uKey * 0.08;            // soft studio / street fill\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.75, 1.0, sin(r.x * 9.0 + r.z * 5.0 + r.y * 3.0) * 0.5 + 0.5);\n    vec3 env = mix(uFog * 1.2 + vec3(0.02), uSkyTop * 1.4 + vec3(0.05, 0.06, 0.09), smoothstep(-0.3, 0.6, r.y));\n    env += mix(uNeonA, uNeonB, step(0.0, r.x)) * band * 0.55 + vec3(0.9, 0.85, 0.8) * smoothstep(0.985, 1.0, dot(r, L)) * 2.0;\n    env += vec3(0.85, 0.9, 1.0) * uKey * 0.5 * smoothstep(0.75, 0.9, r.y) * (0.6 + 0.4 * step(0.5, fract(r.x * 2.5 + 0.25)));  // overhead softboxes\n    // crisp horizon line: dark floor below, bright rim just above \u2014 gives the body its \"liquid\" definition\n    env = mix(env * 0.35, env, smoothstep(-0.02, 0.02, r.y));\n    env += vec3(0.55, 0.6, 0.75) * (uKey * 0.6 + 0.25) * smoothstep(0.0, 0.03, r.y) * (1.0 - smoothstep(0.03, 0.12, r.y));\n    // long side softbox strip\n    env += vec3(1.0) * uKey * 0.45 * smoothstep(0.86, 0.9, abs(r.x)) * smoothstep(0.05, 0.15, r.y) * (1.0 - smoothstep(0.35, 0.45, r.y));\n    float ndv = max(dot(n, v), 0.0);\n    float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);\n    vec3 F0 = mix(vec3(0.04), base, metal);\n    float shin = mix(220.0, 6.0, rough);\n    float spec = pow(max(dot(reflect(-L, n), v), 0.0), shin) * (1.0 - rough) * 1.6;\n    // cheap ambient occlusion: darker toward the ground, the sills and inside the wheel arches\n    float ao = 0.45 + 0.55 * smoothstep(0.12, 0.62, vWP.y);\n    vec3 col = base * (1.0 - metal) * (amb + diff * uKey * 0.9) * ao;\n    col += env * mix(vec3(fres), base, metal) * (1.0 - rough * 0.8);\n    col += spec * mix(vec3(1.0), base, metal) * uKey;\n    // clear coat on painted panels: a second, razor-sharp lobe on top of the base paint\n    if (pat < 0.5 && rough < 0.5 && uGlassPass < 0.5) {\n        float cc = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);\n        col += env * cc * 0.9 * ao;\n        col += vec3(1.0) * pow(max(dot(reflect(-L, n), v), 0.0), 900.0) * 3.0 * uKey;\n    }\n    col += base * emis * 2.4;\n    col += vec3(0.6, 0.65, 0.8) * uFlash * 0.25;\n    col = applyFog(col, length(uEye - vWP), vWP.y);\n    float alpha = 1.0;\n    if (uGlassPass > 0.5) {                  // tinted glass: you see the cabin, but it clearly is a closed coup\u00e9\n        col = col * 0.8 + env * (0.10 + fres * 0.9);\n        alpha = clamp(0.48 + 0.5 * fres + spec * 0.5, 0.0, 0.95);\n    }\n    gl_FragColor = vec4(col, alpha);\n}\n", "car_hd.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec2 aUV;\nattribute float aMat;\nuniform mat4 uVP;\nuniform mat4 uModel;\nuniform vec3 uMatCol[20];\nuniform vec4 uMatPar[20];   // roughness, metalness, emissive, pattern id\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec2 vUV;\nvarying vec3 vCol;\nvarying vec4 vPar;\nvoid main(){\n    int m = int(aMat + 0.5);\n    vCol = uMatCol[m];\n    vPar = uMatPar[m];\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = (uModel * vec4(aNorm, 0.0)).xyz;\n    vUV = aUV;\n    gl_Position = uVP * wp;\n}\n", "common.glsl": "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform float uTime;\nuniform float uL;\nuniform float uFar;    // distance where everything has faded into the fog\nuniform float uFogDen;\nuniform vec3 uEye;\nuniform vec3 uFog;\nuniform vec3 uSkyTop;\nuniform vec3 uWinA;\nuniform vec3 uWinB;\nuniform vec3 uWinC;\nuniform vec3 uNeonA;\nuniform vec3 uNeonB;\nuniform float uFlash;   // lightning\n\nfloat h21(vec2 p){\n    p = fract(p * vec2(123.34, 456.21));\n    p += dot(p, p + 45.32);\n    return fract(p.x * p.y);\n}\n\nfloat vnoise(vec2 p){\n    vec2 i = floor(p), f = fract(p);\n    f = f * f * (3.0 - 2.0 * f);\n    float a = h21(i), b = h21(i + vec2(1.0, 0.0)), c = h21(i + vec2(0.0, 1.0)), d = h21(i + vec2(1.0, 1.0));\n    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\nfloat fbm(vec2 p){\n    float v = 0.0, a = 0.5;\n    for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }\n    return v;\n}\n\n/* Integer id from an interpolated per-vertex seed: varyings are not bit-exact,\n   so hashing the raw float produces per-pixel noise. */\nfloat sid(float s){ return floor(s * 251.0 + 0.5); }\n\n/* Exponential fog plus a hard fade near the end of the wrapped city chunk,\n   so buildings re-entering at the horizon never pop. */\nfloat fogAmount(float d){\n    float f = 1.0 - exp(-d * uFogDen);\n    return max(f, smoothstep(uFar * 0.60, uFar * 0.84, d));\n}\nvec3 applyFog(vec3 col, float d, float y){\n    float f = fogAmount(d);\n    vec3 fc = uFog * (1.0 + 0.35 * exp(-max(y, 0.0) * 0.02)) + vec3(0.55, 0.6, 0.8) * uFlash;\n    return mix(col, fc, f);\n}\n", "glow.frag": "uniform float uGlow;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\n/* Additive soft light: underglow, headlight pools, tail-light bloom. */\nvoid main(){\n    float f = exp(-dot(vUV, vUV) * 2.6) * (1.0 - smoothstep(0.85, 1.0, max(abs(vUV.x), abs(vUV.y))));\n    float d = length(uEye - vWP);\n    float fade = 1.0 - fogAmount(d) * 0.9;\n    gl_FragColor = vec4(vCol.rgb * f * vCol.a * uGlow * fade, 1.0);\n}\n", "glow.vert": "attribute vec3 aPos;\nattribute vec2 aUV;\nattribute vec4 aCol;\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec2 vUV;\nvarying vec4 vCol;\nvarying vec3 vWP;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz; vUV = aUV; vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "ground.frag": "uniform float uCamZ;\nvarying vec3 vWP;\n\nvoid main(){\n    float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong\n    float wz = vWP.z + uCamZ;\n    float ax = abs(vWP.x);\n    vec3 col = vec3(0.010, 0.012, 0.018);\n    // dashed lane lines on the avenue\n    float lane = (1.0 - smoothstep(0.05, 0.16, abs(mod(vWP.x + 2.0, 4.0) - 2.0)))\n               * step(ax, 13.0) * step(0.55, fract(wz / 6.0));\n    col += vec3(0.55, 0.58, 0.7) * lane * 0.18;\n    // sidewalk curbs glow\n    col += uNeonA * exp(-abs(ax - 14.5) * 3.0) * 0.35;\n    // cross streets\n    float cz = abs(mod(wz, 84.0) - 7.0);\n    float cross = step(cz, 6.0);\n    col += vec3(0.6, 0.6, 0.7) * cross * step(0.6, fract(vWP.x / 5.0)) * 0.05 * step(ax, 400.0);\n    // wet asphalt: vertical streak reflections of the neon\n    float n = h21(vec2(floor(vWP.x * 0.7), 3.0));\n    float streak = pow(n, 5.0) * (0.55 + 0.45 * sin(wz * 0.045 + n * 40.0 + uTime * 0.3));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.55 * (0.6 + 0.4 * step(13.0, ax));\n    // reflection of the fog / skyline\n    col += uFog * 0.12 * smoothstep(20.0, 300.0, vDist);\n    col = applyFog(col, vDist * 0.7, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "ground.vert": "attribute vec2 aPos;\nuniform mat4 uVP;\nuniform vec3 uEye;\nvarying vec3 vWP;\nvoid main(){\n    vec3 wp = vec3(aPos.x, 0.0, aPos.y);\n    vWP = wp;\n    gl_Position = uVP * vec4(wp, 1.0);\n}\n", "ground_game.frag": "uniform float uCamX;\nuniform float uCamZ;\nuniform float uPitch;   // block pitch (road every uPitch metres)\nuniform float uRoad;    // road width\nvarying vec3 vWP;\n\n/* Game ground: a grid of wet neon streets with lanes, crossings and sidewalks. */\nvoid main(){\n    float vDist = length(vWP - uEye);\n    vec2 w = vWP.xz + vec2(uCamX, uCamZ);                 // world position on the torus\n    vec2 q = mod(w + uPitch * 0.5, uPitch) - uPitch * 0.5; // distance to the nearest road axis (signed)\n    vec2 a = abs(q);\n    float hr = uRoad * 0.5;\n    float onX = step(a.x, hr), onZ = step(a.y, hr);   // inside a road running along z / along x\n    float road = max(onX, onZ);\n    float inter = onX * onZ;\n    vec3 col = vec3(0.012, 0.014, 0.02);\n    // sidewalks and block floor\n    float walk = 1.0 - road;\n    vec2 tl = abs(fract(w * 0.5) - 0.5);\n    col += walk * (vec3(0.028, 0.03, 0.042) + 0.012 * step(0.47, max(tl.x, tl.y)));\n    // curb neon lines\n    float curb = max(onX * (1.0 - onZ) * exp(-abs(a.x - hr) * 4.0), onZ * (1.0 - onX) * exp(-abs(a.y - hr) * 4.0));\n    col += uNeonA * curb * 0.5;\n    // centre double line and dashed lanes (not inside crossings)\n    float alongZ = onX * (1.0 - onZ), alongX = onZ * (1.0 - onX);\n    float centre = alongZ * (1.0 - smoothstep(0.08, 0.16, abs(a.x - 0.25))) + alongX * (1.0 - smoothstep(0.08, 0.16, abs(a.y - 0.25)));\n    col += vec3(1.0, 0.75, 0.25) * centre * 0.35;\n    float lane = alongZ * (1.0 - smoothstep(0.06, 0.14, abs(a.x - 4.6))) * step(0.5, fract(w.y / 6.0))\n               + alongX * (1.0 - smoothstep(0.06, 0.14, abs(a.y - 4.6))) * step(0.5, fract(w.x / 6.0));\n    col += vec3(0.7, 0.75, 0.85) * lane * 0.22;\n    // zebra crossings at the edge of each intersection\n    float zx = onX * step(hr, a.y) * step(a.y, hr + 3.0) * step(0.5, fract(w.x * 0.8));\n    float zz = onZ * step(hr, a.x) * step(a.x, hr + 3.0) * step(0.5, fract(w.y * 0.8));\n    col += vec3(0.6, 0.62, 0.7) * max(zx, zz) * 0.18;\n    // wet asphalt: neon streak reflections\n    // streaks run along the road: thin across, long and slowly varying along\n    float nz = h21(vec2(floor(w.x * 0.8), floor(w.y / 26.0)));\n    float nx = h21(vec2(floor(w.y * 0.8) + 91.0, floor(w.x / 26.0)));\n    float n = alongZ > 0.5 ? nz : nx;\n    float along = alongZ > 0.5 ? w.y : w.x;\n    float streak = pow(n, 6.0) * road * (0.55 + 0.45 * sin(along * 0.07 + n * 40.0));\n    col += mix(uNeonA, uNeonB, fract(n * 7.0)) * streak * 0.5;\n    col += uFog * 0.10 * smoothstep(15.0, 300.0, vDist);\n    col += vec3(0.5, 0.55, 0.7) * uFlash * 0.15;\n    col = applyFog(col, vDist * 0.8, 0.0);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "mist.frag": "uniform float uMist;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Drifting ground mist / fog banks over the whole frame (alpha-blended). */\nvoid main(){\n    vec2 p = vUV * vec2(uRes.x / uRes.y, 1.0);\n    float n1 = fbm(p * 2.2 + vec2(uTime * 0.035, uTime * 0.008));\n    float n2 = fbm(p * 4.5 - vec2(uTime * 0.06, -uTime * 0.01) + n1);\n    float band = smoothstep(0.85, 0.15, vUV.y);           // denser low, near the street\n    float m = (n1 * 0.65 + n2 * 0.45) * (0.45 + 0.75 * band);\n    m = smoothstep(0.18, 0.8, m) * uMist;\n    vec3 col = uFog * 1.7 + vec3(0.05) + uNeonA * 0.03 + vec3(0.6, 0.65, 0.8) * uFlash;\n    gl_FragColor = vec4(col, m * 0.92);\n}\n", "particle.frag": "varying vec4 vCol;\nvarying float vKind;\nvarying float vSeed;\n/* Exhaust particles drawn as point sprites: soft turbulent smoke puffs (alpha blended)\n   and backfire flames (additive: white-blue core, orange tongue). */\nvoid main(){\n    vec2 q = gl_PointCoord * 2.0 - 1.0;\n    float r = length(q);\n    if (r > 1.0) discard;\n    if (vKind < 0.5) {\n        float n = vnoise(q * 2.6 + vSeed * 31.0) * 0.6 + vnoise(q * 5.3 - vSeed * 17.0) * 0.4;\n        float a = (1.0 - smoothstep(0.25, 1.0, r)) * (0.45 + 0.75 * n) * vCol.a;\n        gl_FragColor = vec4(vCol.rgb * (0.8 + 0.4 * n), a);\n    } else {\n        float n = vnoise(q * 3.0 + vec2(vSeed * 40.0, uTime * 9.0));\n        float core = exp(-r * r * 9.0);\n        float tongue = (1.0 - smoothstep(0.2, 1.0, r + (n - 0.5) * 0.5));\n        vec3 c = vCol.rgb * tongue * 0.9 + vec3(0.6, 0.75, 1.0) * core * 0.7;\n        gl_FragColor = vec4(c * vCol.a, 1.0);\n    }\n}\n", "particle.vert": "attribute vec3 aPos;\nattribute vec4 aCol;\nattribute vec2 aInfo;        // x: size in metres, y: kind (0 smoke, 1 flame) + seed * 0.9\nuniform mat4 uVP;\nuniform float uScale;        // viewport height / (2 tan(fov / 2))\nvarying vec4 vCol;\nvarying float vKind;\nvarying float vSeed;\nvoid main(){\n    gl_Position = uVP * vec4(aPos, 1.0);\n    gl_PointSize = clamp(aInfo.x * uScale / max(gl_Position.w, 0.05), 1.0, 300.0);\n    vCol = aCol;\n    vKind = floor(aInfo.y);\n    vSeed = fract(aInfo.y) / 0.9;\n}\n", "post.frag": "uniform float uFade;\nuniform float uScan;\nuniform vec2 uRes;\nvarying vec2 vUV;\n/* Vignette, CRT scanlines and fade-to-black (alpha-blended over the frame). */\nvoid main(){\n    vec2 p = vUV - 0.5;\n    float vig = smoothstep(0.35, 0.85, length(p * vec2(1.0, 0.85)));\n    float scan = uScan * 0.18 * step(0.5, fract(vUV.y * uRes.y / 3.0));\n    float a = clamp(max(uFade, vig * 0.75 + scan), 0.0, 1.0);\n    gl_FragColor = vec4(0.0, 0.0, 0.0, a);\n}\n", "post.vert": "attribute vec2 aPos;\nvarying vec2 vUV;\nvoid main(){\n    vUV = aPos * 0.5 + 0.5;\n    gl_Position = vec4(aPos, 0.0, 1.0);\n}\n", "rain.frag": "uniform float uRain;\nuniform float uSnow;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    float a = (1.0 - abs(vC.y)) * smoothstep(0.0, 0.4, vC.x) * uRain;\n    a *= smoothstep(1.0, 5.0, vDist) * (1.0 - smoothstep(30.0, 70.0, vDist));\n    vec3 col = mix(vec3(0.6, 0.7, 0.85), uFog * 2.2 + uNeonA * 0.2, 0.4);\n    if (uSnow > 0.5) {\n        a = (1.0 - abs(vC.y)) * (1.0 - abs(vC.x * 2.0 - 1.0)) * uRain;\n        a *= smoothstep(0.5, 3.0, vDist) * (1.0 - smoothstep(25.0, 60.0, vDist));\n        col = vec3(0.9, 0.93, 1.0) + uNeonA * 0.08;\n        gl_FragColor = vec4(col * a * 0.9, 1.0);\n        return;\n    }\n    col += vec3(0.6) * uFlash;\n    gl_FragColor = vec4(col * a * 0.35, 1.0);\n}\n", "rain.vert": "attribute vec3 aSeed;\nattribute vec2 aCorner;\nuniform mat4 uV;\nuniform mat4 uP;\nuniform vec3 uEye;\nuniform float uTime;\nuniform float uCamZ;\nuniform float uRainSpeed;\nuniform float uSnow;\nuniform float uWind;\nvarying vec2 vC;\nvarying float vDist;\nvoid main(){\n    vec3 pos;\n    pos.x = uEye.x + (aSeed.x - 0.5) * 70.0;\n    float fall = uRainSpeed * (0.8 + aSeed.z * 0.4) * mix(1.0, 0.07, uSnow);\n    pos.y = uEye.y - 25.0 + mod(aSeed.y * 60.0 - uTime * fall, 60.0);\n    pos.z = mod(aSeed.z * 84.0 - uCamZ, 84.0) - 4.0;\n    pos.x += uSnow * sin(uTime * (0.6 + aSeed.x) + aSeed.y * 30.0) * 1.2 + uWind * 0.02 * mod(uTime * 7.0 + aSeed.z * 50.0, 60.0);\n    vec3 vel = mix(vec3(-0.08 - uWind * 0.02, -1.0, 0.0), vec3(0.0, -0.06, 0.0), uSnow);\n    vec3 a = (uV * vec4(pos, 1.0)).xyz;\n    vec3 b = (uV * vec4(pos + vel * 0.9, 1.0)).xyz;\n    vec3 seg = b - a;\n    vec3 P = mix(a, b, aCorner.x);\n    vec3 perp = cross(seg, P);\n    float pl = length(perp);\n    perp = pl > 1e-4 ? perp / pl : vec3(1.0, 0.0, 0.0);\n    P += perp * aCorner.y * mix(0.018, 0.05, uSnow) + (uSnow > 0.5 ? normalize(seg + vec3(1e-4)) * (aCorner.x * 2.0 - 1.0) * 0.04 : vec3(0.0));\n    vC = aCorner;\n    vDist = length(P);\n    gl_Position = uP * vec4(P, 1.0);\n}\n", "sky.frag": "uniform vec3 uSunDir;\nuniform vec3 uSunCol;\nuniform float uSunStripes;\nuniform float uCloud;\nvarying vec3 vDir;\n\nvoid main(){\n    vec3 d = normalize(vDir);\n    float y = d.y;\n    vec3 col = mix(uFog * 1.15, uSkyTop, smoothstep(-0.05, 0.55, y));\n    // stars\n    vec2 sp = d.xz / (abs(y) + 0.25) * 260.0;\n    float st = step(0.9965, h21(floor(sp)));\n    col += (1.0 - uCloud) * vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));\n    // moon / sun\n    float dd = distance(d, normalize(uSunDir));\n    float disk = smoothstep(0.075, 0.070, dd) * (1.0 - 0.75 * uCloud);\n    if (uSunStripes > 0.5) {\n        float sy = (d.y - uSunDir.y) / 0.075;\n        float stripe = step(0.0, sin(sy * 26.0 + uTime * 1.5)) + step(0.25, sy);\n        disk *= clamp(stripe, 0.0, 1.0);\n        col += mix(uSunCol, uNeonB, smoothstep(0.07, -0.07, d.y - uSunDir.y)) * disk * 1.4;\n    } else {\n        col += uSunCol * disk * 1.2;\n    }\n    col += uSunCol * 0.35 * exp(-dd * (7.0 + 6.0 * uCloud)) * (1.0 - 0.5 * uCloud);\n    // weather: moving cloud deck lit by the city glow (and by lightning)\n    if (uCloud > 0.01) {\n        vec2 cp = d.xz / (max(y, 0.0) + 0.18) * 1.6 + vec2(uTime * 0.03, uTime * 0.012);\n        float cl = smoothstep(0.35, 0.85, fbm(cp)) * smoothstep(-0.02, 0.18, y);\n        vec3 cc = uFog * 1.5 + uNeonB * 0.05 + vec3(0.7, 0.75, 0.95) * uFlash * 1.5;\n        float hide = uCloud * 0.85;\n        col = mix(col, uFog * 1.2 + vec3(0.5, 0.55, 0.7) * uFlash, hide * 0.55);\n        col = mix(col, cc, cl * uCloud);\n    }\n    // slow haze bands\n    float band = h21(vec2(floor(y * 40.0 + uTime * 0.02), 1.0));\n    col += uFog * 0.06 * band * smoothstep(0.35, 0.0, y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "sky.vert": "attribute vec2 aPos;\nuniform vec3 uFwd;\nuniform vec3 uRight;\nuniform vec3 uUp;\nuniform vec2 uTan;\nvarying vec3 vDir;\nvoid main(){\n    vDir = uFwd + aPos.x * uTan.x * uRight + aPos.y * uTan.y * uUp;\n    gl_Position = vec4(aPos, 0.9999, 1.0);\n}\n", "solid.frag": "uniform float uGloss;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\n/* Player car: dark metallic paint lit by the city: ambient fog, neon rim light, sliding light streaks. */\nvoid main(){\n    vec3 v = normalize(uEye - vWP);\n    vec3 n = normalize(vN);\n    if (dot(n, v) < 0.0) n = -n;            // two-sided: the loft faces are not all wound the same way\n    float d = length(uEye - vWP);\n    vec3 base = vCol.rgb;\n    vec3 amb = uFog * 0.9 + vec3(0.05, 0.05, 0.07);\n    float up = n.y * 0.5 + 0.5;\n    vec3 lit = base * (amb + up * 0.25 + vec3(0.6, 0.65, 0.8) * uFlash);\n    float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);\n    vec3 rim = mix(uNeonA, uNeonB, step(0.0, n.x)) * fres * 0.55;\n    // reflections of city lights sliding over the body\n    vec3 r = reflect(-v, n);\n    float band = smoothstep(0.92, 1.0, sin(r.y * 22.0 + r.x * 7.0 + uTime * 0.3) * 0.5 + 0.5);\n    vec3 refl = (mix(uFog * 1.4, uSkyTop, clamp(r.y, 0.0, 1.0)) + mix(uWinA, uNeonA, band) * band * 0.7) * uGloss;\n    vec3 col = lit + rim * uGloss + refl * (0.25 + 0.6 * fres);\n    col = mix(col, base * 2.4, vCol.a);\n    col = applyFog(col, d, vWP.y);\n    gl_FragColor = vec4(col, 1.0);\n}\n", "solid.vert": "attribute vec3 aPos;\nattribute vec3 aNorm;\nattribute vec4 aCol;   // rgb, a = emissive amount\nuniform mat4 uVP;\nuniform mat4 uModel;\nvarying vec3 vN;\nvarying vec3 vWP;\nvarying vec4 vCol;\nvoid main(){\n    vec4 wp = uModel * vec4(aPos, 1.0);\n    vWP = wp.xyz;\n    vN = normalize((uModel * vec4(aNorm, 0.0)).xyz);\n    vCol = aCol;\n    gl_Position = uVP * wp;\n}\n", "studio_floor.frag": "uniform float uAlpha;\nvarying vec3 vWP;\n/* Showroom floor: glossy dark (the mirrored car shows through), neon turntable ring and a faint grid. */\nvoid main(){\n    vec2 p = vWP.xz + uEye.xz * 0.0;\n    float r = length(vWP.xz);\n    vec3 col = vec3(0.012, 0.013, 0.02) + uFog * 0.08;\n    float ring = exp(-abs(r - 3.6) * 18.0) + 0.5 * exp(-abs(r - 3.75) * 40.0);\n    col += uNeonA * ring * 0.9;\n    float sweep = smoothstep(0.96, 1.0, sin(atan(vWP.z, vWP.x) * 1.0 - uTime * 1.2) * 0.5 + 0.5) * step(r, 3.6);\n    col += uNeonA * sweep * 0.06;\n    vec2 g = abs(fract(vWP.xz * 0.5) - 0.5);\n    col += uNeonB * 0.05 * step(0.48, max(g.x, g.y)) * smoothstep(14.0, 4.0, r);\n    col *= smoothstep(26.0, 5.0, r) * 0.9 + 0.1;\n    float a = mix(uAlpha, 1.0, smoothstep(3.0, 9.0, r));\n    gl_FragColor = vec4(col, a);\n}\n"};</script>
 <script>/* Cybercity 3D — web engine (WebGL 1). Same shaders and city generator as the Android DreamService.
  * SHADERS is injected by tools/build_web.py from app/src/main/assets/shaders. */
 (function () {
@@ -520,11 +525,17 @@ function bodyPt(u, v) {
     for (const ax of AXLES) { const dz = z - ax; if (Math.abs(dz) < ARCH_R) yb = Math.max(yb, 0.36 + Math.sqrt(ARCH_R * ARCH_R - dz * dz) * (1 - 0.0)); }
     yb = Math.min(yb, Ys - 0.07);
     x = side * W * (0.955 + 0.045 * Math.sin(k * Math.PI / 2));
+    // feature line: a crisp crease along the doors that catches a sharp reflection
+    const cz = smooth((z + 1.9) / 0.5) * (1 - smooth((z - 1.75) / 0.4));
+    x += side * W * 0.014 * Math.exp(-Math.pow((k - 0.62) / 0.05, 2)) * cz;
     y = yb + (Ys - yb) * k;
   } else {
     const k = (vv - 0.45) / 0.55, ph = k * Math.PI / 2;
     x = side * W * Math.pow(Math.cos(ph), 0.55);
     y = Ys + (Yt - Ys) * Math.pow(Math.sin(ph), 0.75);
+    // hood power bulge between the front fenders
+    const hz = smooth((z - 1.0) / 0.25) * (1 - smooth((z - 2.05) / 0.2));
+    y += 0.03 * hz * Math.exp(-Math.pow(x / 0.32, 2));
   }
   return [x, y, z];
 }
@@ -532,18 +543,20 @@ const zOf = u => lerp(Z0, Z1, u);
 const uOf = z => (z - Z0) / (Z1 - Z0);
 
 // cabin / greenhouse
-const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.55, 1.10], [0.98, 0.84]];
+const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.55, 1.10], [0.98, 0.795]];
 const CZ0 = -1.30, CZ1 = 0.98;
 function roofY(z) {
   let k = 0; while (k < CB.length - 2 && z > CB[k + 1][0]) k++;
   const a = CB[k], b = CB[k + 1], t = smooth((z - a[0]) / (b[0] - a[0]));
   return lerp(a[1], b[1], t);
 }
+// height of the body surface where the greenhouse meets it (x = 0.88 W): glass grows out of the body, no slit
+function beltY(z) { const [, , Ys, Yt] = station(z); return Ys + (Yt - Ys) * 0.69 - 0.012; }
 function cabinPt(u, v) {
   const z = lerp(CZ0, CZ1, u);
   const side = v < 0.5 ? -1 : 1, vv = v < 0.5 ? v * 2 : (1 - v) * 2;
   const [W] = station(z);
-  const Wb = W * 0.88, Wr = 0.62 + 0.04 * Math.sin(u * Math.PI), yb = 0.86, Yr = Math.max(yb + 0.01, roofY(z));
+  const Wb = W * 0.88, Wr = 0.62 + 0.04 * Math.sin(u * Math.PI), yb = beltY(z), Yr = Math.max(yb + 0.01, roofY(z));
   let x, y;
   if (vv < 0.6) { const k = vv / 0.6; x = side * lerp(Wb, Wr, Math.pow(k, 0.9)); y = lerp(yb, Yr - 0.05, k); }
   else { const k = (vv - 0.6) / 0.4; x = side * Wr * (1 - k); y = Yr - 0.05 + 0.05 * Math.sin(k * Math.PI / 2); }
@@ -558,11 +571,15 @@ function build(opt) {
   const P = (name, pivot) => (parts[name] = parts[name] || Part(name, pivot));
   const body = P('body'), hood = P('hood', RIG.hood.pivot), doorL = P('doorL', RIG.doorL.pivot), doorR = P('doorR', RIG.doorR.pivot);
   const interior = P('interior'), engine = P('engine'), wheel = P('steeringWheel', RIG.steering.pivot);
-  const NU = Math.round(110 * q), NV = Math.round(72 * q);
-  const DZ0 = -0.62, DZ1 = 0.40;                         // door cut
-  const HZ0 = 0.96, HZ1 = 2.16;                           // hood cut
-  const inDoor = (z, vv) => z > DZ0 && z < DZ1 && vv > 0.07 && vv < 0.72;
-  const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > 0.80;
+  const NU = Math.round(170 * q), NV = Math.round(104 * q);
+  // cut lines snapped to grid lines so the panels split exactly where the gap lines are drawn
+  const snapZ = z => lerp(Z0, Z1, Math.round(uOf(z) * NU) / NU);
+  const snapVV = vv => Math.round(vv * NV / 2) / (NV / 2);
+  const DZ0 = snapZ(-0.62), DZ1 = snapZ(0.40);            // door cut
+  const HZ0 = snapZ(0.96), HZ1 = snapZ(2.16);              // hood cut
+  const DV0 = snapVV(0.07), DV1 = snapVV(0.72), HV0 = snapVV(0.80);
+  const inDoor = (z, vv) => z > DZ0 && z < DZ1 && vv > DV0 && vv < DV1;
+  const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > HV0;
   const inCabin = (u, v) => {
     const p = bodyPt(u, v), z = p[2];
     if (z < CZ0 + 0.03 || z > CZ1 - 0.03) return false;
@@ -588,16 +605,41 @@ function build(opt) {
     if (inHood(z, vv)) return { part: hood, mat: M.TRIM, offset: -0.02 };
     return null;
   }, [5, 3], { id: 'inner' });
-  // panel gaps: thin dark frames around the door and hood cuts (slightly proud of the surface)
-  const seam = (z, vv, cut0, cut1, v0, v1) => {
-    const du = 0.008, dv = 0.006;
-    return (Math.abs(z - cut0) < du || Math.abs(z - cut1) < du) && vv > v0 && vv < v1 || (z > cut0 && z < cut1 && (Math.abs(vv - v0) < dv || Math.abs(vv - v1) < dv));
+  // panel gaps: crisp dark ribbons exactly on the cut lines (both sides of the car)
+  const bodyN = (u, v) => { const e = 1e-4; return norm(cross(sub(bodyPt(Math.min(1, u + e), v), bodyPt(Math.max(0, u - e), v)), sub(bodyPt(u, Math.min(1, v + e)), bodyPt(u, Math.max(0, v - e))))); };
+  const vOf = (vv, left) => left ? vv / 2 : 1 - vv / 2;
+  const gap = (part, uvFn, n, w, mat, lift) => {
+    const pts = []; for (let i = 0; i <= n; i++) { const [u, v] = uvFn(i / n); pts.push([bodyPt(u, v), bodyN(u, v)]); }
+    let prev = -1, prev2 = -1;
+    for (let i = 0; i <= n; i++) {
+      const [p, nn0] = pts[i], q2 = pts[Math.min(n, i + 1)][0], q0 = pts[Math.max(0, i - 1)][0];
+      const nn = scl(nn0, Math.sign(nn0[0] * p[0] + nn0[1] * (p[1] - 0.5) + 1e-6) || 1);
+      const side = norm(cross(sub(q2, q0), nn));
+      const a1 = vert(part, add(add(p, scl(side, w / 2)), scl(nn, lift)), nn, [i / n, 0], mat), a2 = vert(part, add(sub(p, scl(side, w / 2)), scl(nn, lift)), nn, [i / n, 1], mat);
+      if (prev >= 0) { tri(part, prev, a1, a2, mat); tri(part, prev, a2, prev2, mat); }
+      prev = a1; prev2 = a2;
+    }
   };
-  surface(bodyPt, NU * 3, NV * 3, (u, v) => {
-    const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
-    if (seam(z, vv, DZ0, DZ1, 0.07, 0.72) || seam(z, vv, HZ0, HZ1, 0.80, 1.01)) return { part: body, mat: M.TRIM, offset: 0.002 };
-    return null;
-  }, [1, 1], { id: 'seam' });
+  for (const left of [true, false]) {
+    const D = left ? doorL : doorR;
+    gap(body, t => [uOf(DZ0), vOf(lerp(DV0, DV1, t), left)], 30, 0.006, M.TRIM, 0.0025);
+    gap(body, t => [uOf(DZ1), vOf(lerp(DV0, DV1, t), left)], 30, 0.006, M.TRIM, 0.0025);
+    gap(D, t => [uOf(lerp(DZ0, DZ1, t)), vOf(DV0, left)], 40, 0.006, M.TRIM, 0.0025);
+    gap(D, t => [uOf(lerp(DZ0, DZ1, t)), vOf(DV1, left)], 40, 0.006, M.TRIM, 0.0025);
+    gap(hood, t => [uOf(lerp(HZ0, HZ1, t)), vOf(HV0, left)], 50, 0.006, M.TRIM, 0.0025);
+    // wheel-arch lips (carbon) following the arch cut-out
+    for (const ax of AXLES) {
+      const pts = [];
+      for (let i = 0; i <= 28; i++) {
+        const a = Math.PI * (0.02 + 0.96 * i / 28), z = ax + Math.cos(a) * ARCH_R;
+        const [W, , Ys] = station(z), y = Math.min(Ys - 0.07, 0.36 + Math.sin(a) * ARCH_R);
+        pts.push([(left ? -1 : 1) * W * 0.962, y, z]);
+      }
+      tube(body, pts, 0.018, 8, M.CARBON);
+    }
+  }
+  gap(body, t => [uOf(HZ0), lerp(1 - HV0 / 2, HV0 / 2, t) < 0.5 ? lerp(1 - HV0 / 2, HV0 / 2, t) : lerp(1 - HV0 / 2, HV0 / 2, t)], 40, 0.006, M.TRIM, 0.0025);
+  gap(body, t => [uOf(HZ1), lerp(1 - HV0 / 2, HV0 / 2, t)], 40, 0.006, M.TRIM, 0.0025);
   // shoulder neon line, door handles, hood vents
   surface(bodyPt, NU * 2, NV * 4, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
@@ -609,8 +651,10 @@ function build(opt) {
   // headlights (follow the nose surface) and full-width segmented tail light
   surface(bodyPt, NU * 3, NV * 3, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
-    if (z > 2.24 && z < 2.31 && vv > 0.60 && vv < 0.84) return { part: body, mat: M.HEAD, offset: 0.004 };
-    if (z > 2.31 && z < 2.345 && vv > 0.40 && vv < 0.6) return { part: body, mat: M.NEON, offset: 0.004 };   // DRL hook
+    // headlight: a dark lens pocket with a thin diagonal LED blade inside
+    const blade = Math.abs((z - 2.30) + (vv - 0.62) * 0.42);
+    if (z > 2.22 && z < 2.315 && vv > 0.60 && vv < 0.86) return { part: body, mat: blade < 0.007 ? M.HEAD : M.GLASS === 4 && blade < 0.03 ? M.TRIM : M.PAINT, offset: blade < 0.03 ? 0.003 : 0 } ;
+    if (z > 2.315 && z < 2.335 && vv > 0.42 && vv < 0.62) return { part: body, mat: M.NEON, offset: 0.004 };   // DRL hook
     if (z < -2.27 && vv > 0.42) return { part: body, mat: M.TAIL, offset: 0.004 };
     return null;
   }, [8, 4], { id: 'lights' });
@@ -654,21 +698,54 @@ function build(opt) {
     lathe(body, [ex, 0.33, -2.38], [[0, 0.052], [0.12, 0.052], [0.12, 0.044], [0.0, 0.044]], 20, M.CHROME, 'z');
     lathe(body, [ex, 0.33, -2.35], [[0, 0.0], [0, 0.044]], 20, M.ENGNEON, 'z');
   }
+  // ---- side mirrors: aero housing (paint over carbon), LED repeater, carbon bezel, real mirror glass,
+  //      and a swan-neck blade support that grows out of the door top
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const se = (a, e) => Math.sign(a) * Math.pow(Math.abs(a), e);
+  const bez = (a, b, c, d, t) => { const m = 1 - t; return [0, 1, 2].map(i => m * m * m * a[i] + 3 * m * m * t * b[i] + 3 * m * t * t * c[i] + t * t * t * d[i]); };
   for (const [door, sx] of [[doorL, -1], [doorR, 1]]) {
-    blob(door, [sx * 1.04, 0.95, 0.30], [0.09, 0.05, 0.11], 0.6, M.PAINT, 0, 0, 10, 14);
-    box(door, [sx * 1.00, 0.92, 0.32], [0.04, 0.012, 0.02], M.TRIM);
-    box(door, [sx * 1.115, 0.95, 0.27], [0.004, 0.04, 0.08], M.CHROME);   // mirror glass
+    const C = [sx * 1.105, 0.935, 0.235], HW = 0.108, HH = 0.050, HD = 0.085, Z0m = C[2] - HD * 0.28;
+    // cross-section of the housing at depth k (0 = rear rim, 1 = nose)
+    const sec = (th, k, sc) => {
+      const s = Math.pow(Math.max(0, 1 - Math.pow(k, 2.4)), 0.5) * sc, c = Math.cos(th), sn = Math.sin(th);
+      const outer = c * sx > 0 ? 1.06 : 0.94;                       // fuller outboard, slimmer towards the glass
+      return [C[0] - sx * 0.025 * k * k + se(c, 0.42) * HW * s * outer, C[1] - 0.008 * k + se(sn, 0.62) * HH * s * (sn > 0 ? 1 : 0.85), Z0m + k * HD * 1.28];
+    };
+    surface((u, v) => sec(u * Math.PI * 2, v, 1), 56, 26, (u, v) => {
+      const th = u * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th);
+      if (c * sx > 0.55 && Math.abs(sn) < 0.05 && v > 0.14 && v < 0.6) return { part: door, mat: M.NEON, offset: 0.0015 };   // LED repeater
+      return { part: door, mat: sn < -0.35 ? M.CARBON : M.PAINT };
+    }, [4, 2], { id: 'mirrorShell' + sx, flip: sx > 0 });
+    // rolled rear lip, carbon bezel and the glass itself (facing the driver, slightly recessed)
+    surface((u, v) => { const p0 = sec(u * Math.PI * 2, 0, 1), p1 = sec(u * Math.PI * 2, 0, 0.93); return [lerp(p0[0], p1[0], v), lerp(p0[1], p1[1], v), lerp(p0[2], p1[2], v) - 0.006 * Math.sin(v * Math.PI / 2)]; },
+      56, 3, () => ({ part: door, mat: M.TRIM }), [1, 1], { id: 'mirrorLip' + sx, flip: sx < 0 });
+    surface((u, v) => { const p0 = sec(u * Math.PI * 2, 0, 0.93), p1 = sec(u * Math.PI * 2, 0, 0.88); return [lerp(p0[0], p1[0], v), lerp(p0[1], p1[1], v), p0[2] - 0.006 + 0.004 * v]; },
+      56, 2, () => ({ part: door, mat: M.CARBON }), [6, 1], { id: 'mirrorBezel' + sx, flip: sx < 0 });
+    surface((u, v) => { const p = sec(u * Math.PI * 2, 0, 0.88 * (1 - v)); return [lerp(p[0], C[0], 0) , p[1], Z0m - 0.002 - 0.004 * v * v]; },
+      56, 6, () => ({ part: door, mat: M.CHROME }), [1, 1], { id: 'mirrorGlass' + sx, flip: sx < 0 });
+    // swan-neck blade: airfoil section swept along a bezier, wide foot blending into the door
+    const F = [sx * 0.878, 0.742, 0.305], Hm = [sx * 1.045, C[1] - HH * 0.75, C[2] + 0.01];
+    const B1 = [sx * 0.95, 0.80, 0.30], B2 = [sx * 1.02, C[1] - HH * 1.6, C[2] + 0.02];
+    surface((u, v) => {
+      const t = u, p = bez(F, B1, B2, Hm, t), q = bez(F, B1, B2, Hm, Math.min(1, t + 0.01)), q0 = bez(F, B1, B2, Hm, Math.max(0, t - 0.01));
+      const T = norm(sub(q, q0)); let Z = [0, 0, 1]; Z = norm(sub(Z, scl(T, dot(Z, T)))); const X = cross(T, Z);
+      const chord = lerp(0.12, 0.068, smooth(t * 1.6)), thick = lerp(0.042, 0.021, smooth(t * 1.8));
+      const a = v * Math.PI * 2, cz = Math.cos(a), cx = Math.sin(a);
+      // airfoil: round leading edge (front, +z), sharp trailing edge (rear)
+      const zz = cz * chord / 2, xx = cx * thick / 2 * (cz > 0 ? 1 : 0.3 + 0.7 * Math.sqrt(Math.max(0, 1 + cz)));
+      return add(add(p, scl(Z, zz - chord * 0.08)), scl(X, xx));
+    }, 34, 20, (u) => ({ part: door, mat: u < 0.22 ? M.PAINT : M.CARBON }), [1, 3], { id: 'mirrorArm' + sx, flip: sx > 0 });
   }
   // ---- interior
   // floor, firewall, rear bulkhead, tunnel, sills
   box(interior, [0, 0.30, -0.10], [0.86, 0.01, 1.0], M.CARPET);
-  box(interior, [0, 0.55, 0.93], [0.88, 0.25, 0.02], M.DASH);
+  box(interior, [0, 0.52, 0.93], [0.80, 0.22, 0.02], M.DASH);
   box(interior, [0, 0.62, -1.07], [0.88, 0.32, 0.02], M.ALCANTARA);
   blob(interior, [0, 0.40, -0.05], [0.13, 0.10, 0.9], 0.25, M.CARBON);
   for (const sx of [-0.86, 0.86]) box(interior, [sx, 0.42, -0.1], [0.04, 0.12, 0.62], M.CARBON);
   // dashboard: lofted wave across the cabin, screen, vents, binnacle
   surface((u, v) => {
-    const x = lerp(-0.9, 0.9, u), a = v * Math.PI;
+    const x = lerp(-0.81, 0.81, u), a = v * Math.PI;
     const z = 0.62 + Math.cos(a) * 0.28 - 0.04 * Math.cos(x * 3);
     const y = 0.64 + Math.sin(a) * 0.25 + 0.015 * Math.sin(x * 6);
     return [x, y, z];
@@ -714,8 +791,10 @@ function build(opt) {
   }
   // ---- engine bay + twin-turbo V8 hybrid (visible with the hood open)
   box(engine, [0, 0.30, 1.56], [0.86, 0.01, 0.58], M.TRIM);
-  for (const sx of [-0.86, 0.86]) box(engine, [sx, 0.52, 1.56], [0.01, 0.22, 0.58], M.TRIM);
-  box(engine, [0, 0.52, 0.99], [0.86, 0.22, 0.01], M.TRIM);
+  // bay walls follow the underside of the hood/fenders so nothing pokes through the bodywork
+  const topAt = (z, X) => { for (let v = 0.5; v > 0; v -= 0.002) { const p = bodyPt(uOf(z), v); if (Math.abs(p[0]) >= X) return p[1]; } return 0.6; };
+  for (const sx of [-1, 1]) surface((u, v) => { const z = lerp(0.99, 2.12, u); return [sx * 0.84, lerp(0.30, topAt(z, 0.84) - 0.04, v), z]; }, 16, 2, () => ({ part: engine, mat: M.TRIM }), [1, 1], { id: 'bay' + sx });
+  surface((u, v) => { const x = lerp(-0.84, 0.84, u); return [x, lerp(0.30, topAt(0.99, Math.abs(x)) - 0.04, v), 0.99]; }, 16, 2, () => ({ part: engine, mat: M.TRIM }), [1, 1], { id: 'bayF' });
   box(engine, [0, 0.42, 2.10], [0.74, 0.11, 0.02], M.GRILLE);                 // radiator
   blob(engine, [0, 0.38, 1.52], [0.24, 0.08, 0.44], 0.2, M.ALU);              // block
   for (const sx of [-1, 1]) {
@@ -883,6 +962,237 @@ root.CarRender = CarRender;
 root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
+<script>/* AMPY KAGE GT — engine simulation, synthesized V8 sound and exhaust effects (smoke + backfire flames).
+   Shared by the NEON RUN web game and the web showroom. The Android app has a line-by-line Java port
+   (EngineSim.java, EngineSound.java, ExhaustFx.java): keep the numbers in sync. */
+(function (root) {
+  'use strict';
+  const ENG = {
+    idle: 900, red: 8900, limiter: 9100,
+    ratios: [3.30, 2.35, 1.80, 1.45, 1.20, 1.02, 0.88, 0.76], final: 4.70, wheelR: 0.365,
+    tips: [[-0.38, 0.33, -2.40], [-0.22, 0.33, -2.40], [0.22, 0.33, -2.40], [0.38, 0.33, -2.40]]
+  };
+  let seed = 12345;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  /* ------------------------------------------------------------------ engine state */
+  function EngineSim() {
+    this.rpm = ENG.idle; this.gear = 0; this.load = 0; this.boost = 0; this.shift = 0;
+    this.thr = 0; this.prevThr = 0; this.crackle = 0; this.crackleT = 0; this.cut = 0;
+    this.pops = 0;          // pops fired this frame (consumed by sound + fx)
+    this.popStrength = 0;
+  }
+  EngineSim.prototype.firePop = function (s) { this.pops++; this.popStrength = Math.max(this.popStrength, s); };
+  /** o: { speed (m/s, along the car), throttle 0..1, boost bool, free bool (neutral: showroom revs) } */
+  EngineSim.prototype.update = function (dt, o) {
+    this.pops = 0; this.popStrength = 0;
+    const thrIn = Math.max(0, Math.min(1, o.throttle || 0));
+    this.thr += (thrIn - this.thr) * Math.min(1, dt * (thrIn > this.thr ? 14 : 9));
+    let target;
+    if (o.free) {
+      // neutral: the engine spins up fast and falls back with its own inertia
+      target = ENG.idle + Math.pow(this.thr, 1.15) * (ENG.limiter + 200 - ENG.idle);
+      const k = target > this.rpm ? 7.5 : 2.6;
+      this.rpm += (target - this.rpm) * Math.min(1, dt * k);
+      this.gear = -1;
+    } else {
+      const v = Math.abs(o.speed || 0), wheelRpm = v / (2 * Math.PI * ENG.wheelR) * 60;
+      if (this.gear < 0) this.gear = 0;
+      let r = wheelRpm * ENG.ratios[this.gear] * ENG.final;
+      if (this.shift <= 0) {
+        if (r > ENG.red - 250 && this.gear < 7) { this.gear++; this.shift = 0.14; if (this.thr > 0.6) this.firePop(0.9); }
+        else if (this.gear > 0 && r < 3300) { this.gear--; this.shift = 0.10; }
+      }
+      r = wheelRpm * ENG.ratios[this.gear] * ENG.final;
+      // clutch slip at low speed: the revs stay up with the throttle
+      const slip = Math.max(0, 1 - v / 9);
+      target = Math.max(ENG.idle + this.thr * 600, r, ENG.idle + slip * this.thr * 3600);
+      if (this.shift > 0) { this.shift -= dt; target *= 0.93; }
+      this.rpm += (target - this.rpm) * Math.min(1, dt * 12);
+    }
+    // rev limiter: fuel cut bounces the needle and spits pops
+    if (this.cut > 0) this.cut -= dt;
+    if (this.rpm > ENG.limiter) { this.rpm = ENG.limiter - 350; this.cut = 0.06; if (rnd() < 0.6) this.firePop(0.55); }
+    this.rpm = Math.max(ENG.idle * 0.92, this.rpm);
+    this.load = this.cut > 0 ? 0 : this.thr;
+    const boostT = o.boost ? 1 : Math.max(0, (this.rpm - 2500) / 6000) * this.thr;
+    this.boost += (boostT - this.boost) * Math.min(1, dt * 3);
+    // overrun crackle: lifting off at high revs lights the unburnt fuel in the hot exhaust
+    if (this.thr > 0.6 && this.rpm > 4200) this.armed = true;          // latched: we were on the throttle at high revs
+    if (this.armed && this.thr < 0.3) { this.armed = false; if (this.rpm > 3800) { this.crackle = 0.55 + rnd() * 0.6; this.crackleT = 0.02; this.firePop(1); } }
+    if (this.crackle > 0) {
+      this.crackle -= dt; this.crackleT -= dt;
+      if (this.crackleT <= 0 && this.thr < 0.3 && this.rpm > 2400) { this.firePop(0.35 + rnd() * 0.65); this.crackleT = 0.03 + rnd() * 0.11; }
+    }
+    return this;
+  };
+
+  /* ------------------------------------------------------------------ synthesizer (same as EngineSound.java) */
+  const PAT = [1.0, 0.68, 0.94, 0.58, 0.9, 0.74, 1.0, 0.55];   // cross-plane V8 firing unevenness → burble
+  function EngineSynth(sr) {
+    this.sr = sr; this.ph = 0; this.cyl = 0; this.amp = 0; this.rpm = ENG.idle; this.load = 0; this.boost = 0;
+    this.low = 0; this.band = 0; this.low2 = 0; this.tph = 0; this.hiss = 0;
+    this.popEnv = 0; this.popPh = 0; this.popQ = 0; this.popGap = 0; this.popAmp = 0; this.vol = 0.8; this.n = 1;
+  }
+  EngineSynth.prototype.noise = function () { this.n = (this.n * 16807) % 2147483647; return this.n / 1073741823.5 - 1; };
+  EngineSynth.prototype.render = function (out, rpmT, loadT, boostT, pops, popS) {
+    const sr = this.sr, len = out.length;
+    if (pops > 0) { this.popQ += pops; this.popAmp = Math.max(this.popAmp, popS); }
+    for (let i = 0; i < len; i++) {
+      this.rpm += (rpmT - this.rpm) * 0.0016; this.load += (loadT - this.load) * 0.002; this.boost += (boostT - this.boost) * 0.0008;
+      const rpm = this.rpm, load = this.load;
+      this.ph += rpm / 60 * 4 / sr;                       // 4 firings per revolution
+      if (this.ph >= 1) {
+        this.ph -= 1; this.cyl = (this.cyl + 1) & 7;
+        this.amp = PAT[this.cyl] * (0.42 + 0.58 * load) * (0.9 + 0.2 * (this.noise() * 0.5 + 0.5));
+      }
+      const p = this.ph, a = this.amp;
+      let x = a * (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6;
+      x += this.noise() * a * Math.exp(-p * 4) * (0.12 + 0.4 * load);
+      // exhaust resonance (state-variable filter), opens with revs and throttle
+      const fc = Math.min(sr * 0.2, 110 + rpm * 0.085 + load * 1100);
+      const f1 = 2 * Math.sin(Math.PI * fc / sr);
+      this.low += f1 * this.band; const high = x - this.low - 0.55 * this.band; this.band += f1 * high;
+      // muffler body: heavy low pass for the deep rumble
+      this.low2 += (x - this.low2) * (2 * Math.PI * 70 / sr);
+      let y = this.low * 0.85 + this.band * 0.35 + this.low2 * 1.4;
+      // turbo whistle + blow-off hiss
+      this.tph += (2200 + rpm * 0.55) / sr; if (this.tph > 1) this.tph -= 1;
+      y += Math.sin(this.tph * 6.2831853) * 0.035 * this.boost * (0.3 + load);
+      this.hiss += (this.noise() - this.hiss) * 0.25; y += this.hiss * 0.03 * this.boost * (1 - load);
+      // backfire pops: sharp crack + low thump
+      if (this.popEnv < 0.05 && this.popQ > 0 && this.popGap <= 0) { this.popQ--; this.popEnv = 0.6 + 0.4 * this.popAmp; this.popPh = 0; this.popGap = sr * 0.025; if (this.popQ === 0) this.popAmp = 0; }
+      if (this.popGap > 0) this.popGap--;
+      if (this.popEnv > 0.001) {
+        this.popPh += 85 / sr;
+        y += this.popEnv * (this.noise() * 0.9 + Math.sin(this.popPh * 6.2831853) * 0.9);
+        this.popEnv *= 1 - 32 / sr * 1.0;
+      }
+      out[i] = Math.tanh(y * 1.1) * this.vol;
+    }
+  };
+
+  /* ------------------------------------------------------------------ WebAudio output */
+  function EngineAudio() { this.ctx = null; this.on = true; this.sim = null; this.master = 0.8; }
+  EngineAudio.prototype.start = function () {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ctx = this.ctx = new AC();
+    const syn = this.syn = new EngineSynth(ctx.sampleRate);
+    const node = ctx.createScriptProcessor(1024, 0, 1);
+    const pend = { pops: 0, s: 0 }; this.pend = pend;
+    node.onaudioprocess = (e) => {
+      const out = e.outputBuffer.getChannelData(0), s = this.sim;
+      if (!s || !this.on) { out.fill(0); return; }
+      syn.vol = this.master;
+      syn.render(out, s.rpm, s.load, s.boost, pend.pops, pend.s); pend.pops = 0; pend.s = 0;
+    };
+    node.connect(ctx.destination); this.node = node;
+  };
+  /** call once per frame after sim.update */
+  EngineAudio.prototype.feed = function (sim) { this.sim = sim; if (this.pend && sim.pops) { this.pend.pops += sim.pops; this.pend.s = Math.max(this.pend.s, sim.popStrength); } };
+  EngineAudio.prototype.toggle = function () { this.on = !this.on; return this.on; };
+
+  /* ------------------------------------------------------------------ exhaust particles */
+  const STRIDE = 9;   // x y z  r g b a  size info
+  function ExhaustFX(max) { this.max = max || 700; this.p = []; this.data = new Float32Array(this.max * STRIDE); this.smokeN = 0; this.flameN = 0; this.acc = 0; }
+  ExhaustFX.prototype.shift = function (dx, dy, dz) { for (const q of this.p) { q.x += dx; q.y += dy; q.z += dz; } };
+  /** tips: world positions of the 4 pipes; dir: world exhaust direction (unit); vel: car velocity (m/s) */
+  ExhaustFX.prototype.update = function (dt, tips, dir, vel, sim) {
+    const P = this.p, speed = Math.hypot(vel[0], vel[2]);
+    // smoke: light haze at idle, thicker under load, thinner at speed (it is spread out by the airflow)
+    const rate = sim.off ? 0 : (6 + sim.load * 22 + Math.max(0, sim.rpm - 3000) / 6000 * 6) / (1 + speed * 0.06);
+    this.acc += rate * dt;
+    while (this.acc >= 1) {
+      this.acc -= 1;
+      for (const t of tips) {
+        if (P.length >= this.max) break;
+        const ex = 0.8 + sim.load * 2.6 + rnd() * 0.6;
+        P.push({ k: 0, x: t[0] + (rnd() - 0.5) * 0.03, y: t[1] + (rnd() - 0.5) * 0.03, z: t[2] + (rnd() - 0.5) * 0.03,
+          vx: vel[0] + dir[0] * ex + (rnd() - 0.5) * 0.3, vy: vel[1] + dir[1] * ex + 0.15 + rnd() * 0.2, vz: vel[2] + dir[2] * ex + (rnd() - 0.5) * 0.3,
+          age: 0, life: 1.3 + rnd() * 1.3 - Math.min(0.8, speed * 0.02), s0: 0.07, s1: 0.75 + rnd() * 0.55 + sim.load * 0.4,
+          c: 0.55 + rnd() * 0.15 - sim.load * 0.12, a: 0.13 + sim.load * 0.08, seed: rnd() });
+      }
+    }
+    // flames for every pop
+    if (sim.pops > 0) {
+      const st = Math.max(0.35, sim.popStrength);
+      for (const t of tips) {
+        if (rnd() < 0.25 && st < 0.7) continue;
+        const n = 3 + Math.floor(rnd() * 3 + st * 3);
+        for (let i = 0; i < n && P.length < this.max; i++) {
+          const ex = 3 + rnd() * 5 * st, off = rnd() * 0.12;
+          P.push({ k: 1, x: t[0] + dir[0] * off, y: t[1] + dir[1] * off, z: t[2] + dir[2] * off,
+            vx: vel[0] + dir[0] * ex + (rnd() - 0.5) * 0.8, vy: vel[1] + dir[1] * ex + (rnd() - 0.3) * 0.6, vz: vel[2] + dir[2] * ex + (rnd() - 0.5) * 0.8,
+            age: 0, life: 0.05 + rnd() * 0.09 * (0.6 + st), s0: 0.06 + 0.07 * st, s1: 0.13 + 0.17 * st * rnd(), seed: rnd(), hot: rnd() });
+        }
+        if (P.length < this.max) P.push({ k: 0, x: t[0], y: t[1], z: t[2], vx: vel[0] + dir[0] * 2, vy: vel[1] + 0.3, vz: vel[2] + dir[2] * 2, age: 0, life: 0.9 + rnd() * 0.6,
+          s0: 0.15, s1: 0.9, c: 0.3, a: 0.32, seed: rnd() });
+      }
+    }
+    // integrate: air drag pulls the gas to rest in the world, smoke rises a little
+    let sN = 0, fN = 0;
+    const d = this.data;
+    for (let i = P.length - 1; i >= 0; i--) {
+      const q = P[i]; q.age += dt;
+      if (q.age >= q.life) { P[i] = P[P.length - 1]; P.pop(); continue; }
+      const drag = Math.exp(-(q.k ? 7 : 2.6) * dt);
+      q.vx *= drag; q.vz *= drag; q.vy = q.vy * drag + (q.k ? 0.6 : 0.35) * dt;
+      q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt;
+      if (q.y < 0.05) { q.y = 0.05; q.vy = Math.abs(q.vy) * 0.2; }
+    }
+    // pack: smoke first (alpha blended), then flames (additive)
+    for (let pass = 0; pass < 2; pass++) for (const q of P) {
+      if (q.k !== pass) continue;
+      const f = q.age / q.life, o = (sN + fN) * STRIDE;
+      d[o] = q.x; d[o + 1] = q.y; d[o + 2] = q.z;
+      if (q.k === 0) {
+        const a = q.a * Math.min(1, f * 6) * (1 - f) * (1 - f);
+        d[o + 3] = q.c; d[o + 4] = q.c; d[o + 5] = q.c * 1.05; d[o + 6] = a;
+        d[o + 7] = q.s0 + (q.s1 - q.s0) * Math.sqrt(f); d[o + 8] = 0 + q.seed * 0.9; sN++;
+      } else {
+        // white-blue at birth → orange → dark red
+        const r = 1.0, g = 0.5 - f * 0.32 + q.hot * 0.12, b = Math.max(0, 0.35 - f * 1.6) + 0.03;
+        d[o + 3] = r; d[o + 4] = g; d[o + 5] = b; d[o + 6] = 0.75 * (1 - f) * (1 - f * 0.5);
+        d[o + 7] = q.s0 + (q.s1 - q.s0) * f; d[o + 8] = 1 + q.seed * 0.9; fN++;
+      }
+    }
+    this.smokeN = sN; this.flameN = fN;
+  };
+
+  /** WebGL renderer for ExhaustFX (point sprites, shaders particle.vert / particle.frag). */
+  function ExhaustGL(gl, prog) { this.gl = gl; this.pr = prog; this.buf = gl.createBuffer(); }
+  ExhaustGL.prototype.draw = function (fx, scale) {
+    const gl = this.gl, pr = this.pr, n = fx.smokeN + fx.flameN; if (!n) return;
+    gl.useProgram(pr.p);
+    gl.uniform1f(pr.u.uScale, scale);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+    gl.bufferData(gl.ARRAY_BUFFER, fx.data.subarray(0, n * STRIDE), gl.DYNAMIC_DRAW);
+    const L = ['aPos', 'aCol', 'aInfo'].map(k => gl.getAttribLocation(pr.p, k));
+    const S = STRIDE * 4;
+    gl.enableVertexAttribArray(L[0]); gl.vertexAttribPointer(L[0], 3, gl.FLOAT, false, S, 0);
+    gl.enableVertexAttribArray(L[1]); gl.vertexAttribPointer(L[1], 4, gl.FLOAT, false, S, 12);
+    gl.enableVertexAttribArray(L[2]); gl.vertexAttribPointer(L[2], 2, gl.FLOAT, false, S, 28);
+    gl.enable(gl.BLEND); gl.depthMask(false);
+    if (fx.smokeN) { gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.drawArrays(gl.POINTS, 0, fx.smokeN); }
+    if (fx.flameN) { gl.blendFunc(gl.ONE, gl.ONE); gl.drawArrays(gl.POINTS, fx.smokeN, fx.flameN); }
+    for (const l of L) gl.disableVertexAttribArray(l);
+    gl.depthMask(true);
+  };
+  /** car model matrix (column major) → world tips + exhaust direction */
+  function tipsFrom(M) {
+    const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
+    const tips = ENG.tips.map(t => tr(t[0], t[1], t[2]));
+    const dir = [-M[8], -M[9] + 0.04, -M[10]];
+    const l = Math.hypot(dir[0], dir[1], dir[2]) || 1;
+    return { tips, dir: [dir[0] / l, dir[1] / l, dir[2] / l] };
+  }
+
+  const api = { ENG, EngineSim, EngineSynth, EngineAudio, ExhaustFX, ExhaustGL, tipsFrom };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.EngineFX = api;
+})(typeof window !== 'undefined' ? window : this);
+</script>
 <script>/* AMPY KAGE GT showroom: turntable, hood, butterfly doors, interior / cockpit / engine cameras, steering demo, lights, specs. */
 (function () {
 'use strict';
@@ -911,11 +1221,14 @@ function Showroom(canvas, opts) {
   this.model = CarHD.build();
   this.buildMs = performance.now() - t0;
   this.car = new CarRender(gl, this.P.car, this.model);
+  const F = window.EngineFX;
+  this.P.fx = prog('particle.vert', 'particle.frag');
+  this.eng = new F.EngineSim(); this.fx = new F.ExhaustFX(700); this.fxgl = new F.ExhaustGL(gl, this.P.fx); this.audio = new F.EngineAudio();
   const b = (arr, ix) => { const x = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, x); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return x; };
   this.quad = { a: b([-1, -1, 1, -1, 1, 1, -1, 1]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.ground = { a: b([-40, -40, 40, -40, 40, 40, -40, 40]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0 };
-  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1 };
+  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0 };
   this.cam = { yaw: 0.7, pitch: 0.18, dist: 7.2, mode: 'orbit', auto: true, look: 0, lookP: 0 };
   this.t = 0; this.turn = 0;
 }
@@ -936,7 +1249,16 @@ Showroom.prototype.frame = function (dt) {
   const W = this.canvas.width, H = this.canvas.height; gl.viewport(0, 0, W, H);
   // camera
   let eye, tgt, fov = 40;
-  const carM = U.RY(this.turn);
+  // engine: idles by itself, SU DI GIRI holds the throttle (neutral)
+  const eng = this.eng;
+  if (tg.engine) { eng.off = false; eng.update(dt, { free: true, throttle: tg.rev }); }
+  else { eng.off = true; eng.pops = 0; eng.rpm = Math.max(0, eng.rpm - dt * 4000); eng.load = 0; }
+  this.audio.on = tg.engine; this.audio.feed(eng);
+  // the body rocks on its mounts with the torque, and shivers at idle
+  const rk = tg.engine ? Math.min(1, Math.max(0, (eng.rpm - 900) / 8000)) : 0;
+  const shiver = tg.engine ? Math.sin(t * eng.rpm / 60 * 0.5 * 6.283) * 0.0012 * (1 - rk * 0.6) : 0;
+  const body = U.mul(U.T(0, shiver + rk * 0.004, 0), U.RZ(rk * eng.load * 0.012 + shiver * 0.6));
+  const carM = U.mul(U.RY(this.turn), body);
   const toWorld = p => { const c = Math.cos(this.turn), s = Math.sin(this.turn); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; };
   if (cam.mode === 'cockpit') {
     const e = CarHD.RIG.driverEye; eye = toWorld(e);
@@ -948,7 +1270,7 @@ Showroom.prototype.frame = function (dt) {
     eye = toWorld([0.9, 2.0, 3.4]); tgt = toWorld([0, 0.45, 1.5]); fov = 45;
   } else {
     const d = cam.dist, ce = Math.cos(cam.yaw), se = Math.sin(cam.yaw);
-    eye = [se * d * Math.cos(cam.pitch), 0.6 + d * Math.sin(cam.pitch), ce * d * Math.cos(cam.pitch)]; tgt = [0, 0.55, 0];
+    const T0 = cam.tgt || [0, 0.55, 0]; eye = [T0[0] + se * d * Math.cos(cam.pitch), T0[1] + 0.05 + d * Math.sin(cam.pitch), T0[2] + ce * d * Math.cos(cam.pitch)]; tgt = T0;
   }
   const V = lookAt(eye, tgt, [0, 1, 0]), Pm = perspective(fov * Math.PI / 180, W / H, 0.03, 200), VP = new Float32Array(16);
   { const a = Pm, bb = V.m; for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * bb[c * 4 + k]; VP[c * 4 + r] = s; } }
@@ -983,6 +1305,9 @@ Showroom.prototype.frame = function (dt) {
   this.car.draw(carM, st, 'opaque');
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   this.car.draw(carM, st, 'glass');
+  const tp = EngineFX.tipsFrom(carM);
+  this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng);
+  set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov * Math.PI / 360)));
   gl.depthMask(true); gl.disable(gl.BLEND);
 };
 window.Showroom = Showroom;
@@ -1013,6 +1338,17 @@ window.Showroom = Showroom;
   $('bPaint').onclick=()=>{ const ks=Object.keys(CarRenderUtil.PAINTS); o.paint=ks[(ks.indexOf(o.paint)+1)%ks.length]; };
   $('bPal').onclick=()=>{ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; accent(); };
   $('bSpecs').onclick=()=>{ $('specs').classList.toggle('open'); tog('bSpecs',$('specs').classList.contains('open')); };
+  // engine sound starts with the first touch (browser rule), SU DI GIRI: hold to rev, release for the crackle
+  const snd=()=>sr.audio.start(); addEventListener('pointerdown',snd); addEventListener('keydown',snd);
+  $('bMotor').onclick=()=>{ sr.tg.engine=!sr.tg.engine; tog('bMotor',sr.tg.engine); $('bMotor').textContent=sr.tg.engine?'MOTORE ON':'MOTORE OFF';
+    if(sr.tg.engine){ sr.eng.rpm=300; sr.tg.rev=0.45; setTimeout(()=>{ if(!revHeld) sr.tg.rev=0; },260); } };
+  let revHeld=false;
+  const rev=on=>{ revHeld=on; if(on&&!sr.tg.engine) $('bMotor').onclick(); sr.tg.rev=on?1:0; tog('bRev',on); };
+  $('bRev').addEventListener('pointerdown',e=>{ e.stopPropagation(); snd(); rev(true); });
+  for(const ev of ['pointerup','pointerleave','pointercancel']) $('bRev').addEventListener(ev,()=>rev(false));
+  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat) rev(true); });
+  addEventListener('keyup',e=>{ if(e.code==='Space') rev(false); });
+  setInterval(()=>{ $('rpm').textContent=sr.tg.engine?(Math.round(sr.eng.rpm/50)*50)+' RPM':''; },80);
   // orbit / look around with drag, zoom with wheel / pinch
   let drag=null;
   cv.addEventListener('pointerdown',e=>{ drag=[e.clientX,e.clientY]; });
@@ -1026,8 +1362,12 @@ window.Showroom = Showroom;
     if(q.has('mode')) sr.cam.mode=q.get('mode');
     if(q.has('steer')){ sr.st.wheelSteer=0.5; sr.st.steerWheel=2.4; }
     if(q.has('yaw')) sr.cam.yaw=parseFloat(q.get('yaw')); if(q.has('pitch')) sr.cam.pitch=parseFloat(q.get('pitch')); if(q.has('dist')) sr.cam.dist=parseFloat(q.get('dist'));
+    if(q.has('tgt')) sr.cam.tgt=q.get('tgt').split(',').map(parseFloat);
     if(q.has('specs')) $('specs').classList.add('open');
-    sr.cam.auto=false; sr.frame(0.001); window.__done=true; return;
+    sr.cam.auto=false;
+    if(q.has('fx')){ const fx=q.get('fx'), M=CarRenderUtil.RY(0), tp=EngineFX.tipsFrom(M), stp=th=>{ sr.eng.update(1/60,{free:true,throttle:th}); sr.fx.update(1/60,tp.tips,tp.dir,[0,0,0],sr.eng); };
+      for(let i=0;i<70;i++) stp(1); for(let i=0;i<4;i++) stp(0); if(fx==='smoke') for(let i=0;i<60;i++) stp(0); else for(let i=0;i<60&&sr.fx.flameN<8;i++) stp(0); sr.turn=0; }
+    sr.frame(0.001); window.__done=true; return;
   }
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; sr.frame(dt); requestAnimationFrame(loop); }

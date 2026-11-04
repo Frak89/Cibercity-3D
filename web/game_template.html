@@ -28,6 +28,7 @@
 <script>/*ENGINE*/</script>
 <script>/*CARHD*/</script>
 <script>/*CARRENDER*/</script>
+<script>/*ENGINEFX*/</script>
 <script>/*GAME*/</script>
 <script>
 (function(){
@@ -46,7 +47,10 @@
   addEventListener('resize',resize); resize();
   const inp={gas:false,brake:false,steer:0,hand:false,boost:false};
   const keys={};
-  addEventListener('keydown',e=>{ keys[e.code]=true;
+  const snd=()=>{ if(game.audio) game.audio.start(); };
+  addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
+  addEventListener('keydown',e=>{ keys[e.code]=true; snd();
+    if(e.code==='KeyB'&&game.audio) game.audio.toggle();
     if(e.code==='KeyC') game.view=(game.view+1)%NeonRun.VIEWS.length;
     if(e.code==='KeyP'){ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; save(); }
     if(e.code==='KeyM'){ const ks=['',...Object.keys(CYBER_WEATHER)]; o.weather=ks[(ks.indexOf(o.weather)+1)%ks.length]; save(); }
