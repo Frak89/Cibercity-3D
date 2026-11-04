@@ -35,6 +35,15 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private float fxOx, fxOz; private boolean fxInit = false;
     public volatile float hudRpm, hudRed = 8900, hudLim = 9100; public volatile int hudGear;
     public volatile int power = 0; public volatile boolean roofOpen = false;
+    /* KAGE CHRONO + race exhaust + LEVITA flight */
+    public volatile boolean chronoOn = false, race = false, flyOn = false;
+    public volatile float hudChrono = 0, hudCool = 0; public volatile boolean hudPast = false;
+    private Meadow meadow; private final List<Gl.Mesh> nature = new ArrayList<>();
+    private Gl.Prog natureP, meadowP, warpP;
+    private boolean past = false;
+    private float tjCharge = 0, tjCool = 0, tjWhite = 0, tjRing = 1, tjJumpAt = -1, flyK = 0, bank = 0, pitch = 0, chronoPh = 0;
+    private boolean arrive = false;
+    private float[] curFog, curTop; private float curFogDen;
     private float roofT = 0;
     /** HUD snapshot (written on the GL thread) */
     public volatile float hudKmh, hudBoost, hudDrift, hudSteer, hudH, hudX, hudZ, hudDist; public volatile int hudScore, hudBest; public volatile boolean hudBoosting, hudCockpit;
@@ -68,6 +77,13 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         glow = Gl.prog(ctx, "glow.vert", "glow.frag", common);
         hdProg = Gl.prog(ctx, "car_hd.vert", "car_hd.frag", common);
         fxProg = Gl.prog(ctx, "particle.vert", "particle.frag", common); exhaust.glLost();
+        natureP = Gl.prog(ctx, "nature.vert", "nature.frag", common);
+        meadowP = Gl.prog(ctx, "ground.vert", "ground_meadow.frag", common);
+        warpP = Gl.prog(ctx, "post.vert", "warp.frag", common);
+        if (meadow == null) meadow = new Meadow(2077 + 1885);
+        nature.clear();
+        for (Meadow.Chunk c : meadow.chunks)
+            nature.add(Gl.mesh(new String[]{"aPos", "aCenter", "aNorm", "aCol"}, new float[][]{c.pos.arr(), c.center.arr(), c.norm.arr(), c.col.arr()}, new int[]{3, 2, 3, 4}, c.idx.arr()));
         try { hd = new CarHd(ctx, hdProg); hdError = null; } catch (Exception ex) { android.util.Log.e(Gl.TAG, "car_hd", ex); hd = null; hdError = String.valueOf(ex.getMessage()); }
         if (city == null) city = new GameCity(2077);
         chunks.clear();
@@ -128,7 +144,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         GLES20.glUseProgram(p.id);
         p.f1("uTime", t % 3600f); p.f1("uL", S); p.f1("uFar", 620); p.f1("uZOff", 0.5f); p.f1("uCamX", camX); p.f1("uWrapX", S); p.f1("uCamZ", camZ);
         p.f1("uFogDen", fogDen); p.f1("uFlash", flash); p.f1("uPitch", GameCity.GP); p.f1("uRoad", GameCity.RW);
-        p.v3("uFog", pal.fog); p.v3("uSkyTop", pal.top); p.v3("uWinA", pal.winA); p.v3("uWinB", pal.winB); p.v3("uWinC", pal.winC);
+        p.v3("uFog", curFog != null ? curFog : pal.fog); p.v3("uSkyTop", curTop != null ? curTop : pal.top); p.v3("uWinA", pal.winA); p.v3("uWinB", pal.winB); p.v3("uWinC", pal.winC);
         p.v3("uNeonA", pal.neonA); p.v3("uNeonB", pal.neonB); p.v3("uEye", eye);
         p.m4("uVP", VP); p.m4("uV", V); p.m4("uP", P);
     }
@@ -139,18 +155,34 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         last = now;
         Palette pal = Palette.of(palette);
         if (!carBuilt.equals(pal.key + paint)) buildCar(pal);
-        Weather.Fx wx = Weather.fx(weather);
+        Weather.Fx wx = past ? null : Weather.fx(weather);
+        curFog = past ? Meadow.FOG : null; curTop = past ? Meadow.TOP : null;
+        // LEVITA flight: hover higher
+        flyK += Math.max(-dt * 0.8f, Math.min(dt * 0.8f, (power == 2 && flyOn ? 1 : 0) - flyK));
+        float fsm = flyK * flyK * (3 - 2 * flyK);
+        car.y = fsm * CarHd.FLY_ALT + (power == 2 ? 0.015f * (float) Math.sin(t * 2.1f) * (1 + fsm * 4) : 0);
+        car.meadow = past ? meadow : null;
         if (!paused) {
             t += dt;
             float imp = car.step(input, dt, city);
             if (imp > 3) lastImpact = imp;
+            eng.race = race;
             eng.setType(power); car.pk = power == 0 ? 1 : power == 1 ? 1.03f : 1.1f;
             eng.update(dt, car.speed(), input.gas ? 1 : 0, car.boosting, false);
             roofT += Math.max(-dt / 5, Math.min(dt / 5, (roofOpen ? 1 : 0) - roofT));
+            // KAGE CHRONO: hold 300 km/h to charge; the jump swaps Cybercity and the meadow
+            float kmh = car.speed() * 3.6f;
+            tjCool = Math.max(0, tjCool - dt); tjWhite = Math.max(0, tjWhite - dt * 1.6f); tjRing = Math.min(1, tjRing + dt * 0.9f);
+            if (chronoOn && tjCool <= 0 && kmh >= 300) tjCharge = Math.min(1, tjCharge + dt / 1.6f); else tjCharge = Math.max(0, tjCharge - dt * 1.2f);
+            if (tjCharge >= 1) { tjCharge = 0; tjCool = 4; tjWhite = 1; tjRing = 0; tjJumpAt = 0.18f; eng.boom(); car.shake = 1; lastImpact = 6; }
+            if (tjJumpAt >= 0) { tjJumpAt -= dt; if (tjJumpAt < 0) { past = !past; exhaust.reset(); arrive = true; } }
+            eng.chrono = chronoOn ? tjCharge : 0;
+            chronoPh += dt * (1 + tjCharge * 14);
         }
         flash = Math.max(0, flash - dt * 3.5f);
         if (wx != null && wx.light > 0) { nextFlash -= dt; if (nextFlash <= 0) { flash = 1; nextFlash = rnd.nextFloat() < 0.35f ? 0.15f : 4 + rnd.nextFloat() * 9; } }
         camera(paused ? 0 : dt);
+        if (view != 5 && view != 6) { e[1] += car.y; l[1] += car.y; } else l[1] += car.y;
         {   // exhaust particles live in the camera-relative frame: follow the origin across the torus
             float ox = car.x + e[0], oz = car.z + e[2];
             if (fxInit) { float dx = ox - fxOx, dz = oz - fxOz; dx -= Math.round(dx / S) * S; dz -= Math.round(dz / S) * S; exhaust.shift(-dx, 0, -dz); }
@@ -161,7 +193,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         Matrix.setLookAtM(V, 0, 0, e[1], 0, l[0] - e[0], l[1], l[2] - e[2], 0, 1, 0);
         Matrix.perspectiveM(P, 0, fov, W / (float) H, 0.12f, 700);
         Matrix.multiplyMM(VP, 0, P, 0, V, 0);
-        float fogDen = pal.fogDen * (wx != null ? wx.fog : 1);
+        float fogDen = past ? Meadow.FOG_DEN : pal.fogDen * (wx != null ? wx.fog : 1);
 
         GLES20.glClearColor(0, 0, 0, 1);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
@@ -177,23 +209,35 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         GLES20.glUniform3f(sky.u("uUp"), ux, uy, uz);
         float ty = (float) Math.tan(Math.toRadians(fov) / 2);
         GLES20.glUniform2f(sky.u("uTan"), ty * W / H, ty);
-        sky.f1("uCloud", wx != null ? wx.cloud : 0);
-        sky.v3("uSunDir", pal.sunDir); sky.v3("uSunCol", pal.sun); sky.f1("uSunStripes", pal.stripes);
+        sky.f1("uCloud", past ? 0.45f : wx != null ? wx.cloud : 0); sky.f1("uDay", past ? 1 : 0);
+        sky.v3("uSunDir", past ? Meadow.SUN_DIR : pal.sunDir); sky.v3("uSunCol", past ? Meadow.SUN : pal.sun); sky.f1("uSunStripes", pal.stripes);
         Gl.draw(sky, mQuad);
 
         GLES20.glEnable(GLES20.GL_DEPTH_TEST); GLES20.glDepthMask(true);
-        common(ground, pal, fogDen, camX, camZ, eye); Gl.draw(ground, mGround);
-        common(building, pal, fogDen, camX, camZ, eye); for (Gl.Mesh m : chunks) Gl.draw(building, m);
-        common(board, pal, fogDen, camX, camZ, eye); Gl.draw(board, mBoard);
+        if (past) {
+            common(meadowP, pal, fogDen, camX, camZ, eye); meadowP.v3("uSunDir", Meadow.SUN_DIR); meadowP.v3("uSunCol", Meadow.SUN); Gl.draw(meadowP, mGround);
+            common(natureP, pal, fogDen, camX, camZ, eye); natureP.v3("uSunDir", Meadow.SUN_DIR); natureP.v3("uSunCol", Meadow.SUN); for (Gl.Mesh m : nature) Gl.draw(natureP, m);
+        } else {
+            common(ground, pal, fogDen, camX, camZ, eye); Gl.draw(ground, mGround);
+            common(building, pal, fogDen, camX, camZ, eye); for (Gl.Mesh m : chunks) Gl.draw(building, m);
+            common(board, pal, fogDen, camX, camZ, eye); Gl.draw(board, mBoard);
+        }
+        // body: heading + gyroscopic bank into the turn (stronger in flight) + pitch with throttle / brake
+        float vabs = car.speed();
+        bank += ((-car.steer * (0.10f + 0.32f * fsm) * Math.min(1, vabs / 15)) - bank) * Math.min(1, dt * 4);
+        pitch += (((input.gas ? -0.025f : 0) + (input.brake ? 0.04f : 0)) * (0.4f + fsm) - pitch) * Math.min(1, dt * 3);
         Matrix.setIdentityM(M, 0);
-        Matrix.translateM(M, 0, -e[0], 0, -e[2]);
+        Matrix.translateM(M, 0, -e[0], car.y, -e[2]);
         Matrix.rotateM(M, 0, (float) Math.toDegrees(car.h), 0, 1, 0);
+        Matrix.rotateM(M, 0, (float) Math.toDegrees(pitch), 1, 0, 0);
+        Matrix.rotateM(M, 0, (float) Math.toDegrees(bank), 0, 0, 1);
         hdState.roof = roofT; hdState.power = power; hdState.time = t;
+        hdState.race = race; hdState.chrono = chronoOn; hdState.chronoPh = chronoPh; hdState.fly = fsm;
         hdState.wheelSteer = car.steer * 0.5f; hdState.steerWheel = car.steer * 2.6f; hdState.spin = car.spin;
         if (drawCar && hd != null) {
             common(hdProg, pal, fogDen, camX, camZ, eye);
             hd.setMaterials(paint, pal.neonA, pal.neonB);
-            hdProg.f1("uKey", 0.35f); hdProg.f1("uLights", 1); hdProg.f1("uBrake", input.brake ? 1 : 0);
+            hdProg.f1("uKey", past ? 1.0f : 0.35f); hdProg.f1("uLights", 1); hdProg.f1("uBrake", input.brake ? 1 : 0);
             hd.draw(M, hdState, false);
         } else if (drawCar) {
             common(solid, pal, fogDen, camX, camZ, eye);
@@ -207,18 +251,22 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             common(hdProg, pal, fogDen, camX, camZ, eye);
             hd.draw(M, hdState, true);
         }
-        if (!paused) exhaust.update(dt, M, car.vx, car.vz, eng);
+        if (!paused) {
+            exhaust.update(dt, M, car.vx, car.vz, eng);
+            if (chronoOn && tjCharge > 0.05f) exhaust.chronoArcs(M, tjCharge, car.vx, car.vz);
+            if (arrive) { arrive = false; exhaust.ring(M, 2.2f, car.vx, car.vz, 120); }
+        }
         common(fxProg, pal, fogDen, camX, camZ, eye);
         exhaust.draw(fxProg, H / (2 * (float) Math.tan(Math.toRadians(fov) / 2)));
         GLES20.glEnable(GLES20.GL_BLEND); GLES20.glDepthMask(false);
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE);
-        common(traffic, pal, fogDen, camX, camZ, eye); traffic.f1("uWidth", 0.3f); Gl.draw(traffic, mTraffic);
+        if (!past) { common(traffic, pal, fogDen, camX, camZ, eye); traffic.f1("uWidth", 0.3f); Gl.draw(traffic, mTraffic); }
         common(glow, pal, fogDen, camX, camZ, eye);
         glow.m4("uModel", M);
         glow.f1("uGlow", 0.55f + 0.15f * (float) Math.sin(t * 3)); Gl.draw(glow, cUnder);
         glow.f1("uGlow", 1); Gl.draw(glow, cHeads);
         glow.f1("uGlow", input.brake ? 1.8f : 0.7f); Gl.draw(glow, cTail);
-        float rainAmt = wx != null ? wx.rain : 0;
+        float rainAmt = wx != null ? wx.rain : 0;   // (no weather in the past)
         if (rainAmt > 0) {
             common(rain, pal, fogDen, camX, camZ, eye); rain.f1("uCamZ", camZ % 84);
             rain.f1("uRain", rainAmt); rain.f1("uRainSpeed", 28); rain.f1("uSnow", wx.snow); rain.f1("uWind", wx.wind);
@@ -233,12 +281,19 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         GLES20.glUseProgram(post.id);
         post.f1("uFade", paused ? 0.45f : car.hit * 0.25f); post.f1("uScan", 0); GLES20.glUniform2f(post.u("uRes"), W, H);
         Gl.draw(post, mQuad);
+        if (tjCharge > 0.01f || tjWhite > 0.01f || tjRing < 1) {
+            common(warpP, pal, fogDen, camX, camZ, eye); GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE);
+            warpP.f1("uWarp", tjCharge * tjCharge); warpP.f1("uWhite", Math.min(1, tjWhite * 1.4f)); warpP.f1("uRing", tjRing); GLES20.glUniform2f(warpP.u("uRes"), W, H);
+            Gl.draw(warpP, mQuad);
+        }
         GLES20.glDepthMask(true); GLES20.glDisable(GLES20.GL_BLEND);
 
+        hudChrono = chronoOn ? tjCharge : -1; hudCool = tjCool; hudPast = past;
         hudRpm = eng.rpm; hudGear = eng.gear; hudRed = eng.red(); hudLim = eng.limiter();
         hudKmh = car.speed() * 3.6f; hudBoost = car.boost; hudBoosting = car.boosting; hudDrift = car.drift; hudSteer = car.steer;
         hudH = car.h; hudX = car.x; hudZ = car.z; hudDist = car.dist; hudScore = car.score; hudBest = car.best; hudCockpit = view == 3 && hd == null;
     }
 
     public void resetCar() { car.reset(); camH = 0; exhaust.reset(); fxInit = false; }
+    public void toPresent() { past = false; tjCharge = 0; }
 }

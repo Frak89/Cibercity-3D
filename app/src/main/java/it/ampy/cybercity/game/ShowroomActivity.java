@@ -43,6 +43,7 @@ public class ShowroomActivity extends Activity {
         r.palette = sp.getString("gPalette", "neon");
         r.paint = sp.getString("gPaint", "rosso");
         r.power = CarHd.powerIndex(sp.getString("gPower", "v8"));
+        r.race = sp.getBoolean("gRace", false); r.chrono = sp.getBoolean("gChrono", false);
         accent = Palette.argb(Palette.of(r.palette).neonA);
         glv = new GLSurfaceView(this);
         glv.setEGLContextClientVersion(2);
@@ -92,11 +93,18 @@ public class ShowroomActivity extends Activity {
         LinearLayout eb = new LinearLayout(this); eb.setGravity(Gravity.CENTER_VERTICAL);
         rpmText = text("900 RPM", 16, accent, true); rpmText.setShadowLayer(dp(8), 0, 0, accent);
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-2, -2); rp.rightMargin = dp(12); eb.addView(rpmText, rp);
-        add(eb, "roof", "CAPOTE: CHIUSA", false, v -> { r.tRoof = r.tRoof > 0 ? 0 : 1; sel("roof", r.tRoof > 0); btn.get("roof").setText(r.tRoof > 0 ? "CAPOTE: APERTA (SPIDER)" : "CAPOTE: CHIUSA"); });
-        add(eb, "power", CarHd.POWER_NAMES[r.power], false, v -> {
+        add(bar, "roof", "CAPOTE: CHIUSA", false, v -> { r.tRoof = r.tRoof > 0 ? 0 : 1; sel("roof", r.tRoof > 0); btn.get("roof").setText(r.tRoof > 0 ? "CAPOTE: APERTA (SPIDER)" : "CAPOTE: CHIUSA"); });
+        add(bar, "power", CarHd.POWER_NAMES[r.power], false, v -> {
             r.power = (r.power + 1) % 3; sp.edit().putString("gPower", CarHd.POWER_KEYS[r.power]).apply();
             btn.get("power").setText(CarHd.POWER_NAMES[r.power]); specs.setText(specsText()); titleView.setText(CarHd.MODEL_NAMES[r.power]);
         });
+        add(bar, "exh", "SCARICO: SERIE", false, v -> { r.race = !r.race; sel("exh", r.race); btn.get("exh").setText(r.race ? "SCARICO: ELABORATO" : "SCARICO: SERIE"); sp.edit().putBoolean("gRace", r.race).apply(); });
+        add(bar, "chrono", "MODULO CRONO", false, v -> { r.chrono = !r.chrono; sel("chrono", r.chrono); sp.edit().putBoolean("gChrono", r.chrono).apply(); });
+        add(bar, "fly", "VOLO", false, v -> {
+            if (r.power != 2) { r.power = 2; btn.get("power").setText(CarHd.POWER_NAMES[2]); specs.setText(specsText()); titleView.setText(CarHd.MODEL_NAMES[2]); }
+            r.fly = !r.fly; sel("fly", r.fly);
+        });
+        sel("exh", r.race); btn.get("exh").setText(r.race ? "SCARICO: ELABORATO" : "SCARICO: SERIE"); sel("chrono", r.chrono);
         add(eb, "motor", "MOTORE ON", true, v -> {
             r.engineOn = !r.engineOn; sel("motor", r.engineOn); btn.get("motor").setText(r.engineOn ? "MOTORE ON" : "MOTORE OFF");
             if (r.engineOn) { r.eng.rpm = 300; r.rev = 0.45f; glv.postDelayed(() -> { if (!revHeld) r.rev = 0; }, 260); }

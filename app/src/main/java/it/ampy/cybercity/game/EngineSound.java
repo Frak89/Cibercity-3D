@@ -21,6 +21,7 @@ final class EngineSound implements Runnable {
     private float lump = 1, zap = 0, crk = 0, bp1 = 0;
     private double eph = 0, zph = 0, hum = 0;
     private int synType = 0;
+    private boolean race = false; private float chronoK = 0, boom = 0, blp = 0; private double chph = 0, bph = 0;
     private float amp = 0, rpm = EngineSim.IDLE, load = 0, boost = 0, low = 0, band = 0, low2 = 0, hiss = 0, popEnv = 0, popAmp = 0, gain = 0;
 
     EngineSound(EngineSim s) { sim = s; }
@@ -54,6 +55,7 @@ final class EngineSound implements Runnable {
             if (pops > 0) { popQ += pops; popAmp = Math.max(popAmp, ps[0]); }
             float rpmT = sim.rpm, loadT = sim.load, boostT = sim.boostLvl, spd = sim.speed;
             if (synType != sim.type) { synType = sim.type; rpm = rpmT; }
+            race = sim.race; chronoK = sim.chrono; if (sim.takeBoom() > 0) { boom = 1; bph = 0; }
             float gainT = (muted || sim.off || rpmT < 200) ? 0 : volume;
             for (int i = 0; i < frames; i++) buf[i] = (short) ((synType == 2 ? sampleMag(rpmT, loadT, boostT, gainT) : sample(rpmT, loadT, boostT, gainT, spd)) * 32000);
             track.write(buf, 0, frames);
@@ -82,11 +84,12 @@ final class EngineSound implements Runnable {
             x = a * (float) (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6f;
             x += noise() * a * (float) Math.exp(-p * 4) * (0.12f + 0.4f * load);
         }
-        float fc = Math.min(sr * 0.22f, W ? 220 + rpm * 0.13f + load * 1700 : 110 + rpm * 0.085f + load * 1100);
+        if (race) x *= 1.25f;
+        float fc = Math.min(sr * 0.22f, (W ? 220 + rpm * 0.13f + load * 1700 : 110 + rpm * 0.085f + load * 1100) * (race ? 1.35f : 1));
         float f1 = 2 * (float) Math.sin(Math.PI * fc / sr);
         low += f1 * band; float high = x - low - (W ? 0.42f : 0.55f) * band; band += f1 * high;
         low2 += (x - low2) * (float) (2 * Math.PI * (W ? 110 : 70) / sr);
-        float y = low * 0.85f + band * (W ? 0.5f : 0.35f) + low2 * (W ? 0.8f : 1.4f);
+        float y = low * 0.85f + band * (W ? 0.5f : 0.35f) * (race ? 1.5f : 1) + low2 * (W ? 0.8f : 1.4f) * (race ? 1.35f : 1);
         tph += (2200 + rpm * 0.55) / sr; if (tph > 1) tph -= 1;
         y += (float) Math.sin(tph * 6.2831853) * 0.035f * boost * (0.3f + load);
         hiss += (noise() - hiss) * 0.25f; y += hiss * 0.03f * boost * (1 - load);
@@ -95,10 +98,28 @@ final class EngineSound implements Runnable {
         if (popGap > 0) popGap--;
         if (popEnv > 0.001f) {
             popPh += (W ? 140.0 : 85.0) / sr;
-            y += popEnv * (noise() * (W ? 1.1f : 0.9f) + (float) Math.sin(popPh * 6.2831853) * (W ? 0.6f : 0.9f));
+            y += popEnv * (race ? 1.35f : 1) * (noise() * (W ? 1.1f : 0.9f) + (float) Math.sin(popPh * 6.2831853) * (W ? 0.6f : 0.9f));
             popEnv *= 1 - (W ? 45f : 32f) / sr;
         }
-        return (float) Math.tanh(y * 1.1f) * gain;
+        return (float) Math.tanh(chronoMix(y * (race ? 1.2f : 1)) * 1.1f) * gain;
+    }
+
+    /** KAGE CHRONO layer: rising whine while charging, boom + crack at the jump */
+    private float chronoMix(float y) {
+        float k = chronoK;
+        if (k > 0.001f) {
+            chph += (180 + k * k * 2600) / sr;
+            double ph = chph * 6.2831853;
+            y += (float) (Math.sin(ph) * 0.6 + Math.sin(ph * 2.01) * 0.25 + Math.sin(ph * 3.03) * 0.15) * k * 0.22f;
+        }
+        if (boom > 0.0005f) {
+            bph += 1.0 / sr;
+            float n2 = noise();
+            blp += (n2 - blp) * 0.03f;
+            y += boom * ((float) Math.sin(bph * 6.2831853 * (38 + 30 * boom)) * 1.1f + blp * 2.5f) + (bph < 0.06 ? n2 * 0.9f * (float) (1 - bph / 0.06) : 0);
+            boom *= 1 - 2.2f / sr;
+        }
+        return y;
     }
 
     /** LEVITA: electrostatic hum, gliding field whine, crackling micro-discharges, zaps on lift-off */
@@ -122,6 +143,6 @@ final class EngineSound implements Runnable {
         if (popGap > 0) popGap--;
         if (zap > 0.001f) { popPh += (900 + 2400 * zap) / sr; y += zap * (hp * 1.2f + Math.signum((float) Math.sin(popPh * 6.2831853)) * 0.25f); zap *= 1 - 60f / sr; }
         low2 += (y - low2) * 0.5f;
-        return (float) Math.tanh(low2 * 1.3f) * gain;
+        return (float) Math.tanh(chronoMix(low2) * 1.3f) * gain;
     }
 }

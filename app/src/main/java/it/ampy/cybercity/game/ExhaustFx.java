@@ -40,7 +40,7 @@ final class ExhaustFx {
     /** M: car model matrix (column major); vel: car velocity in world (m/s) */
     void update(float dt, float[] M, float velX, float velZ, EngineSim sim) {
         for (int t = 0; t < 4; t++) {
-            float[] p = EngineSim.TIPS[t];
+            float[] p = (sim.race && sim.type != 2 ? EngineSim.TIPS_RACE : EngineSim.TIPS)[t];
             tips[t][0] = M[0] * p[0] + M[4] * p[1] + M[8] * p[2] + M[12];
             tips[t][1] = M[1] * p[0] + M[5] * p[1] + M[9] * p[2] + M[13];
             tips[t][2] = M[2] * p[0] + M[6] * p[1] + M[10] * p[2] + M[14];
@@ -131,6 +131,28 @@ final class ExhaustFx {
         h2[i] = h2[j]; mag[i] = mag[j];
         k[i] = k[j]; x[i] = x[j]; y[i] = y[j]; z[i] = z[j]; vx[i] = vx[j]; vy[i] = vy[j]; vz[i] = vz[j]; age[i] = age[j]; life[i] = life[j];
         s0[i] = s0[j]; s1[i] = s1[j]; c[i] = c[j]; al[i] = al[j]; seed[i] = seed[j]; hot[i] = hot[j];
+    }
+    /** chrono: blue arcs crawling over the body (k 0..1) */
+    void chronoArcs(float[] M, float k, float velX, float velZ) {
+        curH2 = false; curMag = true;
+        int cnt = (int) (k * k * 14) + (r() < k ? 1 : 0);
+        for (int i = 0; i < cnt; i++) {
+            float side = r() < 0.5f ? -1 : 1, z = (r() * 2 - 1) * 2.3f, y = 0.3f + r() * 0.9f;
+            float x = side * (0.95f + r() * 0.12f) * (1 - (float) Math.pow(Math.abs(z) / 2.5f, 4) * 0.4f);
+            add(1, M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14],
+                velX + (r() - 0.5f) * 2, (r() - 0.5f) * 2, velZ + (r() - 0.5f) * 2, 0.05f + r() * 0.1f, 0.10f, 0.03f, 0, 1);
+        }
+    }
+    /** burst ring around the car (arrival) */
+    void ring(float[] M, float radius, float velX, float velZ, int cnt) {
+        curH2 = false; curMag = true;
+        for (int i = 0; i < cnt; i++) {
+            float a = i / (float) cnt * 6.2831853f, ca = (float) Math.cos(a), sa = (float) Math.sin(a);
+            float x = ca * radius, y = 0.15f + r() * 0.3f, z = sa * radius * 1.6f;
+            float ox = ca * 9, oz = sa * 9;
+            add(1, M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14],
+                velX * 0.3f + ox * M[0] + oz * M[8], 0.5f + r(), velZ * 0.3f + ox * M[2] + oz * M[10], 0.35f + r() * 0.35f, 0.35f, 0.08f, 0, 1);
+        }
     }
     void reset() { n = 0; smokeN = flameN = 0; }
 

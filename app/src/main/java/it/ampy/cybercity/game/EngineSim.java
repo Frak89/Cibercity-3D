@@ -13,6 +13,11 @@ final class EngineSim {
     static final float[] T_IDLE = {900, 1150, 600}, T_RED = {8900, 10200, 21000}, T_LIM = {9100, 10500, 22000}, T_FINAL = {4.70f, 5.40f, 0};
 
     volatile int type = 0;
+    volatile boolean race = false;             // sport exhaust: louder, earlier and longer crackle
+    volatile float chrono = 0; private volatile int boomPend = 0;
+    static final float[][] TIPS_RACE = {{-0.40f, 0.32f, -2.50f}, {-0.20f, 0.32f, -2.50f}, {0.20f, 0.32f, -2.50f}, {0.40f, 0.32f, -2.50f}};
+    void boom() { boomPend++; }
+    synchronized int takeBoom() { int b = boomPend; boomPend = 0; return b; }
     volatile float rpm = IDLE, load = 0, boostLvl = 0, speed = 0;
     volatile int gear = 0;           // -1 neutral, -2 electric direct drive
     volatile boolean off = false;
@@ -71,12 +76,12 @@ final class EngineSim {
         speed = v;
         float bt = boost ? 1 : Math.max(0, (rpm - idle * 2.6f) / (red * 0.68f)) * thr;
         boostLvl += (bt - boostLvl) * Math.min(1, dt * 3);
-        float hi = red * 0.47f;
+        final boolean rc = race; float hi = red * (rc ? 0.36f : 0.47f);
         if (thr > 0.6f && rpm > hi) armed = true;
-        if (armed && thr < 0.3f) { armed = false; if (rpm > hi * 0.9f) { crackle = 0.55f + rnd.nextFloat() * 0.6f; crackleT = 0.02f; firePop(1); } }
+        if (armed && thr < 0.3f) { armed = false; if (rpm > hi * 0.9f) { crackle = (rc ? 1.0f : 0.55f) + rnd.nextFloat() * (rc ? 0.9f : 0.6f); crackleT = 0.02f; firePop(1); } }
         if (crackle > 0) {
             crackle -= dt; crackleT -= dt;
-            if (crackleT <= 0 && thr < 0.3f && rpm > red * 0.27f) { firePop(0.35f + rnd.nextFloat() * 0.65f); crackleT = 0.03f + rnd.nextFloat() * 0.11f; }
+            if (crackleT <= 0 && thr < 0.3f && rpm > red * (rc ? 0.2f : 0.27f)) { firePop((rc ? 0.55f : 0.35f) + rnd.nextFloat() * 0.65f); crackleT = rc ? 0.02f + rnd.nextFloat() * 0.07f : 0.03f + rnd.nextFloat() * 0.11f; }
         }
     }
 }

@@ -31,6 +31,7 @@ public final class CarHd {
     static final float[] ROOF_PIVOT_B = {0, 0.86f, -1.32f}, ROOF_JOINT = {0, 1.235f, -0.35f}, LID_PIVOT = {0, 0.85f, -2.22f};
     static final float ROOF_FOLD = (float) Math.PI - 0.08f, ROOF_FLIP = (float) Math.PI - 0.10f, LID_OPEN = -1.15f, WIN_DROP = 0.32f;
     static final float SPHERE_R = 0.335f, SPHERE_LIFT = 0.04f;
+    static final float[] CHRONO_C = {0, 0.80f, -0.985f}; public static final float FLY_ALT = 1.9f; static final float TUCK_X = 0.05f, TUCK_Y = 0.06f;
     private static float sm(float t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
 
     public static final String[] PAINT_KEYS = {"nero", "rosso", "perla", "oro", "ciano", "viola"};
@@ -39,7 +40,7 @@ public final class CarHd {
     public static int paintIndex(String k) { for (int i = 0; i < PAINT_KEYS.length; i++) if (PAINT_KEYS[i].equals(k)) return i; return 0; }
 
     /** Animated state (radians / 0..1). */
-    public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin, roof, time; public int power; }   // power: 0 V8, 1 Wankel, 2 LEVITA
+    public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin, roof, time, chronoPh, fly; public int power; public boolean race, chrono; }   // power: 0 V8, 1 Wankel, 2 LEVITA
 
     static final class Part {
         String name; int kind; int hub = -1;          // kind: 0 static, 1 hood, 2 doorL, 3 doorR, 4 wheel, 5 caliper, 6 steering wheel
@@ -79,9 +80,16 @@ public final class CarHd {
             else if (n.equals("roofA")) part.kind = 7; else if (n.equals("roofB")) part.kind = 8; else if (n.equals("tonneau")) part.kind = 9;
             else if (n.equals("winL")) part.kind = 10; else if (n.equals("winR")) part.kind = 11;
             else if (n.startsWith("sphere")) { part.kind = 12; part.hub = hubIndex(n.substring(6)); }
+            else if (n.equals("qwinL") || n.equals("qwinR")) part.kind = 13;
+            else if (n.equals("chrono")) part.kind = 14;
+            else if (n.startsWith("chronoR")) { part.kind = 15; part.hub = n.charAt(7) - '1'; }
+            else if (n.equals("magRings")) part.kind = 16;
+            else if (n.equals("exhaustR")) part.kind = 17;
+            else if (n.equals("exhaust")) part.kind = 18;
             // which power units show this part (bit 0 V8, 1 Wankel, 2 LEVITA)
             part.mask = 7;
-            if (n.equals("engine")) part.mask = 1; else if (n.equals("engineW")) part.mask = 2; else if (n.equals("engineE") || n.equals("magPads") || part.kind == 12) part.mask = 4;
+            if (n.equals("engine")) part.mask = 1; else if (n.equals("engineW")) part.mask = 2; else if (n.equals("engineE") || n.equals("magPads") || n.equals("magRings") || part.kind == 12) part.mask = 4;
+            else if (n.equals("exhaustR")) part.mask = 3;
             else if (n.equals("exhaust") || part.kind == 4 || part.kind == 5) part.mask = 3;
             parts.add(part);
         }
@@ -118,15 +126,15 @@ public final class CarHd {
         float[] p = PAINTS[paintIndex(paint)];
         float[][] col = {p, {0.06f, 0.06f, 0.07f}, {0.02f, 0.02f, 0.025f}, {0.30f, 0.31f, 0.35f}, {0.02f, 0.03f, 0.05f}, {0.85f, 0.95f, 1.0f}, {1.0f, 0.06f, 0.12f}, a,
             {0.025f, 0.025f, 0.025f}, {0.35f, 0.35f, 0.37f}, b, {0.05f, 0.045f, 0.05f}, {0.035f, 0.035f, 0.04f}, {0.025f, 0.027f, 0.035f}, {0, 0, 0}, {0.6f, 0.6f, 0.62f},
-            b, a, {0.03f, 0.03f, 0.035f}, {0.03f, 0.03f, 0.035f}};
+            b, a, {0.03f, 0.03f, 0.035f}, {0.03f, 0.03f, 0.035f}, {0.62f, 0.58f, 0.60f}};
         float[][] par = {{0.18f, 0.55f, 0, 0}, {0.3f, 0.2f, 0, 1}, {0.6f, 0, 0, 0}, {0.12f, 1, 0, 0}, {0.05f, 0, 0, 0}, {0.2f, 0, 1, 7}, {0.2f, 0, 1, 6}, {0.3f, 0, 1, 9},
             {0.9f, 0, 0, 3}, {0.35f, 0.9f, 0, 5}, {0.35f, 0.2f, 0.15f, 0}, {0.55f, 0, 0, 2}, {0.95f, 0, 0, 0}, {0.7f, 0, 0, 0}, {0.3f, 0, 1, 4}, {0.35f, 1, 0, 0},
-            {0.3f, 0, 1, 9}, {0.3f, 0, 0.8f, 9}, {0.5f, 0.3f, 0, 8}, {1, 0, 0, 10}};
-        float[] c3 = new float[60], c4 = new float[80];
-        for (int i = 0; i < 20; i++) { System.arraycopy(col[i], 0, c3, i * 3, 3); System.arraycopy(par[i], 0, c4, i * 4, 4); }
+            {0.3f, 0, 1, 9}, {0.3f, 0, 0.8f, 9}, {0.5f, 0.3f, 0, 8}, {1, 0, 0, 10}, {0.22f, 1, 0, 11}};
+        float[] c3 = new float[63], c4 = new float[84];
+        for (int i = 0; i < 21; i++) { System.arraycopy(col[i], 0, c3, i * 3, 3); System.arraycopy(par[i], 0, c4, i * 4, 4); }
         GLES20.glUseProgram(prog.id);
-        GLES20.glUniform3fv(prog.u("uMatCol"), 20, c3, 0);
-        GLES20.glUniform4fv(prog.u("uMatPar"), 20, c4, 0);
+        GLES20.glUniform3fv(prog.u("uMatCol"), 21, c3, 0);
+        GLES20.glUniform4fv(prog.u("uMatPar"), 21, c4, 0);
     }
 
     private static void about(float[] m, float[] p, float rad) {
@@ -149,11 +157,22 @@ public final class CarHd {
                 return;
             }
             case 12: {
-                float[] h = HUBS[p.hub];
+                float[] h = HUBS[p.hub]; float fl = s.fly, outS = h[0] > 0 ? 1 : -1;
                 float bob = SPHERE_LIFT + 0.006f * (float) Math.sin(s.time * 2.3f + h[2] * 3 + h[0]);
-                Matrix.translateM(out, 0, h[0], h[1] + bob, h[2]);
-                if (p.hub < 2) Matrix.rotateM(out, 0, (float) Math.toDegrees(s.wheelSteer), 0, 1, 0);
-                Matrix.rotateM(out, 0, (float) Math.toDegrees((s.spin * WHEEL_R / SPHERE_R) % (2 * Math.PI)), 1, 0, 0);
+                Matrix.translateM(out, 0, h[0] + outS * TUCK_X * fl, h[1] + bob + TUCK_Y * fl, h[2]);
+                if (p.hub < 2) Matrix.rotateM(out, 0, (float) Math.toDegrees(s.wheelSteer * (1 - fl)), 0, 1, 0);
+                Matrix.rotateM(out, 0, (float) Math.toDegrees(-outS * fl * Math.PI / 2), 0, 0, 1);
+                if (fl > 0.5f) Matrix.rotateM(out, 0, (float) Math.toDegrees((s.time * 4) % (2 * Math.PI)), 0, 1, 0);
+                else Matrix.rotateM(out, 0, (float) Math.toDegrees((s.spin * WHEEL_R / SPHERE_R) % (2 * Math.PI)), 1, 0, 0);
+                return;
+            }
+            case 13: Matrix.translateM(out, 0, 0, -WIN_DROP * win, 0); return;
+            case 15: {
+                float ph = s.chronoPh + s.time * 0.8f;
+                Matrix.translateM(out, 0, CHRONO_C[0], CHRONO_C[1], CHRONO_C[2]);
+                if (p.hub == 0) { Matrix.rotateM(out, 0, (float) Math.toDegrees(ph % 6.2831853f), 0, 1, 0); Matrix.rotateM(out, 0, (float) Math.toDegrees(0.35f), 1, 0, 0); }
+                else if (p.hub == 1) { Matrix.rotateM(out, 0, (float) Math.toDegrees((-ph * 1.4f) % 6.2831853f), 1, 0, 0); Matrix.rotateM(out, 0, (float) Math.toDegrees(0.6f), 0, 0, 1); }
+                else { Matrix.rotateM(out, 0, (float) Math.toDegrees((ph * 1.9f) % 6.2831853f), 0, 0, 1); Matrix.rotateM(out, 0, (float) Math.toDegrees(1.2f), 1, 0, 0); }
                 return;
             }
             case 1:
@@ -195,6 +214,9 @@ public final class CarHd {
             int ib = glass ? p.gibo : p.ibo, n = glass ? p.gn : p.n;
             if (ib == 0 || n == 0) continue;
             if ((p.mask & (1 << s.power)) == 0) continue;
+            if ((p.kind == 18 && s.race) || (p.kind == 17 && !s.race)) continue;
+            if ((p.kind == 14 || p.kind == 15) && !s.chrono) continue;
+            if (p.kind == 16 && s.fly > 0.25f) continue;
             partMatrix(p, car, s, T);
             GLES20.glUniformMatrix4fv(lm, 1, false, T, 0);
             bind(aPos, p.vPos, 3); bind(aNorm, p.vNorm, 3); bind(aUV, p.vUV, 2); bind(aMat, p.vMat, 1);

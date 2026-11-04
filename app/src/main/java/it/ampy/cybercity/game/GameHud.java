@@ -129,13 +129,22 @@ public class GameHud extends View {
         p.setStyle(Paint.Style.FILL); p.setColor(0x26ffffff);
         c.drawRect(cx - rr, cy + rr * 0.9f, cx + rr, cy + rr * 0.9f + m * 0.014f, p);
         p.setColor(second); c.drawRect(cx - rr, cy + rr * 0.9f, cx - rr + 2 * rr * r.hudBoost, cy + rr * 0.9f + m * 0.014f, p);
+        // KAGE CHRONO gauge + era label
+        if (r.hudChrono >= 0) {
+            float bw = m * 0.34f, bx = cx - bw / 2, by = cy - rr * 1.55f, k = r.hudChrono;
+            p.setStyle(Paint.Style.FILL); p.setColor(0x1fffffff); c.drawRect(bx, by, bx + bw, by + m * 0.012f, p);
+            p.setColor(accent); p.setShadowLayer(m * 0.02f * k, 0, 0, accent); c.drawRect(bx, by, bx + bw * k, by + m * 0.012f, p); p.clearShadowLayer();
+            t.setTextAlign(Paint.Align.CENTER); t.setTextSize(m * 0.022f); t.setColor(0xffecfcff);
+            c.drawText(r.hudCool > 0 ? "CRONO · RICARICA" : k > 0 ? "CRONO · TIENI 300 KM/H" : "CRONO · PRONTO A 300 KM/H", cx, by - m * 0.014f, t);
+        }
+        if (r.hudPast) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.032f); t.setColor(0xfffff6c8); c.drawText("⏳ PRATERIA DEL PASSATO", m * 0.04f, m * 0.2f, t); }
         // minimap
         float mr = m * 0.16f, mx = W - mr - m * 0.04f, my = mr + m * 0.04f, scale = mr / 220f;
         c.save();
         Path clip = new Path(); clip.addCircle(mx, my, mr, Path.Direction.CW); c.clipPath(clip);
-        p.setColor(0xbf070b13); c.drawCircle(mx, my, mr, p);
+        p.setColor(r.hudPast ? 0xbf285a1e : 0xbf070b13); c.drawCircle(mx, my, mr, p);
         p.setStyle(Paint.Style.STROKE); p.setStrokeCap(Paint.Cap.BUTT); p.setColor(0x73a0c8e6); p.setStrokeWidth(GameCity.RW * scale);
-        for (int k2 = -4; k2 <= 4; k2++) {
+        for (int k2 = -4; k2 <= 4 && !r.hudPast; k2++) {
             float rx = (Math.round(r.hudX / GameCity.GP) + k2) * GameCity.GP - r.hudX, rz = (Math.round(r.hudZ / GameCity.GP) + k2) * GameCity.GP - r.hudZ;
             c.drawLine(mx + rx * scale, my - mr, mx + rx * scale, my + mr, p);
             c.drawLine(mx - mr, my - rz * scale, mx + mr, my - rz * scale, p);
