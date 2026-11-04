@@ -33,7 +33,8 @@ function Showroom(canvas, opts) {
   this.quad = { a: b([-1, -1, 1, -1, 1, 1, -1, 1]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.ground = { a: b([-40, -40, 40, -40, 40, 40, -40, 40]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0, roof: 0, power: opts.power || 'v8', time: 0 };
-  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0, roof: 0 };
+  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0, roof: 0, fly: 0 };
+  this.chronoPh = 0; this.flyK = 0;
   this.eng.setType(this.st.power);
   this.cam = { yaw: 0.7, pitch: 0.18, dist: 7.2, mode: 'orbit', auto: true, look: 0, lookP: 0 };
   this.t = 0; this.turn = 0;
@@ -48,7 +49,9 @@ Showroom.prototype.frame = function (dt) {
   const pal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   this.t += dt; const t = this.t;
   const ease = (cur, target, k) => cur + (target - cur) * Math.min(1, dt * k);
-  st.time = t; st.power = o.power || 'v8'; if (this.eng.type !== st.power) this.eng.setType(st.power);
+  st.time = t; st.power = o.power || 'v8'; st.exhaust = o.exhaust || 'serie'; st.chrono = !!o.chrono;
+  this.flyK += Math.max(-dt * 0.7, Math.min(dt * 0.7, (st.power === 'mag' && tg.fly ? 1 : 0) - this.flyK)); st.fly = this.flyK * this.flyK * (3 - 2 * this.flyK);
+  this.chronoPh += dt * (1 + (tg.rev || 0) * 10); st.chronoPh = this.chronoPh; this.eng.race = st.exhaust === 'race'; if (this.eng.type !== st.power) this.eng.setType(st.power);
   // the roof moves at constant speed (≈ 14 s like a real folding hard top… shortened to 5 s)
   st.roof += Math.max(-dt / 5, Math.min(dt / 5, tg.roof - st.roof));
   if (st.power === 'mag') st.spin += dt * (eng => eng.rpm / 22000 * 9)(this.eng);
@@ -68,7 +71,8 @@ Showroom.prototype.frame = function (dt) {
   const rk = tg.engine ? Math.min(1, Math.max(0, (eng.rpm - 900) / 8000)) : 0;
   const shiver = tg.engine ? Math.sin(t * eng.rpm / 60 * 0.5 * 6.283) * 0.0012 * (1 - rk * 0.6) : 0;
   const body = U.mul(U.T(0, shiver + rk * 0.004, 0), U.RZ(rk * eng.load * 0.012 + shiver * 0.6));
-  const carM = U.mul(U.RY(this.turn), body);
+  const hover = st.fly * 1.2, bank = st.fly * 0.06 * Math.sin(t * 0.9);
+  const carM = U.mul(U.T(0, hover, 0), U.mul(U.RY(this.turn), U.mul(U.RZ(bank), body)));
   const toWorld = p => { const c = Math.cos(this.turn), s = Math.sin(this.turn); return [p[0] * c + p[2] * s, p[1], -p[0] * s + p[2] * c]; };
   if (cam.mode === 'cockpit') {
     const e = CarHD.RIG.driverEye; eye = toWorld(e);
@@ -115,7 +119,7 @@ Showroom.prototype.frame = function (dt) {
   this.car.draw(carM, st, 'opaque');
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   this.car.draw(carM, st, 'glass');
-  const tp = EngineFX.tipsFrom(carM);
+  const tp = EngineFX.tipsFrom(carM, st.exhaust === 'race');
   this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng, tp.hubs);
   set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov * Math.PI / 360)));
   gl.depthMask(true); gl.disable(gl.BLEND);

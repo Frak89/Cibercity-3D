@@ -2,6 +2,7 @@ uniform vec3 uSunDir;
 uniform vec3 uSunCol;
 uniform float uSunStripes;
 uniform float uCloud;
+uniform float uDay;     // 1 = daytime sky (the meadow): no stars
 varying vec3 vDir;
 
 void main(){
@@ -11,7 +12,7 @@ void main(){
     // stars
     vec2 sp = d.xz / (abs(y) + 0.25) * 260.0;
     float st = step(0.9965, h21(floor(sp)));
-    col += (1.0 - uCloud) * vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));
+    col += (1.0 - uCloud) * (1.0 - uDay) * vec3(0.8, 0.85, 1.0) * st * smoothstep(0.12, 0.5, y) * (0.5 + 0.5 * sin(uTime * 3.0 + h21(floor(sp) + 3.0) * 40.0));
     // moon / sun
     float dd = distance(d, normalize(uSunDir));
     float disk = smoothstep(0.075, 0.070, dd) * (1.0 - 0.75 * uCloud);

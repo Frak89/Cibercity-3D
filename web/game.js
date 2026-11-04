@@ -225,6 +225,94 @@ function buildCarModel(paint, accent) {
   return { solid: { pos: P, norm: N, col: Cc, idx: I }, under, heads, tail };
 }
 
+/* ===================================================================== the past: meadow world (trees, rocks, bushes) */
+const MEADOW_PAL = { name: 'PRATERIA', fog: [0.66, 0.77, 0.88], top: [0.20, 0.45, 0.85], sun: [1.0, 0.95, 0.82], sunDir: [0.45, 0.55, 0.7], stripes: 0, fogDen: 0.0042 };
+function buildMeadow(seed) {
+  let s = seed >>> 0; const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const chunks = [], cells = new Map(), CELL = 16;
+  let B = null;
+  const newChunk = () => { B = { pos: [], center: [], norm: [], col: [], idx: [] }; chunks.push(B); };
+  newChunk();
+  const vtx = (p, n, c, cx, cz, leaf) => { B.pos.push(p[0], p[1], p[2]); B.norm.push(n[0], n[1], n[2]); B.col.push(c[0], c[1], c[2], leaf); B.center.push(cx, cz); return B.pos.length / 3 - 1; };
+  const face = (a, b, c, col, cx, cz, leaf) => {     // flat-shaded triangle
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+    let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; const l = Math.hypot(n[0], n[1], n[2]) || 1; n = n.map(x => x / l);
+    if (n[1] < -0.2 && leaf < 0.5 && a[1] > 0.05) n = n.map(x => -x);
+    const i = vtx(a, n, col, cx, cz, leaf); vtx(b, n, col, cx, cz, leaf); vtx(c, n, col, cx, cz, leaf); B.idx.push(i, i + 1, i + 2);
+  };
+  const cone = (cx, cz, y0, y1, r, seg, col, leaf, jit) => {
+    for (let k = 0; k < seg; k++) {
+      const a0 = k / seg * Math.PI * 2, a1 = (k + 1) / seg * Math.PI * 2, j = 1 + (rnd() - 0.5) * jit;
+      const p0 = [Math.cos(a0) * r * j, y0, Math.sin(a0) * r * j], p1 = [Math.cos(a1) * r, y0, Math.sin(a1) * r], tip = [(rnd() - 0.5) * r * 0.15, y1, (rnd() - 0.5) * r * 0.15];
+      const c = col.map(x => x * (0.85 + rnd() * 0.3));
+      face(p0, tip, p1, c, cx, cz, leaf); face(p0, p1, [0, y0 - r * 0.15, 0], c.map(x => x * 0.7), cx, cz, leaf);
+    }
+  };
+  const prism = (cx, cz, y0, y1, r, seg, col) => {
+    for (let k = 0; k < seg; k++) {
+      const a0 = k / seg * Math.PI * 2, a1 = (k + 1) / seg * Math.PI * 2;
+      const b0 = [Math.cos(a0) * r, y0, Math.sin(a0) * r], b1 = [Math.cos(a1) * r, y0, Math.sin(a1) * r], t0 = [b0[0] * 0.7, y1, b0[2] * 0.7], t1 = [b1[0] * 0.7, y1, b1[2] * 0.7];
+      face(b0, t0, b1, col, cx, cz, 0); face(b1, t0, t1, col, cx, cz, 0);
+    }
+  };
+  // lumpy rock / leafy crown: octahedron subdivided once, radially jittered
+  const lump = (cx, cz, y, rx, ry, rz, col, leaf, jit) => {
+    const V0 = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]], F0 = [[0,2,4],[4,2,1],[1,2,5],[5,2,0],[4,3,0],[1,3,4],[5,3,1],[0,3,5]];
+    const cache = {}, jv = {}, J = i => { if (jv[i] === undefined) jv[i] = 1 + (rnd() - 0.5) * jit; return jv[i]; };
+    const verts = V0.map(v => v.slice());
+    const mid = (a, b) => { const k = a < b ? a + '_' + b : b + '_' + a; if (cache[k] !== undefined) return cache[k]; const m = [(verts[a][0] + verts[b][0]) / 2, (verts[a][1] + verts[b][1]) / 2, (verts[a][2] + verts[b][2]) / 2]; const l = Math.hypot(...m); verts.push(m.map(x => x / l)); return cache[k] = verts.length - 1; };
+    const F = []; for (const [a, b, c] of F0) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); F.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]); }
+    const P = i => { const v = verts[i], j = J(i); return [v[0] * rx * j, y + Math.max(v[1], leaf ? -1 : -0.35) * ry * j, v[2] * rz * j]; };
+    for (const [a, b, c] of F) face(P(a), P(b), P(c), col.map(x => x * (0.85 + rnd() * 0.3)), cx, cz, leaf);
+  };
+  const add = (x, z, r) => { const k = Math.floor(x / CELL) + ',' + Math.floor(z / CELL); if (!cells.has(k)) cells.set(k, []); cells.get(k).push([x, z, r]); };
+  const free = (x, z) => Math.hypot(x - 0, z - 42) > 30;   // keep the arrival spot clear
+  let n = 0;
+  while (n < 1500) {
+    const x = rnd() * S, z = rnd() * S; if (!free(x, z)) continue;
+    // clustered: groves where a low-frequency noise is high
+    const grove = Math.sin(x * 0.011) * Math.cos(z * 0.013) + Math.sin((x + z) * 0.007);
+    if (grove < -0.2 && rnd() < 0.8) continue;
+    if (B.pos.length / 3 > 52000) newChunk();
+    const kind = rnd();
+    if (kind < 0.42) {                    // conifer
+      const h = 6 + rnd() * 9, r = 1.6 + rnd() * 1.6;
+      prism(x, z, 0, h * 0.35, 0.35, 6, [0.30, 0.20, 0.12]);
+      for (let k = 0; k < 3; k++) cone(x, z, h * (0.22 + k * 0.22), h * (0.55 + k * 0.17), r * (1 - k * 0.25), 8, [0.10, 0.30 + rnd() * 0.08, 0.10], 1, 0.3);
+      add(x, z, 0.8);
+    } else if (kind < 0.78) {             // broadleaf
+      const h = 4 + rnd() * 5, r = 2.2 + rnd() * 2;
+      prism(x, z, 0, h * 0.6, 0.38, 6, [0.33, 0.23, 0.14]);
+      lump(x, z, h * 0.75, r, r * 0.75, r, [0.22 + rnd() * 0.1, 0.44 + rnd() * 0.1, 0.12], 1, 0.35);
+      add(x, z, 0.8);
+    } else if (kind < 0.93) {             // rock
+      const r = 0.5 + Math.pow(rnd(), 2) * 3.2;
+      lump(x, z, r * 0.25, r, r * (0.45 + rnd() * 0.3), r * (0.7 + rnd() * 0.5), [0.42, 0.41, 0.38].map(v => v * (0.8 + rnd() * 0.3)), 0, 0.45);
+      add(x, z, r * 0.85);
+    } else {                              // bush
+      const r = 0.6 + rnd() * 0.8;
+      lump(x, z, r * 0.4, r * 1.2, r * 0.7, r * 1.2, [0.18, 0.40, 0.12], 1, 0.4);
+    }
+    n++;
+  }
+  return { chunks, cells, CELL };
+}
+function collideMeadow(c, M) {
+  const C = M.CELL, cx = Math.floor(c.x / C), cz = Math.floor(c.z / C);
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const kx = ((cx + i) % (S / C) + S / C) % (S / C), kz = ((cz + j) % (S / C) + S / C) % (S / C);
+    const L = M.cells.get(kx + ',' + kz); if (!L) continue;
+    for (const o of L) {
+      let dx = c.x - o[0], dz = c.z - o[1]; dx -= Math.round(dx / S) * S; dz -= Math.round(dz / S) * S;
+      const d = Math.hypot(dx, dz), r = o[2] + 1.1;
+      if (d >= r || d < 1e-4) continue;
+      const nx = dx / d, nz = dz / d; c.x += nx * (r - d); c.z += nz * (r - d);
+      const vn = c.vx * nx + c.vz * nz;
+      if (vn < 0) { c.vx -= 1.5 * vn * nx; c.vz -= 1.5 * vn * nz; c.vx *= 0.75; c.vz *= 0.75; c.shake = Math.min(1, c.shake + Math.abs(vn) * 0.05); c.hit = Math.min(1, Math.abs(vn) * 0.06); }
+    }
+  }
+}
+
 /* ===================================================================== physics */
 function newCar() { return { x: 0, z: 42, h: 0, vx: 0, vz: 0, steer: 0, spin: 0, boost: 1, drift: 0, score: 0, best: 0, shake: 0, hit: 0, dist: 0 }; }
 
@@ -260,7 +348,7 @@ function stepCar(c, inp, dt, city) {
   // drift score
   const slip = Math.abs(c.vx * nrx + c.vz * nrz);
   if (slip > 4 && sp > 12) { c.drift += slip * dt * 10; } else if (c.drift > 0) { c.score += Math.round(c.drift); c.best = Math.max(c.best, Math.round(c.drift)); c.drift = 0; }
-  collide(c, city);
+  if (c.world === 'meadow') { if ((c.y || 0) < 1.0) collideMeadow(c, c.meadow); } else collide(c, city);
   c.x = ((c.x % S) + S) % S; c.z = ((c.z % S) + S) % S;
   c.shake = Math.max(0, c.shake - dt * 3); c.hit = Math.max(0, c.hit - dt * 2.5);
   return { vF, slip, boosting };
@@ -312,8 +400,9 @@ function cameraFor(view, c, cam, dt, t) {
     case 6: e = [-fx * 2, 70, -fz * 2]; l = [fx * 3, 0, fz * 3]; fov = 60; break;
     default: e = [-fx * 6.5, 2.4, -fz * 6.5]; l = [fx * 4, 0.9, fz * 4];
   }
-  const sh = c.shake * 0.25;
+  const sh = c.shake * 0.25, cy = c.y || 0;
   e[0] += (Math.random() - 0.5) * sh; e[1] += (Math.random() - 0.5) * sh;
+  if (view !== 5 && view !== 6) { e[1] += cy; l[1] += cy; } else l[1] += cy;
   return { e, l, drawCar, fov, cockpit: view === 3 && !window.CarHD };
 }
 
@@ -359,7 +448,7 @@ function Game(canvas, hud, opts) {
   }
   this.P = { sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground_game.frag'),
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
-    post: prog('post.vert', 'post.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
+    post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
   if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); }
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
@@ -378,6 +467,10 @@ function Game(canvas, hud, opts) {
     this.eng = new F.EngineSim(opts.power || 'v8'); this.fx = new F.ExhaustFX(700); this.fxgl = new F.ExhaustGL(gl, this.P.fx); this.audio = new F.EngineAudio();
     this.fxO = null;
   }
+  const md = this.meadow = buildMeadow((opts.seed || 2077) + 1885);
+  this.M.nature = md.chunks.map(B => this.mesh({ aPos: [B.pos, 3], aCenter: [B.center, 2], aNorm: [B.norm, 3], aCol: [B.col, 4] }, B.idx));
+  this.tj = { charge: 0, phase: 0, t: 0, cool: 0, white: 0, ring: 1 };
+  this.world = 'city';
   this.buildCar();
   this.c = newCar(); this.cam = { h: 0 }; this.t = 0; this.flash = 0; this.nextFlash = 3; this.view = 0;
   this.stats = { verts: city.chunks.reduce((a, B) => a + B.pos.length / 3, 0), chunks: city.chunks.length };
@@ -405,12 +498,20 @@ Game.prototype.draw = function (pr, m) {
 Game.prototype.frame = function (dt, inp) {
   const gl = this.gl, P = this.P, o = this.o;
   if (this.paletteBuilt !== o.palette + o.paint) this.buildCar();
-  const pal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
-  const wx = CYBER_WEATHER[o.weather] || null;
+  const cityPal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
+  const past = this.world === 'meadow';
+  const pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : cityPal;
+  const wx = past ? null : (CYBER_WEATHER[o.weather] || null);
   this.t += dt; const t = this.t;
   this.flash = Math.max(0, this.flash - dt * 3.5);
   if (wx && wx.light > 0) { this.nextFlash -= dt; if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = Math.random() < 0.35 ? 0.15 : 4 + Math.random() * 9; } }
   this.c.pk = { v8: 1, wankel: 1.03, mag: 1.1 }[o.power || 'v8'] || 1;
+  this.c.world = this.world; this.c.meadow = this.meadow;
+  // LEVITA flight: hover higher (and keep hovering a little when not flying)
+  const flyT = (o.power === 'mag' && o.fly) ? 1 : 0;
+  this.fly = (this.fly || 0) + Math.max(-dt * 0.8, Math.min(dt * 0.8, flyT - (this.fly || 0)));
+  const fsm = this.fly * this.fly * (3 - 2 * this.fly);
+  this.c.y = fsm * CarHD.RIG.fly.alt + (o.power === 'mag' ? 0.015 * Math.sin(this.t * 2.1) * (1 + fsm * 4) : 0);
   const phys = stepCar(this.c, inp, dt, this.city);
   this.phys = phys;
   const c = this.c;
@@ -418,8 +519,18 @@ Game.prototype.frame = function (dt, inp) {
   this.cv = cv;
   if (this.eng) {
     if (this.eng.type !== (o.power || 'v8')) { this.eng.setType(o.power || 'v8'); this.eng.rpm = this.eng.T.idle; }
+    this.eng.race = o.exhaust === 'race';
     this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting });
     this.audio.feed(this.eng);
+    // KAGE CHRONO: hold 300 km/h to charge the jump; the jump swaps Cybercity ⇄ the meadow
+    const tj = this.tj, kmh = Math.abs(phys.vF) * 3.6;
+    tj.cool = Math.max(0, tj.cool - dt); tj.white = Math.max(0, tj.white - dt * 1.6); tj.ring = Math.min(1, tj.ring + dt * 0.9);
+    if (o.chrono && tj.cool <= 0 && kmh >= 300) tj.charge = Math.min(1, tj.charge + dt / 1.6); else tj.charge = Math.max(0, tj.charge - dt * 1.2);
+    if (tj.charge >= 1) {
+      tj.charge = 0; tj.cool = 4; tj.white = 1; tj.ring = 0; tj.jumpAt = 0.18; this.audio.boom(); c.shake = 1;
+    }
+    if (tj.jumpAt !== undefined) { tj.jumpAt -= dt; if (tj.jumpAt <= 0) { tj.jumpAt = undefined; this.world = this.world === 'city' ? 'meadow' : 'city'; this.fx.p.length = 0; tj.arrive = 1; } }
+    this.audio.setChrono(o.chrono ? tj.charge : 0);
     // particles live in the camera-relative frame: move them when the camera origin moves (torus-wrapped)
     const ox = c.x + cv.e[0], oz = c.z + cv.e[2];
     if (this.fxO) { let dx = ox - this.fxO[0], dz = oz - this.fxO[1]; dx -= Math.round(dx / S) * S; dz -= Math.round(dz / S) * S; this.fx.shift(-dx, 0, -dz); }
@@ -449,19 +560,31 @@ Game.prototype.frame = function (dt, inp) {
   const sp = P.sky; gl.useProgram(sp.p); set(sp);
   gl.uniform3fv(sp.u.uFwd, V.f); gl.uniform3fv(sp.u.uRight, V.r); gl.uniform3fv(sp.u.uUp, V.u);
   const ty = Math.tan(fov / 2); gl.uniform2f(sp.u.uTan, ty * W / H, ty);
-  if (sp.u.uCloud) gl.uniform1f(sp.u.uCloud, wx ? wx.cloud : 0);
+  if (sp.u.uCloud) gl.uniform1f(sp.u.uCloud, past ? 0.45 : wx ? wx.cloud : 0);
+  if (sp.u.uDay) gl.uniform1f(sp.u.uDay, past ? 1 : 0);
   gl.uniform3fv(sp.u.uSunDir, pal.sunDir); gl.uniform3fv(sp.u.uSunCol, pal.sun); gl.uniform1f(sp.u.uSunStripes, pal.stripes);
   this.draw(sp, this.M.quad);
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
-  gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
-  gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
-  gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
-  const carM = model(c.h, carRel[0], 0, carRel[2]);
+  if (past) {
+    const g = P.meadow; gl.useProgram(g.p); set(g); gl.uniform3fv(g.u.uSunDir, pal.sunDir); gl.uniform3fv(g.u.uSunCol, pal.sun); this.draw(g, this.M.ground);
+    const nt = P.nature; gl.useProgram(nt.p); set(nt); gl.uniform3fv(nt.u.uSunDir, pal.sunDir); gl.uniform3fv(nt.u.uSunCol, pal.sun); for (const m of this.M.nature) this.draw(nt, m);
+  } else {
+    gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
+    gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
+    gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
+  }
+  // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
+  const U = CarRenderUtil, fl = this.fly || 0;
+  this.bank = (this.bank || 0) + ((-c.steer * (0.10 + 0.32 * fl) * Math.min(1, Math.abs(phys.vF) / 15)) - (this.bank || 0)) * Math.min(1, dt * 4);
+  this.pitch = (this.pitch || 0) + (((inp.gas ? -0.025 : 0) + (inp.brake ? 0.04 : 0)) * (0.4 + fl) - (this.pitch || 0)) * Math.min(1, dt * 3);
+  const carM = U.mul(U.T(carRel[0], c.y || 0, carRel[2]), U.mul(U.RY(c.h), U.mul(U.RX(this.pitch), U.RZ(this.bank))));
   this.roof = (this.roof || 0) + Math.max(-dt / 5, Math.min(dt / 5, (o.roof ? 1 : 0) - (this.roof || 0)));
-  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t };
+  this.chronoPh = (this.chronoPh || 0) + dt * (1 + this.tj.charge * 14);
+  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
+    exhaust: o.exhaust || 'serie', chrono: !!o.chrono, chronoPh: this.chronoPh, fly: fsm };
   if (cv.drawCar && this.hd) {
     gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB);
-    gl.uniform1f(P.hd.u.uKey, 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
+    gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
   } else if (cv.drawCar) {
     gl.useProgram(P.solid.p); set(P.solid);
@@ -475,18 +598,20 @@ Game.prototype.frame = function (dt, inp) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.hd.p); set(P.hd); this.hd.draw(carM, hdState, "glass"); gl.blendFunc(gl.ONE, gl.ONE);
   }
   if (this.eng) {
-    const tp = EngineFX.tipsFrom(carM);
+    const tp = EngineFX.tipsFrom(carM, o.exhaust === 'race');
     this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, tp.hubs);
+    if (o.chrono && this.tj.charge > 0.05) this.fx.chronoArcs(carM, this.tj.charge, [c.vx, 0, c.vz]);
+    if (this.tj.arrive) { this.tj.arrive = 0; this.fx.ring(carM, 2.2, [c.vx, 0, c.vz], 120); }
     gl.useProgram(P.fx.p); set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov / 2)));
     gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   }
-  gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car);
+  if (!past) { gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car); }
   gl.useProgram(P.glow.p); set(P.glow);
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
   gl.uniform1f(P.glow.u.uGlow, 0.55 + 0.15 * Math.sin(t * 3)); this.draw(P.glow, this.CM.under);
   gl.uniform1f(P.glow.u.uGlow, 1); this.draw(P.glow, this.CM.heads);
   gl.uniform1f(P.glow.u.uGlow, inp.brake ? 1.8 : 0.7); this.draw(P.glow, this.CM.tail);
-  const rainAmt = wx ? wx.rain : (o.rain || 0);
+  const rainAmt = wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
     gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, 28);
@@ -497,6 +622,12 @@ Game.prototype.frame = function (dt, inp) {
   if (wx && wx.mist > 0) { gl.useProgram(P.mist.p); set(P.mist); gl.uniform1f(P.mist.u.uMist, wx.mist * 0.7); gl.uniform2f(P.mist.u.uRes, W, H); this.draw(P.mist, this.M.quad); }
   gl.useProgram(P.post.p); gl.uniform1f(P.post.u.uFade, c.hit * 0.25); gl.uniform1f(P.post.u.uScan, 0); gl.uniform2f(P.post.u.uRes, W, H);
   this.draw(P.post, this.M.quad);
+  const tj = this.tj;
+  if (tj.charge > 0.01 || tj.white > 0.01 || tj.ring < 1) {
+    const wp = P.warp; gl.useProgram(wp.p); set(wp); gl.blendFunc(gl.ONE, gl.ONE);
+    gl.uniform1f(wp.u.uWarp, tj.charge * tj.charge); gl.uniform1f(wp.u.uWhite, Math.min(1, tj.white * 1.4)); gl.uniform1f(wp.u.uRing, tj.ring); gl.uniform2f(wp.u.uRes, W, H);
+    this.draw(wp, this.M.quad);
+  }
   gl.depthMask(true); gl.disable(gl.BLEND);
   this.drawHud(inp);
 };
@@ -522,6 +653,14 @@ Game.prototype.drawHud = function (inp) {
   g.fillStyle = 'rgba(255,255,255,0.15)'; g.fillRect(cx - r, cy + r * 0.95, r * 2, m * 0.012);
   g.fillStyle = B; g.fillRect(cx - r, cy + r * 0.95, r * 2 * c.boost, m * 0.012);
   g.font = (m * 0.016 | 0) + 'px monospace'; g.fillStyle = '#ecfcff'; g.fillText('NITRO', cx, cy + r * 0.95 + m * 0.035);
+  if (this.o.chrono) {   // chrono gauge
+    const k = this.tj.charge, bw = m * 0.30, bx = cx - bw / 2, by = cy - r * 1.55;
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(bx, by, bw, m * 0.012);
+    g.fillStyle = A; g.shadowColor = A; g.shadowBlur = m * 0.02 * k; g.fillRect(bx, by, bw * k, m * 0.012); g.shadowBlur = 0;
+    g.font = (m * 0.016 | 0) + 'px monospace'; g.fillStyle = '#ecfcff'; g.textAlign = 'center';
+    g.fillText(this.tj.cool > 0 ? 'CRONO · RICARICA' : k > 0 ? 'CRONO · TIENI 300 KM/H' : 'CRONO · PRONTO A 300 KM/H', cx, by - m * 0.012);
+  }
+  if (this.world === 'meadow') { g.font = 'bold ' + (m * 0.024 | 0) + 'px monospace'; g.textAlign = 'left'; g.fillStyle = '#fff6c8'; g.fillText('⏳ PRATERIA DEL PASSATO', m * 0.03, m * 0.13); }
   if (this.eng) {   // rev counter: thin inner arc + gear
     const e = this.eng, kr = Math.min(1, e.rpm / e.T.limiter);
     g.lineWidth = m * 0.006; g.strokeStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.arc(cx, cy, r * 0.8, Math.PI * 0.75, Math.PI * 2.25); g.stroke();
@@ -542,7 +681,8 @@ Game.prototype.drawHud = function (inp) {
   g.save(); g.beginPath(); g.arc(mx, my, mr, 0, Math.PI * 2); g.clip();
   g.fillStyle = 'rgba(7,11,19,0.75)'; g.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
   g.strokeStyle = 'rgba(160,200,230,0.45)'; g.lineWidth = RW * scale;
-  for (let k2 = -4; k2 <= 4; k2++) {
+  if (this.world === 'meadow') { g.fillStyle = 'rgba(40,90,30,0.75)'; g.fillRect(mx - mr, my - mr, mr * 2, mr * 2); g.strokeStyle = 'rgba(0,0,0,0)'; }
+  for (let k2 = -4; k2 <= 4 && this.world !== 'meadow'; k2++) {
     const rx = (Math.round(c.x / GP) + k2) * GP - c.x, rz = (Math.round(c.z / GP) + k2) * GP - c.z;
     g.beginPath(); g.moveTo(mx + rx * scale, my - mr); g.lineTo(mx + rx * scale, my + mr); g.stroke();
     g.beginPath(); g.moveTo(mx - mr, my - rz * scale); g.lineTo(mx + mr, my - rz * scale); g.stroke();
@@ -554,7 +694,7 @@ Game.prototype.drawHud = function (inp) {
   g.fillStyle = '#ecfcff'; g.font = (m * 0.016 | 0) + 'px monospace'; g.textAlign = 'center'; g.fillText('N', mx, my - mr + m * 0.022);
   if (this.o.help) {
     g.textAlign = 'left'; g.fillStyle = 'rgba(236,252,255,0.7)'; g.font = (m * 0.017 | 0) + 'px monospace';
-    ['W/↑ accelera · S/↓ frena · A D/← → sterza', 'SPAZIO derapata · SHIFT nitro · C vista', 'P atmosfera · M meteo · V colore · E propulsione · T capote · B suono · R riparti · H aiuto']
+    ['W/↑ accelera · S/↓ frena · A D/← → sterza', 'SPAZIO derapata · SHIFT nitro · C vista', 'P atmosfera · M meteo · V colore · E propulsione · T capote · X scarico · Q crono · F volo (LEVITA) · B suono · H aiuto']
       .forEach((s, i) => g.fillText(s, m * 0.03, H - m * 0.12 + i * m * 0.03));
   }
 };
@@ -578,5 +718,5 @@ function cockpit(g, W, H, c, A, B) {
   g.restore();
 }
 
-window.NeonRun = { Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildCarModel, stepCar, newCar };
+window.NeonRun = { Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar };
 })();

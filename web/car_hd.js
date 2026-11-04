@@ -5,9 +5,9 @@
 (function (root) {
 'use strict';
 const M = { PAINT: 0, CARBON: 1, TRIM: 2, CHROME: 3, GLASS: 4, HEAD: 5, TAIL: 6, NEON: 7, TIRE: 8, DISC: 9, CALIPER: 10,
-  LEATHER: 11, ALCANTARA: 12, DASH: 13, SCREEN: 14, ALU: 15, ENGNEON: 16, INEON: 17, GRILLE: 18, CARPET: 19 };
+  LEATHER: 11, ALCANTARA: 12, DASH: 13, SCREEN: 14, ALU: 15, ENGNEON: 16, INEON: 17, GRILLE: 18, CARPET: 19, TITAN: 20 };
 const MAT_NAMES = ['paint', 'carbon', 'trim_black', 'chrome', 'glass', 'headlight', 'taillight', 'neon', 'tyre', 'brake_disc', 'caliper',
-  'leather', 'alcantara', 'dashboard', 'screen', 'aluminium', 'engine_neon', 'interior_neon', 'grille', 'carpet'];
+  'leather', 'alcantara', 'dashboard', 'screen', 'aluminium', 'engine_neon', 'interior_neon', 'grille', 'carpet', 'titanium'];
 
 /* hinge / hub positions shared with the renderers */
 const RIG = {
@@ -24,7 +24,11 @@ const RIG = {
   tonneau: { pivot: [0, 0.85, -2.22], open: -1.15 },
   winDrop: 0.32,
   // levitation spheres (RSQ-style) instead of wheels
-  sphere: { r: 0.335, lift: 0.04 }
+  sphere: { r: 0.335, lift: 0.04 },
+  // KAGE CHRONO: chrono core between the seats (three counter-rotating rings)
+  chrono: { center: [0, 0.80, -0.985] },
+  // LEVITA flight: spheres swivel 90° (glow ring horizontal) and tuck up/out
+  fly: { alt: 1.9, tuck: [0.05, 0.06] }
 };
 /** retractable roof timeline: r 0 (closed) → 1 (stowed). Same in car_render.js and CarHd.java */
 function roofPhases(r) {
@@ -70,7 +74,7 @@ function surface(fn, nu, nv, pick, uvs, opts) {
     let n = norm(cross(du, dv));
     if (opts.flip) n = scl(n, -1);
     if (!isFinite(n[0])) n = [0, 1, 0];
-    grid.push({ p, n, uv: [u * (uvs ? uvs[0] : 1), v * (uvs ? uvs[1] : 1)] });
+    grid.push({ p, n, uv: [u * (uvs ? uvs[0] : 1) + (opts.uvOff ? opts.uvOff[0] : 0), v * (uvs ? uvs[1] : 1) + (opts.uvOff ? opts.uvOff[1] : 0)] });
   }
   const at = (i, j) => grid[i * (nv + 1) + j];
   for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) {
@@ -95,7 +99,7 @@ function lathe(P, c, profile, seg, mat, axis, uvRep, a0, a1) {
   a0 = a0 || 0; a1 = a1 === undefined ? Math.PI * 2 : a1;
   const pt = (k, s) => {
     const [a, r] = profile[k], t = a0 + (a1 - a0) * s;
-    return axis === 'z' ? [c[0] + Math.cos(t) * r, c[1] + Math.sin(t) * r, c[2] + a] : [c[0] + a, c[1] + Math.cos(t) * r, c[2] + Math.sin(t) * r];
+    return axis === 'z' ? [c[0] + Math.cos(t) * r, c[1] + Math.sin(t) * r, c[2] + a] : axis === 'y' ? [c[0] + Math.cos(t) * r, c[1] + a, c[2] + Math.sin(t) * r] : [c[0] + a, c[1] + Math.cos(t) * r, c[2] + Math.sin(t) * r];
   };
   const fn = (u, v) => {
     const f = u * (profile.length - 1), k = Math.min(profile.length - 2, Math.floor(f)), w = f - k;
@@ -241,8 +245,8 @@ function build(opt) {
   const P = (name, pivot) => (parts[name] = parts[name] || Part(name, pivot));
   const body = P('body'), hood = P('hood', RIG.hood.pivot), doorL = P('doorL', RIG.doorL.pivot), doorR = P('doorR', RIG.doorR.pivot);
   const roofA = P('roofA', RIG.roof.joint), roofB = P('roofB', RIG.roof.pivotB), tonneau = P('tonneau', RIG.tonneau.pivot);
-  const winL = P('winL'), winR = P('winR'), exhaust = P('exhaust'), bay = P('bay');
-  const engineW = P('engineW'), engineE = P('engineE'), magPads = P('magPads');
+  const winL = P('winL'), winR = P('winR'), qwinL = P('qwinL'), qwinR = P('qwinR'), exhaust = P('exhaust'), bay = P('bay');
+  const engineW = P('engineW'), engineE = P('engineE'), magPads = P('magPads'), magRings = P('magRings');
   const interior = P('interior'), engine = P('engine'), wheel = P('steeringWheel', RIG.steering.pivot);
   const NU = Math.round(170 * q), NV = Math.round(104 * q);
   // cut lines snapped to grid lines so the panels split exactly where the gap lines are drawn
@@ -365,7 +369,8 @@ function build(opt) {
     if (vv > 0.62 && z <= -1.0) return { part: roofB, mat: z > -1.04 ? M.TRIM : M.GLASS };   // rear screen travels with the roof
     if (z > 0.30 && z < 0.40) return { part: body, mat: M.TRIM };                  // A pillar
     if (z < -0.95 && vv < 0.62) return { part: body, mat: M.PAINT };                // flying-buttress C pillars
-    if (z > -0.66 && z < -0.58 && vv < 0.62) return { part: body, mat: M.TRIM };   // B pillar
+    if (z > -0.66 && z < -0.58 && vv < 0.62) return { part: left ? qwinL : qwinR, mat: M.TRIM };   // B pillar (drops with the glass)
+    if (z > -0.95 && z <= -0.66 && vv < 0.62) return { part: left ? qwinL : qwinR, mat: M.GLASS };  // rear quarter glass
     if (z > -0.58 && z < 0.30 && vv < 0.62) return { part: left ? winL : winR, mat: M.GLASS };   // drop glass
     return { part: body, mat: M.GLASS };
   }, [3, 3], { id: 'cabin' });
@@ -385,6 +390,15 @@ function build(opt) {
   box(body, [0, 0.235, 2.30], [0.78, 0.012, 0.14], M.CARBON);
   box(body, [0, 0.235, 2.445], [0.78, 0.012, 0.006], M.NEON);
   for (let i = -2; i <= 2; i++) box(body, [i * 0.18, 0.29, -2.12], [0.008, 0.06, 0.2], M.TRIM, -0.2);
+  const exhaustR = P('exhaustR');
+  for (const ex of [-0.40, -0.20, 0.20, 0.40]) {
+    lathe(exhaustR, [ex, 0.32, -2.47], [[0, 0.074], [0.03, 0.078], [0.20, 0.078], [0.20, 0.066], [0.02, 0.066]], 40, M.TITAN, 'z', 1);
+    lathe(exhaustR, [ex, 0.32, -2.44], [[0, 0.0], [0, 0.064]], 40, M.ENGNEON, 'z');
+    lathe(exhaustR, [ex, 0.32, -2.455], [[0, 0.050], [0.002, 0.050], [0.002, 0.060], [0, 0.060]], 40, M.CHROME, 'z');
+  }
+  // exposed titanium muffler box + heat shield under the diffuser
+  blob(exhaustR, [0, 0.30, -2.18], [0.52, 0.07, 0.16], 0.22, M.TITAN, 0, 0, 20, 28);
+  box(exhaustR, [0, 0.38, -2.18], [0.50, 0.004, 0.15], M.ALU);
   for (const ex of [-0.38, -0.22, 0.22, 0.38]) {
     lathe(exhaust, [ex, 0.33, -2.38], [[0, 0.052], [0.12, 0.052], [0.12, 0.044], [0.0, 0.044]], 28, M.CHROME, 'z');
     lathe(exhaust, [ex, 0.33, -2.35], [[0, 0.0], [0, 0.044]], 28, M.ENGNEON, 'z');
@@ -431,18 +445,41 @@ function build(opt) {
   // floor, firewall, rear bulkhead, tunnel, sills
   box(interior, [0, 0.30, -0.10], [0.86, 0.01, 1.0], M.CARPET);
   box(interior, [0, 0.52, 0.93], [0.80, 0.22, 0.02], M.DASH);
-  box(interior, [0, 0.62, -1.07], [0.88, 0.32, 0.02], M.ALCANTARA);
+  box(interior, [0, 0.54, -1.07], [0.80, 0.245, 0.02], M.ALCANTARA);      // rear bulkhead: stays below the deck line
   blob(interior, [0, 0.40, -0.05], [0.13, 0.10, 0.9], 0.25, M.CARBON);
   for (const sx of [-0.86, 0.86]) box(interior, [sx, 0.42, -0.1], [0.04, 0.12, 0.62], M.CARBON);
-  // dashboard: lofted wave across the cabin, screen, vents, binnacle
-  surface((u, v) => {
-    const x = lerp(-0.81, 0.81, u), a = v * Math.PI;
-    const z = 0.62 + Math.cos(a) * 0.28 - 0.04 * Math.cos(x * 3);
-    const y = 0.64 + Math.sin(a) * 0.25 + 0.015 * Math.sin(x * 6);
-    return [x, y, z];
-  }, Math.round(60 * q), Math.round(16 * q), (u, v) => ({ part: interior, mat: v > 0.45 && v < 0.55 ? M.INEON : M.DASH }), [6, 2], { id: 'dash' });
-  // wide curved screen in front of the driver and centre
-  surface((u, v) => { const x = lerp(-0.78, 0.22, u); return [x, 0.80 + v * 0.09, 0.36 + 0.03 * (x + 0.28) * (x + 0.28) + v * 0.035]; }, 30, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'screen' });
+  // dashboard: sculpted leather top, hooded driver binnacle, floating centre display, turbine vents
+  {
+    const prof = [[0.90, 0.60], [0.80, 0.80], [0.62, 0.865], [0.46, 0.875], [0.37, 0.855], [0.33, 0.80], [0.33, 0.72], [0.37, 0.62], [0.43, 0.50]];
+    const pr = v => { const f = v * (prof.length - 1), k = Math.min(prof.length - 2, Math.floor(f)), w = f - k, t = smooth(w);
+      return [lerp(prof[k][0], prof[k + 1][0], t), lerp(prof[k][1], prof[k + 1][1], t)]; };
+    const hoodAt = x => Math.exp(-Math.pow((x + 0.40) / 0.19, 4));             // driver binnacle brow
+    const dash = (u, v) => {
+      const x = lerp(-0.78, 0.78, u), zy = pr(v), h = hoodAt(x), wave = 0.012 * Math.cos(x * 4.2);
+      const top = smooth((v - 0.15) / 0.3) * (1 - smooth((v - 0.62) / 0.15));
+      return [x, zy[1] + h * 0.055 * top + wave * top, zy[0] - h * 0.07 * smooth((v - 0.3) / 0.3) - 0.03 * Math.cos(x * 1.9)];
+    };
+    surface((u, v) => { const p = dash(u, lerp(0.575, 0.585, v)); return [p[0], p[1], p[2] - 0.003]; }, Math.round(80 * q), 1, () => ({ part: interior, mat: M.INEON }), [1, 1], { id: 'dashline' });
+    surface(dash, Math.round(80 * q), Math.round(28 * q), (u, v) => {
+      return { part: interior, mat: v < 0.5 ? M.LEATHER : v < 0.75 ? M.ALCANTARA : M.CARBON };
+    }, [8, 3], { id: 'dash' });
+    // driver display inside the binnacle (uv.x 0..1 → instrument cluster in the shader)
+    surface((u, v) => { const x = lerp(-0.60, -0.20, u); return [x, 0.878 + v * 0.072, 0.335 + 0.30 * (x + 0.40) * (x + 0.40) + v * 0.03]; }, 28, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'cluster' });
+    surface((u, v) => { const x = lerp(-0.615, -0.185, u); return [x, 0.87 + v * 0.088, 0.342 + 0.30 * (x + 0.40) * (x + 0.40) + v * 0.03]; }, 28, 2, () => ({ part: interior, mat: M.CARBON }), [4, 1], { id: 'clusterBack' });
+    surface((u, v) => { const x = lerp(-0.615, -0.185, u); return [x, 0.868 + v * 0.004, 0.33 + 0.30 * (x + 0.40) * (x + 0.40)]; }, 28, 1, () => ({ part: interior, mat: M.INEON }), [1, 1], { id: 'clusterLine' });
+    // floating centre display (uv.x 2..3 → navigation map)
+    surface((u, v) => [lerp(-0.07, 0.27, u), 0.745 + v * 0.11, 0.315 + v * 0.03], 16, 6, () => ({ part: interior, mat: M.SCREEN }), [1, 1], { id: 'centre', uvOff: [2, 0] });
+    box(interior, [0.10, 0.80, 0.335], [0.18, 0.062, 0.008], M.TRIM, -0.27);
+    tube(interior, [[0.10, 0.74, 0.35], [0.10, 0.70, 0.40]], 0.012, 8, M.ALU);
+    // turbine vents
+    for (const vx of [-0.74, -0.10, 0.36, 0.74]) {
+      const mid = vx === -0.10 || vx === 0.36, vc = [vx, mid ? 0.69 : 0.76, mid ? 0.335 : 0.355];
+      lathe(interior, vc, [[0, 0.045], [0.02, 0.045], [0.02, 0.038], [0.005, 0.038]], 24, M.ALU, 'z');
+      lathe(interior, vc, [[0.012, 0.0], [0.012, 0.037]], 24, M.GRILLE, 'z');
+      lathe(interior, vc, [[0.011, 0.0], [0.011, 0.012]], 16, M.CHROME, 'z');
+    }
+    lathe(interior, [-0.10, 0.62, 0.40], [[0, 0], [0, 0.02], [0.008, 0.02], [0.008, 0]], 16, M.ENGNEON, 'z');
+  }
   // centre console rising to the dash, gear selector, start button
   blob(interior, [0, 0.52, 0.45], [0.12, 0.07, 0.25], 0.3, M.CARBON, -0.35);
   tube(interior, [[0, 0.52, 0.22], [0, 0.62, 0.20]], 0.012, 10, M.CHROME);
@@ -454,30 +491,53 @@ function build(opt) {
     for (const bx of [-0.21, 0.21]) blob(interior, [sx + bx, 0.47, -0.52], [0.05, 0.07, 0.24], 0.4, M.ALCANTARA, -0.05);
     blob(interior, [sx, 0.73, -0.79], [0.24, 0.32, 0.07], 0.35, M.LEATHER, -0.22);
     for (const bx of [-0.2, 0.2]) blob(interior, [sx + bx, 0.73, -0.75], [0.05, 0.28, 0.08], 0.4, M.ALCANTARA, -0.22, bx > 0 ? -0.35 : 0.35);
-    blob(interior, [sx, 1.08, -0.87], [0.13, 0.09, 0.05], 0.4, M.LEATHER, -0.22);
+    blob(interior, [sx, 1.005, -0.845], [0.12, 0.075, 0.045], 0.4, M.LEATHER, -0.22);
     box(interior, [sx, 0.73, -0.718], [0.012, 0.27, 0.004], M.INEON, -0.22);
-    for (const hx of [-0.08, 0.08]) tube(interior, [[sx + hx, 0.98, -0.83], [sx + hx * 0.5, 0.76, -0.71], [sx + hx * 0.2, 0.50, -0.62]], 0.012, 6, M.CALIPER);
+    for (const hx of [-0.08, 0.08]) tube(interior, [[sx + hx, 0.98, -0.83], [sx + hx * 0.5, 0.76, -0.71], [sx + hx * 0.2, 0.50, -0.62]], 0.012, 6, M.ALCANTARA);
   }
   // pedals and dead pedal
   for (const [px, w] of [[-0.52, 0.03], [-0.40, 0.05], [-0.30, 0.04]]) box(interior, [px, 0.40, 0.78], [w, 0.06, 0.01], M.ALU, 0.6);
   // roll hoop behind the seats
-  tube(interior, [[-0.80, 0.30, -1.02], [-0.78, 1.0, -1.02], [-0.6, 1.15, -1.02], [0.6, 1.15, -1.02], [0.78, 1.0, -1.02], [0.80, 0.30, -1.02]], 0.022, 10, M.CALIPER);
-  tube(interior, [[-0.6, 1.15, -1.02], [0.75, 0.35, -1.05]], 0.018, 8, M.CALIPER);
+  for (const sx of [-0.40, 0.40]) {
+    const hoop = [];
+    for (let i = 0; i <= 20; i++) { const a = Math.PI * i / 20; hoop.push([sx + Math.cos(a) * 0.24, 0.78 + Math.sin(a) * 0.235, -0.985 - 0.02 * Math.sin(a)]); }
+    tube(interior, hoop, 0.021, 12, M.CARBON);
+    for (const fx of [-0.24, 0.24]) lathe(interior, [sx + fx, 0.76, -0.985], [[0, 0.03], [0.04, 0.03], [0.05, 0.022]], 14, M.ALU, 'y');
+    surface((u, v) => { const a = Math.PI * (0.15 + 0.7 * u); return [sx + Math.cos(a) * 0.24, 0.78 + Math.sin(a) * 0.235, -0.985 - 0.02 * Math.sin(a) - 0.024 - v * 0.002]; }, 20, 1,
+      () => ({ part: interior, mat: M.INEON }), [1, 1], { id: 'hoopL' + sx });
+  }
+  tube(interior, [[-0.64, 0.84, -1.01], [0.64, 0.84, -1.01]], 0.016, 10, M.ALU);
   // footwell / sill ambient neon
   for (const sx of [-0.83, 0.83]) box(interior, [sx, 0.32, -0.1], [0.004, 0.006, 0.6], M.INEON);
   // ---- steering wheel (own part: rotates with the steering) – built around its local z axis
   const sw = wheel;
   {
-    const R = 0.17, r = 0.022, seg = 48;
-    const ring = [];
-    for (let i = 0; i <= seg; i++) { const a = i / seg * Math.PI * 2; ring.push([Math.cos(a) * R * 1.05, Math.sin(a) * R * (Math.sin(a) < 0 ? 0.88 : 1), 0]); }
-    // flat-bottom yoke-ish rim
-    for (let i = 0; i < seg; i++) tube(sw, [ring[i], ring[i + 1]], r, 8, (i > seg * 0.2 && i < seg * 0.3) ? M.INEON : M.ALCANTARA);
-    for (const a of [Math.PI, 0, -Math.PI / 2]) tube(sw, [[0, 0, 0.02], [Math.cos(a) * R, Math.sin(a) * R * 0.9, 0]], 0.014, 8, M.CARBON);
-    lathe(sw, [0, 0, 0.03], [[0, 0], [0, 0.055], [0.02, 0.05], [0.02, 0]], 24, M.CARBON, 'z');
-    lathe(sw, [0, 0, 0.051], [[0, 0.03], [0, 0.036]], 24, M.INEON, 'z');
-    box(sw, [0.20, 0.03, 0.02], [0.012, 0.05, 0.004], M.ALU);       // shift paddles
-    box(sw, [-0.20, 0.03, 0.02], [0.012, 0.05, 0.004], M.ALU);
+    // futuristic open-top yoke: horn → grip → flat carbon bottom → grip → horn, variable section
+    const path = [];
+    for (let i = 0; i <= 60; i++) {
+      const t = i / 60, a = lerp(Math.PI * 0.80, Math.PI * 2.20, t);        // from upper-left horn round the bottom to upper-right
+      const c = Math.cos(a), sn = Math.sin(a);
+      const x = Math.sign(c) * Math.pow(Math.abs(c), 0.55) * 0.185, y = Math.sign(sn) * Math.pow(Math.abs(sn), 0.8) * 0.125 * (sn < 0 ? 0.92 : 1.0);
+      path.push([x, y, 0.012 * (1 - Math.abs(c))]);
+    }
+    for (let i = 0; i < 60; i++) {
+      const t = (i + 0.5) / 60, grip = Math.exp(-Math.pow((Math.abs(t - 0.5) - 0.30) / 0.09, 2));
+      const r = 0.015 + 0.012 * grip, mat = grip > 0.45 ? M.ALCANTARA : (t < 0.04 || t > 0.96) ? M.INEON : M.CARBON;
+      tube(sw, [path[i], path[i + 1]], r, 12, mat);
+    }
+    for (const e of [path[0], path[60]]) blob(sw, e, [0.013, 0.013, 0.013], 0.8, M.NEON);       // glowing horn tips
+    // spokes into a carbon centre plate with a small display, rotary dials, buttons and a shift-light bar
+    for (const sx of [-1, 1]) surface((u, v) => { const x = sx * lerp(0.05, 0.15, u), y = lerp(-0.028, 0.022, v) - 0.03 * u * u; return [x, y, 0.025 - 0.012 * u]; }, 10, 3, () => ({ part: sw, mat: M.CARBON }), [2, 1], { id: 'spk' + sx });
+    blob(sw, [0, -0.005, 0.03], [0.065, 0.055, 0.018], 0.35, M.CARBON);
+    surface((u, v) => [lerp(-0.042, 0.042, u), lerp(-0.026, 0.020, v), 0.011], 8, 4, () => ({ part: sw, mat: M.SCREEN }), [1, 1], { id: 'swdisp' });
+    for (let k = 0; k < 9; k++) box(sw, [-0.04 + k * 0.01, 0.040, 0.016], [0.0035, 0.0025, 0.003], k < 3 ? M.NEON : k < 6 ? M.ENGNEON : M.TAIL);
+    for (const [dx, dy] of [[-0.11, -0.035], [0.11, -0.035]]) {
+      lathe(sw, [dx, dy, 0.012], [[0, 0.0], [0, 0.016], [0.012, 0.016], [0.012, 0]], 16, M.ALU, 'z');
+      lathe(sw, [dx, dy, 0.011], [[0, 0.0], [0, 0.006]], 12, M.ENGNEON, 'z');
+    }
+    for (const [dx, dy, m] of [[-0.09, 0.012, M.NEON], [-0.12, 0.012, M.ENGNEON], [0.09, 0.012, M.ENGNEON], [0.12, 0.012, M.NEON]]) box(sw, [dx, dy, 0.012], [0.008, 0.006, 0.004], m);
+    // big carbon shift paddles behind the grips
+    for (const sx of [-1, 1]) surface((u, v) => { const a = lerp(-0.3, 0.9, u); return [sx * (0.12 + Math.cos(a) * 0.06), 0.02 + Math.sin(a) * 0.06, 0.045 + v * 0.006]; }, 10, 1, () => ({ part: sw, mat: M.CARBON }), [1, 1], { id: 'pad' + sx });
     tube(sw, [[0, 0, 0.06], [0, 0, 0.30]], 0.03, 12, M.DASH);       // column
   }
   // ---- engine bay + twin-turbo V8 hybrid (visible with the hood open)
@@ -594,7 +654,19 @@ function build(opt) {
     const [W] = station(hub[2]);
     surface((u, v) => { const a = Math.PI * (0.2 + 0.6 * u), R = ARCH_R - 0.035; return [out * lerp(W * 0.70, W * 0.93, v), Math.min(station(hub[2] + Math.cos(a) * R)[2] - 0.08, 0.36 + Math.sin(a) * R), hub[2] + Math.cos(a) * R]; },
       32, 2, (u) => ({ part: magPads, mat: Math.floor(u * 12) % 2 ? M.ENGNEON : M.TRIM }), [1, 1], { id: 'mag' + key });
-    surface((u, v) => { const a = u * Math.PI * 2, rr = lerp(0.20, 0.27, v); return [hub[0] + Math.cos(a) * rr * 0.55, 0.012, hub[2] + Math.sin(a) * rr]; }, 48, 1, () => ({ part: magPads, mat: M.NEON }), [1, 1], { id: 'magR' + key });
+    surface((u, v) => { const a = u * Math.PI * 2, rr = lerp(0.20, 0.27, v); return [hub[0] + Math.cos(a) * rr * 0.55, 0.012, hub[2] + Math.sin(a) * rr]; }, 48, 1, () => ({ part: magRings, mat: M.NEON }), [1, 1], { id: 'magR' + key });
+  }
+  // ---- KAGE CHRONO: chrono core between the seat backs — glass column, aluminium caps, 3 counter-rotating rings
+  {
+    const C = RIG.chrono.center, core = P('chrono'), rings = [P('chronoR1', C), P('chronoR2', C), P('chronoR3', C)];
+    lathe(core, [C[0], C[1] - 0.19, C[2]], [[0, 0.0], [0, 0.10], [0.03, 0.105], [0.05, 0.08]], 32, M.ALU, 'y');
+    lathe(core, [C[0], C[1] + 0.14, C[2]], [[0, 0.08], [0.03, 0.105], [0.05, 0.10], [0.05, 0.0]], 32, M.ALU, 'y');
+    lathe(core, [C[0], C[1] - 0.14, C[2]], [[0, 0.075], [0.28, 0.075]], 32, M.GLASS, 'y');
+    lathe(core, [C[0], C[1] - 0.10, C[2]], [[0, 0.012], [0.20, 0.012]], 16, M.NEON, 'y');
+    for (const sx of [-1, 1]) tube(core, [[C[0] + sx * 0.05, C[1] + 0.17, C[2] - 0.03], [C[0] + sx * 0.10, C[1] + 0.05, C[2] - 0.07], [C[0] + sx * 0.11, 0.42, C[2] - 0.07]], 0.010, 8, M.INEON);
+    const ring = (Pr, r, w, mat) => surface((u, v) => { const a = u * Math.PI * 2, b = v * Math.PI * 2, Rr = r + Math.cos(b) * w; return [Math.cos(a) * Rr, Math.sin(b) * w * 1.6, Math.sin(a) * Rr]; }, 48, 8, () => ({ part: Pr, mat }), [8, 1], { id: 'ring' + Pr.name });
+    // built around the origin; the renderer places them at the core centre with their own spin
+    ring(rings[0], 0.060, 0.006, M.ENGNEON); ring(rings[1], 0.050, 0.005, M.CHROME); ring(rings[2], 0.040, 0.005, M.NEON);
   }
   // ---- orient every quad for exporters (two-sided anyway in our shaders) and pack
   const list = Object.values(parts).filter(p => p.pos.length);
@@ -649,7 +721,7 @@ const SPECS_BY = {
   })
 };
 const POWER = { v8: 'V8 BITURBO IBRIDO', wankel: 'WANKEL 4 ROTORI H₂', mag: 'LEVITA ELETTRICA' };
-const api = { build, M, MAT_NAMES, RIG, SPECS, SPECS_BY, POWER, bodyPt, station, roofPhases };
+const api = { build, M, MAT_NAMES, RIG, SPECS, SPECS_BY, POWER, bodyPt, station, roofPhases, cabinPt };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.CarHD = api;
 })(typeof window !== 'undefined' ? window : globalThis);

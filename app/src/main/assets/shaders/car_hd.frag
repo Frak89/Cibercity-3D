@@ -36,12 +36,37 @@ void main(){
         float letters = side * step(0.6, h21(vec2(floor(uv.x * 12.0), floor(uv.y * 9.0)))) * step(0.12, uv.y) * step(uv.y, 0.22);
         base += vec3(0.08) * letters;
         rough = 0.9;
-    } else if (pat > 3.5 && pat < 4.5) {     // HUD screen
-        vec2 q = uv;
-        float bars = step(0.5, fract(q.x * 18.0)) * step(q.y, 0.25 + 0.6 * h21(vec2(floor(q.x * 18.0), floor(uTime * 2.0))));
-        float ring = smoothstep(0.02, 0.0, abs(length((q - vec2(0.22, 0.5)) * vec2(3.0, 1.0)) - 0.32));
-        float scan = 0.85 + 0.15 * sin(q.y * 300.0);
-        base = (uNeonA * (0.25 + ring * 1.2) + uNeonB * bars * 0.6) * scan;
+    } else if (pat > 3.5 && pat < 4.5) {     // displays: uv.x 0..1 instrument cluster, 2..3 navigation map
+        float scan = 0.9 + 0.1 * sin(uv.y * 400.0);
+        vec3 c = vec3(0.004, 0.008, 0.015);
+        if (uv.x < 1.5) {
+            vec2 q = vec2(uv.x * 4.2, uv.y);                       // display is ~4:1
+            for (int g = 0; g < 2; g++) {                          // tachometer (left) and speed (right) dials
+                vec2 cc = vec2(g == 0 ? 0.85 : 3.35, 0.5), d = q - cc;
+                float r = length(d), a = atan(d.x, -d.y);           // 0 at the bottom
+                float val = 0.35 + 0.3 * sin(uTime * (g == 0 ? 1.3 : 0.4) + float(g));
+                float ang = (a + 3.14159) / 6.28318;
+                float arc = smoothstep(0.04, 0.0, abs(r - 0.40)) * step(0.12, ang) * step(ang, 0.88);
+                float lit = arc * step(ang, 0.12 + 0.76 * val);
+                float tick = smoothstep(0.03, 0.0, abs(r - 0.33)) * step(0.85, fract(ang * 20.0)) * step(0.12, ang) * step(ang, 0.88);
+                float red = step(0.75, ang);
+                c += uNeonA * arc * 0.18 + mix(uNeonA, vec3(1.0, 0.15, 0.25), red) * lit * 0.9 + vec3(0.6) * tick * 0.5;
+                c += uNeonA * smoothstep(0.30, 0.0, r) * 0.08;
+            }
+            // centre: gear / mode block and boost bars
+            float blk = step(abs(q.x - 2.1), 0.38) * step(abs(q.y - 0.55), 0.22);
+            c += uNeonB * blk * (0.12 + 0.5 * step(0.5, fract(q.x * 8.0)) * step(q.y, 0.45 + 0.2 * sin(uTime * 2.0)));
+        } else {
+            vec2 q = vec2(uv.x - 2.0, uv.y) * vec2(3.0, 2.0) + vec2(uTime * 0.05, uTime * 0.12);
+            vec2 gr = abs(fract(q * 3.0) - 0.5);
+            float road = smoothstep(0.06, 0.0, min(gr.x, gr.y));
+            c += vec3(0.05, 0.07, 0.1) * road;
+            float route = smoothstep(0.05, 0.0, abs(fract(q.x * 3.0 + 0.5) - 0.5)) * step(0.5, fract(q.y * 1.5));
+            c += uNeonB * route * 0.6;
+            vec2 me = vec2(uv.x - 2.5, uv.y - 0.35);
+            c += uNeonA * smoothstep(0.05, 0.02, length(me * vec2(3.0, 2.0)));
+        }
+        base = c * scan;
         emis = 1.0;
     } else if (pat > 4.5 && pat < 5.5) {     // drilled + slotted brake disc
         vec2 q = vec2(uv.x * 48.0, uv.y * 3.0);
@@ -63,6 +88,10 @@ void main(){
         base *= 0.15 + 0.85 * hex;
     } else if (pat > 8.5 && pat < 9.5) {     // neon: gentle pulse
         emis = em * (0.85 + 0.15 * sin(uTime * 2.2 + vWP.x * 2.0));
+    } else if (pat > 10.5) {                 // titanium: heat-tinted (gold → blue → violet) along the pipe
+        float k = clamp(uv.x, 0.0, 1.0);
+        vec3 heat = 0.5 + 0.5 * cos(6.28318 * (vec3(0.0, 0.33, 0.67) + k * 0.9 + 0.15));
+        base = mix(base, heat * 0.7, 0.55 * smoothstep(0.1, 0.9, k));
     } else if (pat > 9.5) {                  // carpet
         base *= 0.8 + 0.3 * h21(floor(uv * 400.0));
     }

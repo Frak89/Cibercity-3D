@@ -12,7 +12,8 @@ function materials(paint, a, b) {
     [[0.02, 0.03, 0.05], 0.05, 0, 0, 0], [[0.85, 0.95, 1.0], 0.2, 0, 1, 7], [[1.0, 0.06, 0.12], 0.2, 0, 1, 6], [a, 0.3, 0, 1, 9],
     [[0.025, 0.025, 0.025], 0.9, 0, 0, 3], [[0.35, 0.35, 0.37], 0.35, 0.9, 0, 5], [b, 0.35, 0.2, 0.15, 0], [[0.05, 0.045, 0.05], 0.55, 0, 0, 2],
     [[0.035, 0.035, 0.04], 0.95, 0, 0, 0], [[0.025, 0.027, 0.035], 0.7, 0, 0, 0], [[0, 0, 0], 0.3, 0, 1, 4], [[0.6, 0.6, 0.62], 0.35, 1, 0, 0],
-    [b, 0.3, 0, 1, 9], [a, 0.3, 0, 0.8, 9], [[0.03, 0.03, 0.035], 0.5, 0.3, 0, 8], [[0.03, 0.03, 0.035], 1, 0, 0, 10]
+    [b, 0.3, 0, 1, 9], [a, 0.3, 0, 0.8, 9], [[0.03, 0.03, 0.035], 0.5, 0.3, 0, 8], [[0.03, 0.03, 0.035], 1, 0, 0, 10],
+    [[0.62, 0.58, 0.60], 0.22, 1, 0, 11]
   ];
 }
 
@@ -37,6 +38,7 @@ function partMatrix(name, rig, car, st) {
     case 'tonneau': return mul(car, about(rig.tonneau.pivot, RX(rig.tonneau.open * ph.lid)));
     case 'winL': return mul(partMatrix('doorL', rig, car, st), T(0, -rig.winDrop * ph.win, 0));
     case 'winR': return mul(partMatrix('doorR', rig, car, st), T(0, -rig.winDrop * ph.win, 0));
+    case 'qwinL': case 'qwinR': return mul(car, T(0, -rig.winDrop * ph.win, 0));
     case 'hood': return mul(car, mul(T(pv[0], pv[1], pv[2]), mul(RX(rig.hood.open * st.hood), T(-pv[0], -pv[1], -pv[2]))));
     case 'doorL': case 'doorR': {
       const d = rig[name], k = name === 'doorL' ? st.doorL : st.doorR, p = d.pivot;
@@ -45,9 +47,16 @@ function partMatrix(name, rig, car, st) {
     case 'steeringWheel': { const p = rig.steering.pivot; return mul(car, mul(T(p[0], p[1], p[2]), mul(RX(rig.steering.tilt), RZ(-st.steerWheel)))); }
     default:
       if (name.startsWith('sphere')) {
-        const key = name.slice(6), hub = rig.wheels[key], steer = key[0] === 'F' ? st.wheelSteer : 0;
+        const key = name.slice(6), hub = rig.wheels[key], steer = key[0] === 'F' ? st.wheelSteer : 0, fl = st.fly || 0, out = hub[0] > 0 ? 1 : -1;
         const bob = rig.sphere.lift + 0.006 * Math.sin((st.time || 0) * 2.3 + hub[2] * 3 + hub[0]);
-        return mul(car, mul(T(hub[0], hub[1] + bob, hub[2]), mul(RY(steer), RX(st.spin * 0.365 / rig.sphere.r))));
+        // flight: the pods swivel 90° (glow ring horizontal, thrusting down) and tuck out/up into the arches
+        const roll = mul(RZ(-out * fl * Math.PI / 2), fl > 0.5 ? RY((st.time || 0) * 4) : RX(st.spin * 0.365 / rig.sphere.r));
+        return mul(car, mul(T(hub[0] + out * rig.fly.tuck[0] * fl, hub[1] + bob + rig.fly.tuck[1] * fl, hub[2]), mul(RY(steer * (1 - fl)), roll)));
+      }
+      if (name.startsWith('chronoR')) {
+        const k = +name[7], c = rig.chrono.center, ph = (st.chronoPh || 0) + (st.time || 0) * 0.8;
+        const R = k === 1 ? mul(RY(ph * 1.0), RX(0.35)) : k === 2 ? mul(RX(ph * -1.4), RZ(0.6)) : mul(RZ(ph * 1.9), RX(1.2));
+        return mul(car, mul(T(c[0], c[1], c[2]), R));
       }
       if (name.startsWith('wheel') || name.startsWith('caliper')) {
         const key = name.slice(name.startsWith('wheel') ? 5 : 7), hub = rig.wheels[key];
@@ -75,7 +84,7 @@ function CarRender(gl, prog, model) {
 }
 CarRender.prototype.setMaterials = function (paint, a, b) {
   const gl = this.gl, u = this.prog.u, mats = materials(PAINTS[paint] || PAINTS.nero, a, b);
-  const col = new Float32Array(60), par = new Float32Array(80);
+  const col = new Float32Array(63), par = new Float32Array(84);
   mats.forEach((m, i) => { col.set(m[0], i * 3); par.set([m[1], m[2], m[3], m[4]], i * 4); });
   gl.useProgram(this.prog.p);
   gl.uniform3fv(u['uMatCol[0]'], col); gl.uniform4fv(u['uMatPar[0]'], par);
@@ -86,8 +95,13 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
   gl.useProgram(this.prog.p);
   gl.uniform1f(u.uGlassPass, pass === 'glass' ? 1 : 0);
   if (!skip) skip = SKIP[st.power || 'v8'];
+  const race = st.exhaust === 'race', chrono = !!st.chrono, flying = (st.fly || 0) > 0.25;
   for (const p of this.parts) {
     if (skip && skip.has(p.name)) continue;
+    const n0 = p.name;
+    if ((n0 === 'exhaust' && race) || (n0 === 'exhaustR' && (!race || st.power === 'mag'))) continue;
+    if (n0.startsWith('chrono') && !chrono) continue;
+    if (n0 === 'magRings' && (flying || st.power !== 'mag')) continue;
     const ib = pass === 'glass' ? p.gidx : p.idx, n = pass === 'glass' ? p.gn : p.n;
     if (!ib) continue;
     gl.uniformMatrix4fv(u.uModel, false, partMatrix(p.name, this.rig, car, st));

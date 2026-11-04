@@ -7,7 +7,8 @@
     idle: 900, red: 8900, limiter: 9100,
     ratios: [3.30, 2.35, 1.80, 1.45, 1.20, 1.02, 0.88, 0.76], final: 4.70, wheelR: 0.365,
     tips: [[-0.38, 0.33, -2.40], [-0.22, 0.33, -2.40], [0.22, 0.33, -2.40], [0.38, 0.33, -2.40]],
-    hubs: [[-0.92, 0.36, 1.42], [0.92, 0.36, 1.42], [-0.92, 0.36, -1.45], [0.92, 0.36, -1.45]]
+    hubs: [[-0.92, 0.36, 1.42], [0.92, 0.36, 1.42], [-0.92, 0.36, -1.45], [0.92, 0.36, -1.45]],
+    tipsRace: [[-0.40, 0.32, -2.50], [-0.20, 0.32, -2.50], [0.20, 0.32, -2.50], [0.40, 0.32, -2.50]]
   };
   /* power units: V8 biturbo hybrid, quad-rotor Wankel on hydrogen (hybrid), LEVITA electromagnetic (no gears) */
   const TYPES = {
@@ -68,12 +69,12 @@
     this.boost += (boostT - this.boost) * Math.min(1, dt * 3);
     this.speed = v;
     // overrun crackle (combustion) / field discharge zaps (LEVITA)
-    const hi = T.red * 0.47;
+    const race = !!this.race, hi = T.red * (race ? 0.36 : 0.47);
     if (this.thr > 0.6 && this.rpm > hi) this.armed = true;
-    if (this.armed && this.thr < 0.3) { this.armed = false; if (this.rpm > hi * 0.9) { this.crackle = 0.55 + rnd() * 0.6; this.crackleT = 0.02; this.firePop(1); } }
+    if (this.armed && this.thr < 0.3) { this.armed = false; if (this.rpm > hi * 0.9) { this.crackle = (race ? 1.0 : 0.55) + rnd() * (race ? 0.9 : 0.6); this.crackleT = 0.02; this.firePop(1); } }
     if (this.crackle > 0) {
       this.crackle -= dt; this.crackleT -= dt;
-      if (this.crackleT <= 0 && this.thr < 0.3 && this.rpm > T.red * 0.27) { this.firePop(0.35 + rnd() * 0.65); this.crackleT = 0.03 + rnd() * 0.11; }
+      if (this.crackleT <= 0 && this.thr < 0.3 && this.rpm > T.red * (race ? 0.2 : 0.27)) { this.firePop((race ? 0.55 : 0.35) + rnd() * 0.65); this.crackleT = race ? 0.02 + rnd() * 0.07 : 0.03 + rnd() * 0.11; }
     }
     return this;
   };
@@ -81,7 +82,7 @@
   /* ------------------------------------------------------------------ synthesizer (same as EngineSound.java) */
   const PAT = [1.0, 0.68, 0.94, 0.58, 0.9, 0.74, 1.0, 0.55];   // cross-plane V8 firing unevenness → burble
   function EngineSynth(sr, type) {
-    this.type = type || 'v8'; this.lump = 1; this.zap = 0; this.zph = 0; this.hum = 0; this.eph = 0; this.crk = 0; this.bp1 = 0; this.bp2 = 0;
+    this.type = type || 'v8'; this.race = false; this.chrono = 0; this.boom = 0; this.boomQ = 0; this.chph = 0; this.blp = 0; this.lump = 1; this.zap = 0; this.zph = 0; this.hum = 0; this.eph = 0; this.crk = 0; this.bp1 = 0; this.bp2 = 0;
     this.sr = sr; this.ph = 0; this.cyl = 0; this.amp = 0; this.rpm = ENG.idle; this.load = 0; this.boost = 0;
     this.low = 0; this.band = 0; this.low2 = 0; this.tph = 0; this.hiss = 0;
     this.popEnv = 0; this.popPh = 0; this.popQ = 0; this.popGap = 0; this.popAmp = 0; this.vol = 0.8; this.n = 1;
@@ -113,11 +114,12 @@
         x = a * (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6;
         x += this.noise() * a * Math.exp(-p * 4) * (0.12 + 0.4 * load);
       }
-      const fc = Math.min(sr * 0.22, W ? 220 + rpm * 0.13 + load * 1700 : 110 + rpm * 0.085 + load * 1100);
+      if (this.race) x *= 1.25;
+      const fc = Math.min(sr * 0.22, (W ? 220 + rpm * 0.13 + load * 1700 : 110 + rpm * 0.085 + load * 1100) * (this.race ? 1.35 : 1));
       const f1 = 2 * Math.sin(Math.PI * fc / sr);
       this.low += f1 * this.band; const high = x - this.low - (W ? 0.42 : 0.55) * this.band; this.band += f1 * high;
       this.low2 += (x - this.low2) * (2 * Math.PI * (W ? 110 : 70) / sr);
-      let y = this.low * 0.85 + this.band * (W ? 0.5 : 0.35) + this.low2 * (W ? 0.8 : 1.4);
+      let y = this.low * 0.85 + this.band * (W ? 0.5 : 0.35) * (this.race ? 1.5 : 1) + this.low2 * (W ? 0.8 : 1.4) * (this.race ? 1.35 : 1);
       this.tph += (2200 + rpm * 0.55) / sr; if (this.tph > 1) this.tph -= 1;
       y += Math.sin(this.tph * 6.2831853) * 0.035 * this.boost * (0.3 + load);
       this.hiss += (this.noise() - this.hiss) * 0.25; y += this.hiss * 0.03 * this.boost * (1 - load);
@@ -129,11 +131,29 @@
       if (this.popGap > 0) this.popGap--;
       if (this.popEnv > 0.001) {
         this.popPh += (W ? 140 : 85) / sr;
-        y += this.popEnv * (this.noise() * (W ? 1.1 : 0.9) + Math.sin(this.popPh * 6.2831853) * (W ? 0.6 : 0.9));
+        y += this.popEnv * (this.race ? 1.35 : 1) * (this.noise() * (W ? 1.1 : 0.9) + Math.sin(this.popPh * 6.2831853) * (W ? 0.6 : 0.9));
         this.popEnv *= 1 - (W ? 45 : 32) / sr;
       }
-      out[i] = Math.tanh(y * 1.1) * this.vol;
+      out[i] = Math.tanh(this.chronoMix(y * (this.race ? 1.2 : 1)) * 1.1) * this.vol;
     }
+  };
+  /* KAGE CHRONO layer: rising chrono whine while charging, deep boom + crack at the jump */
+  EngineSynth.prototype.chronoMix = function (y) {
+    const sr = this.sr, k = this.chrono;
+    if (k > 0.001) {
+      this.chph += (180 + k * k * 2600 + Math.sin(this.chph * 0.002) * 20) / sr; if (this.chph > 1e6) this.chph = 0;
+      const ph = this.chph * 6.2831853;
+      y += (Math.sin(ph) * 0.6 + Math.sin(ph * 2.01) * 0.25 + Math.sin(ph * 3.03) * 0.15) * k * 0.22;
+    }
+    if (this.boomQ > 0) { this.boomQ = 0; this.boom = 1; this.bph = 0; }
+    if (this.boom > 0.0005) {
+      this.bph = (this.bph || 0) + 1 / sr;
+      const n = this.noise();
+      this.blp += (n - this.blp) * 0.03;
+      y += this.boom * (Math.sin(this.bph * 6.2831853 * (38 + 30 * this.boom)) * 1.1 + this.blp * 2.5) + (this.bph < 0.06 ? n * 0.9 * (1 - this.bph / 0.06) : 0);
+      this.boom *= 1 - 2.2 / sr;
+    }
+    return y;
   };
   /* LEVITA: electrostatic hum (100 Hz buzz + harmonics), rising field whine, crackling micro-discharges, zaps */
   EngineSynth.prototype.renderMag = function (out, rpmT, loadT, boostT, speed) {
@@ -162,7 +182,7 @@
       if (this.popGap > 0) this.popGap--;
       if (this.zap > 0.001) { this.popPh += (900 + 2400 * this.zap) / sr; y += this.zap * (hp * 1.2 + Math.sign(Math.sin(this.popPh * 6.2831853)) * 0.25); this.zap *= 1 - 60 / sr; }
       this.low2 += (y - this.low2) * 0.5;
-      out[i] = Math.tanh(this.low2 * 1.3) * this.vol;
+      out[i] = Math.tanh(this.chronoMix(this.low2) * 1.3) * this.vol;
     }
   };
 
@@ -180,12 +200,16 @@
       if (!s || !this.on) { out.fill(0); return; }
       syn.vol = this.master;
       if (syn.type !== s.type) { syn.type = s.type; syn.rpm = s.rpm; }
+      syn.race = !!s.race; syn.chrono = this.chronoLvl || 0; if (this.boomPend) { syn.boomQ = 1; this.boomPend = 0; }
       syn.render(out, s.rpm, s.load, s.boost, pend.pops, pend.s, s.speed || 0); pend.pops = 0; pend.s = 0;
     };
     node.connect(ctx.destination); this.node = node;
   };
   /** call once per frame after sim.update */
   EngineAudio.prototype.feed = function (sim) { this.sim = sim; if (this.pend && sim.pops) { this.pend.pops += sim.pops; this.pend.s = Math.max(this.pend.s, sim.popStrength); } };
+  /** chrono layer: level 0..1 while charging, boom() at the jump */
+  EngineAudio.prototype.setChrono = function (lvl) { this.chronoLvl = lvl; };
+  EngineAudio.prototype.boom = function () { this.boomPend = 1; };
   EngineAudio.prototype.toggle = function () { this.on = !this.on; return this.on; };
 
   /* ------------------------------------------------------------------ exhaust particles */
@@ -297,9 +321,29 @@
     gl.depthMask(true);
   };
   /** car model matrix (column major) → world tips + exhaust direction */
-  function tipsFrom(M) {
+  /** chrono: blue arcs crawling over the body (k 0..1), ring(): a burst ring around the car */
+  ExhaustFX.prototype.chronoArcs = function (M, k, vel) {
+    const P = this.p, n = Math.floor(k * k * 14 + (rnd() < k ? 1 : 0));
     const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
-    const tips = ENG.tips.map(t => tr(t[0], t[1], t[2])), hubs = ENG.hubs.map(t => tr(t[0], t[1] + 0.04, t[2]));
+    for (let i = 0; i < n && P.length < this.max; i++) {
+      const side = rnd() < 0.5 ? -1 : 1, z = (rnd() * 2 - 1) * 2.3, y = 0.3 + rnd() * 0.9, x = side * (0.95 + rnd() * 0.12) * (1 - Math.pow(Math.abs(z) / 2.5, 4) * 0.4);
+      const p = tr(x, y, z);
+      P.push({ k: 1, x: p[0], y: p[1], z: p[2], vx: vel[0] + (rnd() - 0.5) * 2, vy: (rnd() - 0.5) * 2, vz: vel[2] + (rnd() - 0.5) * 2, age: 0, life: 0.05 + rnd() * 0.1, s0: 0.10, s1: 0.03, seed: rnd(), hot: 1, mag: true });
+    }
+  };
+  ExhaustFX.prototype.ring = function (M, radius, vel, n) {
+    const P = this.p;
+    const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
+    for (let i = 0; i < (n || 90) && P.length < this.max; i++) {
+      const a = i / (n || 90) * Math.PI * 2, p = tr(Math.cos(a) * radius, 0.15 + rnd() * 0.3, Math.sin(a) * radius * 1.6);
+      const out = [Math.cos(a) * 9, 0, Math.sin(a) * 9];
+      P.push({ k: 1, x: p[0], y: p[1], z: p[2], vx: vel[0] * 0.3 + out[0] * M[0] + out[2] * M[8], vy: 0.5 + rnd(), vz: vel[2] * 0.3 + out[0] * M[2] + out[2] * M[10],
+        age: 0, life: 0.35 + rnd() * 0.35, s0: 0.35, s1: 0.08, seed: rnd(), hot: 1, mag: true });
+    }
+  };
+  function tipsFrom(M, race) {
+    const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
+    const tips = (race ? ENG.tipsRace : ENG.tips).map(t => tr(t[0], t[1], t[2])), hubs = ENG.hubs.map(t => tr(t[0], t[1] + 0.04, t[2]));
     const dir = [-M[8], -M[9] + 0.04, -M[10]];
     const l = Math.hypot(dir[0], dir[1], dir[2]) || 1;
     return { tips, hubs, dir: [dir[0] / l, dir[1] / l, dir[2] / l] };

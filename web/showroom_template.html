@@ -32,7 +32,7 @@
   <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
   <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
-  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
+  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bExh">SCARICO: SERIE</button><button id="bChrono">MODULO CRONO</button><button id="bFly">VOLO</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
 <div id="rpm"></div>
@@ -45,7 +45,7 @@
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
-  const o={palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',power:q.get('power')||'v8',preserve:q.has('shot')};
+  const o={palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',power:q.get('power')||'v8',exhaust:q.get('exhaust')||'serie',chrono:q.has('chrono'),preserve:q.has('shot')};
   const cv=document.getElementById('c'); let sr;
   try{ sr=new Showroom(cv,o); }catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
   window.__sr=sr;
@@ -68,6 +68,9 @@
   $('bPal').onclick=()=>{ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; accent(); };
   $('bSpecs').onclick=()=>{ $('specs').classList.toggle('open'); tog('bSpecs',$('specs').classList.contains('open')); };
   $('bRoof').onclick=()=>{ sr.tg.roof=sr.tg.roof?0:1; $('bRoof').textContent=sr.tg.roof?'CAPOTE: APERTA (SPIDER)':'CAPOTE: CHIUSA'; tog('bRoof',!!sr.tg.roof); };
+  $('bExh').onclick=()=>{ o.exhaust=o.exhaust==='race'?'serie':'race'; $('bExh').textContent=o.exhaust==='race'?'SCARICO: ELABORATO':'SCARICO: SERIE'; tog('bExh',o.exhaust==='race'); };
+  $('bChrono').onclick=()=>{ o.chrono=!o.chrono; tog('bChrono',o.chrono); };
+  $('bFly').onclick=()=>{ if(o.power!=='mag'){ o.power='mag'; $('bPower').textContent=CarHD.POWER[o.power]; specs(); } sr.tg.fly=sr.tg.fly?0:1; tog('bFly',!!sr.tg.fly); };
   const PW=['v8','wankel','mag']; $('bPower').textContent=CarHD.POWER[o.power];
   $('bPower').onclick=()=>{ o.power=PW[(PW.indexOf(o.power)+1)%PW.length]; $('bPower').textContent=CarHD.POWER[o.power]; specs(); sr.eng.rpm=sr.eng.T.idle; };
   // engine sound starts with the first touch (browser rule), SU DI GIRI: hold to rev, release for the crackle
@@ -94,6 +97,7 @@
     if(q.has('mode')) sr.cam.mode=q.get('mode');
     if(q.has('steer')){ sr.st.wheelSteer=0.5; sr.st.steerWheel=2.4; }
     if(q.has('yaw')) sr.cam.yaw=parseFloat(q.get('yaw')); if(q.has('pitch')) sr.cam.pitch=parseFloat(q.get('pitch')); if(q.has('dist')) sr.cam.dist=parseFloat(q.get('dist'));
+    if(q.has('fly')){ sr.tg.fly=1; sr.flyK=1; }
     if(q.has('roof')){ sr.tg.roof=sr.st.roof=parseFloat(q.get('roof')); }
     if(q.has('tgt')) sr.cam.tgt=q.get('tgt').split(',').map(parseFloat);
     if(q.has('specs')) $('specs').classList.add('open');
