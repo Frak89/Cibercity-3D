@@ -30,7 +30,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     public volatile float lastImpact = 0;
     public volatile String hdError = null;
     final EngineSim eng = new EngineSim();
-    private final ExhaustFx fx = new ExhaustFx();
+    private final ExhaustFx exhaust = new ExhaustFx();
     private Gl.Prog fxProg;
     private float fxOx, fxOz; private boolean fxInit = false;
     public volatile float hudRpm; public volatile int hudGear;
@@ -65,7 +65,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         solid = Gl.prog(ctx, "solid.vert", "solid.frag", common);
         glow = Gl.prog(ctx, "glow.vert", "glow.frag", common);
         hdProg = Gl.prog(ctx, "car_hd.vert", "car_hd.frag", common);
-        fxProg = Gl.prog(ctx, "particle.vert", "particle.frag", common); fx.glLost();
+        fxProg = Gl.prog(ctx, "particle.vert", "particle.frag", common); exhaust.glLost();
         try { hd = new CarHd(ctx, hdProg); hdError = null; } catch (Exception ex) { android.util.Log.e(Gl.TAG, "car_hd", ex); hd = null; hdError = String.valueOf(ex.getMessage()); }
         if (city == null) city = new GameCity(2077);
         chunks.clear();
@@ -149,7 +149,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         camera(paused ? 0 : dt);
         {   // exhaust particles live in the camera-relative frame: follow the origin across the torus
             float ox = car.x + e[0], oz = car.z + e[2];
-            if (fxInit) { float dx = ox - fxOx, dz = oz - fxOz; dx -= Math.round(dx / S) * S; dz -= Math.round(dz / S) * S; fx.shift(-dx, 0, -dz); }
+            if (fxInit) { float dx = ox - fxOx, dz = oz - fxOz; dx -= Math.round(dx / S) * S; dz -= Math.round(dz / S) * S; exhaust.shift(-dx, 0, -dz); }
             fxOx = ox; fxOz = oz; fxInit = true;
         }
         float camX = (((car.x + e[0]) % S) + S) % S, camZ = (((car.z + e[2]) % S) + S) % S;
@@ -202,9 +202,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             common(hdProg, pal, fogDen, camX, camZ, eye);
             hd.draw(M, hdState, true);
         }
-        if (!paused) fx.update(dt, M, car.vx, car.vz, eng);
+        if (!paused) exhaust.update(dt, M, car.vx, car.vz, eng);
         common(fxProg, pal, fogDen, camX, camZ, eye);
-        fx.draw(fxProg, H / (2 * (float) Math.tan(Math.toRadians(fov) / 2)));
+        exhaust.draw(fxProg, H / (2 * (float) Math.tan(Math.toRadians(fov) / 2)));
         GLES20.glEnable(GLES20.GL_BLEND); GLES20.glDepthMask(false);
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE);
         common(traffic, pal, fogDen, camX, camZ, eye); traffic.f1("uWidth", 0.3f); Gl.draw(traffic, mTraffic);
@@ -235,5 +235,5 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         hudH = car.h; hudX = car.x; hudZ = car.z; hudDist = car.dist; hudScore = car.score; hudBest = car.best; hudCockpit = view == 3 && hd == null;
     }
 
-    public void resetCar() { car.reset(); camH = 0; fx.reset(); fxInit = false; }
+    public void resetCar() { car.reset(); camH = 0; exhaust.reset(); fxInit = false; }
 }

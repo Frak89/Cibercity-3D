@@ -32,7 +32,7 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
     public volatile String error = null;
     /** engine: idles by itself; rev = throttle held with SU DI GIRI (neutral) */
     final EngineSim eng = new EngineSim();
-    private final ExhaustFx fx = new ExhaustFx();
+    private final ExhaustFx exhaust = new ExhaustFx();
     private Gl.Prog fxProg;
     public volatile boolean engineOn = true;
     public volatile float rev = 0;
@@ -45,7 +45,7 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         sky = Gl.prog(ctx, "sky.vert", "sky.frag", common);
         floor = Gl.prog(ctx, "ground.vert", "studio_floor.frag", common);
         hdProg = Gl.prog(ctx, "car_hd.vert", "car_hd.frag", common);
-        fxProg = Gl.prog(ctx, "particle.vert", "particle.frag", common); fx.glLost();
+        fxProg = Gl.prog(ctx, "particle.vert", "particle.frag", common); exhaust.glLost();
         try { hd = new CarHd(ctx, hdProg); } catch (Exception e) { error = e.getMessage(); }
         quad = Gl.mesh(new String[]{"aPos"}, new float[][]{{-1, -1, 1, -1, 1, 1, -1, 1}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3});
         ground = Gl.mesh(new String[]{"aPos"}, new float[][]{{-40, -40, 40, -40, 40, 40, -40, 40}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3});
@@ -132,9 +132,9 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         hd.draw(car, st, false);
         GLES20.glEnable(GLES20.GL_BLEND); GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA); GLES20.glDepthMask(false);
         hd.draw(car, st, true);
-        fx.update(dt, car, 0, 0, eng);
+        exhaust.update(dt, car, 0, 0, eng);
         common(fxProg, pal, eye);
-        fx.draw(fxProg, H / (2 * (float) Math.tan(Math.toRadians(fov) / 2)));
+        exhaust.draw(fxProg, H / (2 * (float) Math.tan(Math.toRadians(fov) / 2)));
         GLES20.glDepthMask(true); GLES20.glDisable(GLES20.GL_BLEND);
     }
 }
