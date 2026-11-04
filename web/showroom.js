@@ -32,8 +32,9 @@ function Showroom(canvas, opts) {
   const b = (arr, ix) => { const x = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, x); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return x; };
   this.quad = { a: b([-1, -1, 1, -1, 1, 1, -1, 1]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.ground = { a: b([-40, -40, 40, -40, 40, 40, -40, 40]), i: b([0, 1, 2, 0, 2, 3], true) };
-  this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0 };
-  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0 };
+  this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0, roof: 0, power: opts.power || 'v8', time: 0 };
+  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0, roof: 0 };
+  this.eng.setType(this.st.power);
   this.cam = { yaw: 0.7, pitch: 0.18, dist: 7.2, mode: 'orbit', auto: true, look: 0, lookP: 0 };
   this.t = 0; this.turn = 0;
 }
@@ -47,6 +48,10 @@ Showroom.prototype.frame = function (dt) {
   const pal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   this.t += dt; const t = this.t;
   const ease = (cur, target, k) => cur + (target - cur) * Math.min(1, dt * k);
+  st.time = t; st.power = o.power || 'v8'; if (this.eng.type !== st.power) this.eng.setType(st.power);
+  // the roof moves at constant speed (≈ 14 s like a real folding hard top… shortened to 5 s)
+  st.roof += Math.max(-dt / 5, Math.min(dt / 5, tg.roof - st.roof));
+  if (st.power === 'mag') st.spin += dt * (eng => eng.rpm / 22000 * 9)(this.eng);
   st.hood = ease(st.hood, tg.hood, 3); st.doorL = ease(st.doorL, tg.doors, 2.6); st.doorR = ease(st.doorR, tg.doors, 2.4);
   const steer = tg.steerDemo ? Math.sin(t * 1.4) : 0;
   st.wheelSteer = ease(st.wheelSteer, steer * 0.55, 6); st.steerWheel = ease(st.steerWheel, steer * 2.6, 6);
@@ -111,7 +116,7 @@ Showroom.prototype.frame = function (dt) {
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   this.car.draw(carM, st, 'glass');
   const tp = EngineFX.tipsFrom(carM);
-  this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng);
+  this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng, tp.hubs);
   set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov * Math.PI / 360)));
   gl.depthMask(true); gl.disable(gl.BLEND);
 };

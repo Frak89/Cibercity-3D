@@ -120,11 +120,11 @@ public class GameHud extends View {
         c.drawText(String.valueOf(Math.round(r.hudKmh)), cx, cy + m * 0.025f, t);
         t.setTextSize(m * 0.026f); c.drawText("KM/H", cx, cy + m * 0.065f, t);
         // rev counter (inner arc) + gear
-        float rr2 = rr * 0.8f, kr = Math.min(1, r.hudRpm / 9000f); int rc = r.hudRpm > 8000 ? 0xffff3b5c : second;
+        float rr2 = rr * 0.8f, kr = Math.min(1, r.hudRpm / r.hudLim); boolean redz = r.hudRpm > r.hudRed * 0.9f; int rc = redz ? 0xffff3b5c : second;
         p.setStrokeWidth(m * 0.008f); p.setColor(0x1fffffff); c.drawArc(cx - rr2, cy - rr2, cx + rr2, cy + rr2, 135, 270, false, p);
         p.setColor(rc); c.drawArc(cx - rr2, cy - rr2, cx + rr2, cy + rr2, 135, 270 * kr, false, p);
-        t.setTextSize(m * 0.032f); t.setColor(r.hudRpm > 8000 ? 0xffff3b5c : 0xffecfcff);
-        c.drawText((r.hudGear < 0 ? "N" : String.valueOf(r.hudGear + 1)) + "   " + (Math.round(r.hudRpm / 100) * 100), cx, cy - rr * 0.42f, t);
+        t.setTextSize(m * 0.032f); t.setColor(redz ? 0xffff3b5c : 0xffecfcff);
+        c.drawText((r.hudGear == -2 ? "E" : r.hudGear < 0 ? "N" : String.valueOf(r.hudGear + 1)) + "   " + (Math.round(r.hudRpm / 100) * 100), cx, cy - rr * 0.42f, t);
         t.setColor(0xffecfcff);
         p.setStyle(Paint.Style.FILL); p.setColor(0x26ffffff);
         c.drawRect(cx - rr, cy + rr * 0.9f, cx + rr, cy + rr * 0.9f + m * 0.014f, p);

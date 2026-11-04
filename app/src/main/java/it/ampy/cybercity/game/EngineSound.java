@@ -18,6 +18,9 @@ final class EngineSound implements Runnable {
     // synth state
     private double ph = 0, tph = 0, popPh = 0;
     private int cyl = 0, popQ = 0, popGap = 0, n = 1;
+    private float lump = 1, zap = 0, crk = 0, bp1 = 0;
+    private double eph = 0, zph = 0, hum = 0;
+    private int synType = 0;
     private float amp = 0, rpm = EngineSim.IDLE, load = 0, boost = 0, low = 0, band = 0, low2 = 0, hiss = 0, popEnv = 0, popAmp = 0, gain = 0;
 
     EngineSound(EngineSim s) { sim = s; }
@@ -49,37 +52,76 @@ final class EngineSound implements Runnable {
         while (running) {
             int pops = sim.takePops(ps);
             if (pops > 0) { popQ += pops; popAmp = Math.max(popAmp, ps[0]); }
-            float rpmT = sim.rpm, loadT = sim.load, boostT = sim.boostLvl;
+            float rpmT = sim.rpm, loadT = sim.load, boostT = sim.boostLvl, spd = sim.speed;
+            if (synType != sim.type) { synType = sim.type; rpm = rpmT; }
             float gainT = (muted || sim.off || rpmT < 200) ? 0 : volume;
-            for (int i = 0; i < frames; i++) buf[i] = (short) (sample(rpmT, loadT, boostT, gainT) * 32000);
+            for (int i = 0; i < frames; i++) buf[i] = (short) ((synType == 2 ? sampleMag(rpmT, loadT, boostT, gainT) : sample(rpmT, loadT, boostT, gainT, spd)) * 32000);
             track.write(buf, 0, frames);
         }
         try { track.stop(); } catch (Exception ignored) { }
         track.release(); track = null;
     }
 
-    private float sample(float rpmT, float loadT, float boostT, float gainT) {
-        rpm += (rpmT - rpm) * 0.0016f; load += (loadT - load) * 0.002f; boost += (boostT - boost) * 0.0008f; gain += (gainT - gain) * 0.0005f;
+    private float sample(float rpmT, float loadT, float boostT, float gainT, float spd) {
+        final boolean W = synType == 1;
+        rpm += (rpmT - rpm) * (W ? 0.0022f : 0.0016f); load += (loadT - load) * 0.002f; boost += (boostT - boost) * 0.0008f; gain += (gainT - gain) * 0.0005f;
         ph += rpm / 60.0 * 4 / sr;
-        if (ph >= 1) { ph -= 1; cyl = (cyl + 1) & 7; amp = PAT[cyl] * (0.42f + 0.58f * load) * (0.9f + 0.2f * (noise() * 0.5f + 0.5f)); }
-        float p = (float) ph, a = amp;
-        float x = a * (float) (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6f;
-        x += noise() * a * (float) Math.exp(-p * 4) * (0.12f + 0.4f * load);
-        float fc = Math.min(sr * 0.2f, 110 + rpm * 0.085f + load * 1100);
+        if (ph >= 1) {
+            ph -= 1; cyl = (cyl + 1) & 7;
+            if (W) {
+                float lumpy = Math.max(0, 1 - (rpm - 1100) / 2500) * (1 - load);
+                if ((cyl & 3) == 0) lump = 1 - lumpy * (0.55f + 0.45f * (noise() * 0.5f + 0.5f));
+                amp = (0.5f + 0.5f * load) * lump * (0.95f + 0.1f * (noise() * 0.5f + 0.5f));
+            } else amp = PAT[cyl] * (0.42f + 0.58f * load) * (0.9f + 0.2f * (noise() * 0.5f + 0.5f));
+        }
+        float p = (float) ph, a = amp, x;
+        if (W) {
+            x = a * (float) (Math.exp(-p * 2.6) - Math.exp(-p * 70)) * 1.25f - a * 0.25f;
+            x += noise() * a * (float) Math.exp(-p * 3) * (0.2f + 0.55f * load);
+        } else {
+            x = a * (float) (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6f;
+            x += noise() * a * (float) Math.exp(-p * 4) * (0.12f + 0.4f * load);
+        }
+        float fc = Math.min(sr * 0.22f, W ? 220 + rpm * 0.13f + load * 1700 : 110 + rpm * 0.085f + load * 1100);
         float f1 = 2 * (float) Math.sin(Math.PI * fc / sr);
-        low += f1 * band; float high = x - low - 0.55f * band; band += f1 * high;
-        low2 += (x - low2) * (float) (2 * Math.PI * 70 / sr);
-        float y = low * 0.85f + band * 0.35f + low2 * 1.4f;
+        low += f1 * band; float high = x - low - (W ? 0.42f : 0.55f) * band; band += f1 * high;
+        low2 += (x - low2) * (float) (2 * Math.PI * (W ? 110 : 70) / sr);
+        float y = low * 0.85f + band * (W ? 0.5f : 0.35f) + low2 * (W ? 0.8f : 1.4f);
         tph += (2200 + rpm * 0.55) / sr; if (tph > 1) tph -= 1;
         y += (float) Math.sin(tph * 6.2831853) * 0.035f * boost * (0.3f + load);
         hiss += (noise() - hiss) * 0.25f; y += hiss * 0.03f * boost * (1 - load);
-        if (popEnv < 0.05f && popQ > 0 && popGap <= 0) { popQ--; popEnv = 0.6f + 0.4f * popAmp; popPh = 0; popGap = (int) (sr * 0.025f); if (popQ == 0) popAmp = 0; }
+        if (W) { eph += (600 + spd * 95) / sr; if (eph > 1) eph -= 1; y += (float) Math.sin(eph * 6.2831853) * 0.03f * Math.min(1, spd / 20 + load * 0.3f); }
+        if (popEnv < 0.05f && popQ > 0 && popGap <= 0) { popQ--; popEnv = 0.6f + 0.4f * popAmp; popPh = 0; popGap = (int) (sr * (W ? 0.018f : 0.025f)); if (popQ == 0) popAmp = 0; }
         if (popGap > 0) popGap--;
         if (popEnv > 0.001f) {
-            popPh += 85.0 / sr;
-            y += popEnv * (noise() * 0.9f + (float) Math.sin(popPh * 6.2831853) * 0.9f);
-            popEnv *= 1 - 32f / sr;
+            popPh += (W ? 140.0 : 85.0) / sr;
+            y += popEnv * (noise() * (W ? 1.1f : 0.9f) + (float) Math.sin(popPh * 6.2831853) * (W ? 0.6f : 0.9f));
+            popEnv *= 1 - (W ? 45f : 32f) / sr;
         }
         return (float) Math.tanh(y * 1.1f) * gain;
+    }
+
+    /** LEVITA: electrostatic hum, gliding field whine, crackling micro-discharges, zaps on lift-off */
+    private float sampleMag(float rpmT, float loadT, float boostT, float gainT) {
+        rpm += (rpmT - rpm) * 0.0012f; load += (loadT - load) * 0.002f; boost += (boostT - boost) * 0.001f; gain += (gainT - gain) * 0.0005f;
+        float k = Math.min(1, rpm / 22000);
+        hum += 100.0 / sr; if (hum > 1) hum -= 1;
+        double h = hum * 6.2831853;
+        float buzz = (float) (Math.sin(h) + 0.55 * Math.sin(2 * h + 0.3) + 0.4 * Math.sin(3 * h) + 0.22 * Math.sin(5 * h + 1.1) + 0.12 * Math.sin(7 * h));
+        buzz = (float) Math.tanh(buzz * 1.6f) * (0.16f + 0.22f * k + 0.12f * load);
+        eph += (180 + rpm * 0.075) / sr; if (eph > 1) eph -= 1;
+        zph += (183 + rpm * 0.0756) / sr; if (zph > 1) zph -= 1;
+        float whine = (float) (Math.sin(eph * 6.2831853) + Math.sin(zph * 6.2831853 * 2) * 0.4) * (0.03f + 0.10f * k) * (0.6f + 0.4f * load);
+        if (noise() * 0.5f + 0.5f < (3 + load * 45 + k * 20) / sr) crk = 0.6f + 0.4f * (noise() * 0.5f + 0.5f);
+        float n2 = noise();
+        bp1 += (n2 - bp1) * 0.45f; float hp = n2 - bp1;
+        float y = buzz + whine + hp * crk * 0.5f + hiss * 0.02f;
+        hiss += (n2 - hiss) * 0.1f;
+        crk *= 1 - 400f / sr;
+        if (zap < 0.05f && popQ > 0 && popGap <= 0) { popQ--; zap = 0.7f + 0.3f * popAmp; popGap = (int) (sr * 0.03f); if (popQ == 0) popAmp = 0; }
+        if (popGap > 0) popGap--;
+        if (zap > 0.001f) { popPh += (900 + 2400 * zap) / sr; y += zap * (hp * 1.2f + Math.signum((float) Math.sin(popPh * 6.2831853)) * 0.25f); zap *= 1 - 60f / sr; }
+        low2 += (y - low2) * 0.5f;
+        return (float) Math.tanh(low2 * 1.3f) * gain;
     }
 }

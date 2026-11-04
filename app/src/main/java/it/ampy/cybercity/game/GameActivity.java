@@ -45,6 +45,7 @@ public class GameActivity extends Activity implements SensorEventListener {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         sp = Prefs.get(this).raw();
         r = new GameRenderer(this);
+        r.power = CarHd.powerIndex(sp.getString("gPower", "v8")); r.roofOpen = sp.getBoolean("gRoof", false);
         r.palette = sp.getString("gPalette", "neon");
         r.weather = sp.getString("gWeather", "");
         r.paint = sp.getString("gPaint", "nero");
@@ -79,7 +80,7 @@ public class GameActivity extends Activity implements SensorEventListener {
     private EngineSound sound;
     private void menu() {
         r.paused = true;
-        String[] items = {"▶ RIPRENDI", "SUONO MOTORE: " + (sp.getBoolean("gSound", true) ? "ON" : "OFF"), "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
+        String[] items = {"▶ RIPRENDI", "SUONO MOTORE: " + (sp.getBoolean("gSound", true) ? "ON" : "OFF"), "PROPULSIONE: " + CarHd.POWER_NAMES[r.power], "CAPOTE: " + (r.roofOpen ? "APERTA (SPIDER)" : "CHIUSA"), "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
             "METEO: " + weatherName(sp.getString("gWeather", "")), "COLORE AUTO: " + CarModel.PAINT_NAMES[CarModel.paintIndex(r.paint)],
             "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI", "🏁 SHOWROOM (garage)"};
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
@@ -87,9 +88,11 @@ public class GameActivity extends Activity implements SensorEventListener {
             .setItems(items, (d, i) -> {
                 switch (i) {
                     case 1: { boolean on = !sp.getBoolean("gSound", true); sp.edit().putBoolean("gSound", on).apply(); if (sound != null) sound.muted = !on; r.paused = false; return; }
-                    case 2: pick("VISTA", GameRenderer.VIEWS, r.view, k -> { r.view = k; sp.edit().putInt("gView", k).apply(); }); return;
-                    case 3: pick("ATMOSFERA", Palette.NAMES, Palette.index(r.palette), k -> { r.palette = Palette.KEYS[k]; hud.setPalette(Palette.of(r.palette)); sp.edit().putString("gPalette", r.palette).apply(); }); return;
-                    case 4: {
+                    case 2: pick("PROPULSIONE", CarHd.POWER_NAMES, r.power, k -> { r.power = k; sp.edit().putString("gPower", CarHd.POWER_KEYS[k]).apply(); }); return;
+                    case 3: r.roofOpen = !r.roofOpen; sp.edit().putBoolean("gRoof", r.roofOpen).apply(); r.paused = false; return;
+                    case 4: pick("VISTA", GameRenderer.VIEWS, r.view, k -> { r.view = k; sp.edit().putInt("gView", k).apply(); }); return;
+                    case 5: pick("ATMOSFERA", Palette.NAMES, Palette.index(r.palette), k -> { r.palette = Palette.KEYS[k]; hud.setPalette(Palette.of(r.palette)); sp.edit().putString("gPalette", r.palette).apply(); }); return;
+                    case 6: {
                         String[] keys = {"", "auto", "clear", "cloudy", "fog", "drizzle", "rain", "storm", "snow"};
                         String[] names = new String[keys.length];
                         int sel = 0;
@@ -97,11 +100,11 @@ public class GameActivity extends Activity implements SensorEventListener {
                         pick("METEO", names, sel, k -> { sp.edit().putString("gWeather", keys[k]).apply(); applyWeather(); });
                         return;
                     }
-                    case 5: pick("COLORE AUTO", CarModel.PAINT_NAMES, CarModel.paintIndex(r.paint), k -> { r.paint = CarModel.PAINT_KEYS[k]; sp.edit().putString("gPaint", r.paint).apply(); }); return;
-                    case 6: hud.tilt = !hud.tilt; sp.edit().putBoolean("gTilt", hud.tilt).apply(); registerTilt(); r.paused = false; return;
-                    case 7: r.resetCar(); r.paused = false; return;
-                    case 8: finish(); return;
-                    case 9: startActivity(new android.content.Intent(this, ShowroomActivity.class)); return;
+                    case 7: pick("COLORE AUTO", CarModel.PAINT_NAMES, CarModel.paintIndex(r.paint), k -> { r.paint = CarModel.PAINT_KEYS[k]; sp.edit().putString("gPaint", r.paint).apply(); }); return;
+                    case 8: hud.tilt = !hud.tilt; sp.edit().putBoolean("gTilt", hud.tilt).apply(); registerTilt(); r.paused = false; return;
+                    case 9: r.resetCar(); r.paused = false; return;
+                    case 10: finish(); return;
+                    case 11: startActivity(new android.content.Intent(this, ShowroomActivity.class)); return;
                     default: r.paused = false;
                 }
             })

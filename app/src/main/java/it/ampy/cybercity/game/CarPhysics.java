@@ -10,6 +10,8 @@ final class CarPhysics {
     static final class Input { volatile boolean gas, brake, hand, boost; volatile float steer; }
 
     float spin = 0;
+    /** power unit factor: V8 1 · Wankel 1.03 · LEVITA 1.1 */
+    float pk = 1;
     float x = 0, z = 42, h = 0, vx = 0, vz = 0, steer = 0, boost = 1, drift = 0, shake = 0, hit = 0, dist = 0;
     int score = 0, best = 0;
     boolean boosting; float slip;
@@ -22,8 +24,8 @@ final class CarPhysics {
         float fx = (float) Math.sin(h), fz = (float) Math.cos(h), rx = (float) Math.cos(h), rz = (float) -Math.sin(h);
         float vF = vx * fx + vz * fz, vR = vx * rx + vz * rz;
         boosting = in.boost && boost > 0.02f && vF > 2;
-        float maxF = boosting ? 95 : 72;
-        if (in.gas) vF += (boosting ? 30 : 17) * (1 - Math.max(0, vF) / (maxF + 8)) * dt;
+        float maxF = (boosting ? 95 : 72) * pk;
+        if (in.gas) vF += (boosting ? 30 : 17) * pk * pk * (1 - Math.max(0, vF) / (maxF + 8)) * dt;
         if (in.brake) vF -= (vF > 0.5f ? 34 : 10) * dt;
         if (!in.gas && !in.brake) vF -= Math.signum(vF) * Math.min(Math.abs(vF), 3.5f * dt);
         vF = Math.max(-14, Math.min(maxF + 5, vF));

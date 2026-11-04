@@ -33,7 +33,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     private final ExhaustFx exhaust = new ExhaustFx();
     private Gl.Prog fxProg;
     private float fxOx, fxOz; private boolean fxInit = false;
-    public volatile float hudRpm; public volatile int hudGear;
+    public volatile float hudRpm, hudRed = 8900, hudLim = 9100; public volatile int hudGear;
+    public volatile int power = 0; public volatile boolean roofOpen = false;
+    private float roofT = 0;
     /** HUD snapshot (written on the GL thread) */
     public volatile float hudKmh, hudBoost, hudDrift, hudSteer, hudH, hudX, hudZ, hudDist; public volatile int hudScore, hudBest; public volatile boolean hudBoosting, hudCockpit;
 
@@ -142,7 +144,9 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             t += dt;
             float imp = car.step(input, dt, city);
             if (imp > 3) lastImpact = imp;
+            eng.setType(power); car.pk = power == 0 ? 1 : power == 1 ? 1.03f : 1.1f;
             eng.update(dt, car.speed(), input.gas ? 1 : 0, car.boosting, false);
+            roofT += Math.max(-dt / 5, Math.min(dt / 5, (roofOpen ? 1 : 0) - roofT));
         }
         flash = Math.max(0, flash - dt * 3.5f);
         if (wx != null && wx.light > 0) { nextFlash -= dt; if (nextFlash <= 0) { flash = 1; nextFlash = rnd.nextFloat() < 0.35f ? 0.15f : 4 + rnd.nextFloat() * 9; } }
@@ -184,6 +188,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         Matrix.setIdentityM(M, 0);
         Matrix.translateM(M, 0, -e[0], 0, -e[2]);
         Matrix.rotateM(M, 0, (float) Math.toDegrees(car.h), 0, 1, 0);
+        hdState.roof = roofT; hdState.power = power; hdState.time = t;
         hdState.wheelSteer = car.steer * 0.5f; hdState.steerWheel = car.steer * 2.6f; hdState.spin = car.spin;
         if (drawCar && hd != null) {
             common(hdProg, pal, fogDen, camX, camZ, eye);
@@ -230,7 +235,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         Gl.draw(post, mQuad);
         GLES20.glDepthMask(true); GLES20.glDisable(GLES20.GL_BLEND);
 
-        hudRpm = eng.rpm; hudGear = eng.gear;
+        hudRpm = eng.rpm; hudGear = eng.gear; hudRed = eng.red(); hudLim = eng.limiter();
         hudKmh = car.speed() * 3.6f; hudBoost = car.boost; hudBoosting = car.boosting; hudDrift = car.drift; hudSteer = car.steer;
         hudH = car.h; hudX = car.x; hudZ = car.z; hudDist = car.dist; hudScore = car.score; hudBest = car.best; hudCockpit = view == 3 && hd == null;
     }

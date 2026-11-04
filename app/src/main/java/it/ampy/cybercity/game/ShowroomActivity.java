@@ -42,6 +42,7 @@ public class ShowroomActivity extends Activity {
         r = new ShowroomRenderer(this);
         r.palette = sp.getString("gPalette", "neon");
         r.paint = sp.getString("gPaint", "rosso");
+        r.power = CarHd.powerIndex(sp.getString("gPower", "v8"));
         accent = Palette.argb(Palette.of(r.palette).neonA);
         glv = new GLSurfaceView(this);
         glv.setEGLContextClientVersion(2);
@@ -51,7 +52,7 @@ public class ShowroomActivity extends Activity {
         FrameLayout root = new FrameLayout(this);
         root.addView(glv, new FrameLayout.LayoutParams(-1, -1));
 
-        TextView title = text("AMPY KAGE GT", 22, accent, true);
+        TextView title = text(CarHd.MODEL_NAMES[r.power], 22, accent, true); titleView = title;
         title.setShadowLayer(dp(10), 0, 0, accent);
         TextView sub = text("SHOWROOM · CYBERCITY 3D", 10, 0xbbecfcff, false);
         LinearLayout tl = new LinearLayout(this); tl.setOrientation(LinearLayout.VERTICAL); tl.addView(title); tl.addView(sub);
@@ -91,6 +92,11 @@ public class ShowroomActivity extends Activity {
         LinearLayout eb = new LinearLayout(this); eb.setGravity(Gravity.CENTER_VERTICAL);
         rpmText = text("900 RPM", 16, accent, true); rpmText.setShadowLayer(dp(8), 0, 0, accent);
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-2, -2); rp.rightMargin = dp(12); eb.addView(rpmText, rp);
+        add(eb, "roof", "CAPOTE: CHIUSA", false, v -> { r.tRoof = r.tRoof > 0 ? 0 : 1; sel("roof", r.tRoof > 0); btn.get("roof").setText(r.tRoof > 0 ? "CAPOTE: APERTA (SPIDER)" : "CAPOTE: CHIUSA"); });
+        add(eb, "power", CarHd.POWER_NAMES[r.power], false, v -> {
+            r.power = (r.power + 1) % 3; sp.edit().putString("gPower", CarHd.POWER_KEYS[r.power]).apply();
+            btn.get("power").setText(CarHd.POWER_NAMES[r.power]); specs.setText(specsText()); titleView.setText(CarHd.MODEL_NAMES[r.power]);
+        });
         add(eb, "motor", "MOTORE ON", true, v -> {
             r.engineOn = !r.engineOn; sel("motor", r.engineOn); btn.get("motor").setText(r.engineOn ? "MOTORE ON" : "MOTORE OFF");
             if (r.engineOn) { r.eng.rpm = 300; r.rev = 0.45f; glv.postDelayed(() -> { if (!revHeld) r.rev = 0; }, 260); }
@@ -131,12 +137,12 @@ public class ShowroomActivity extends Activity {
         });
     }
 
-    private TextView rpmText;
+    private TextView rpmText, titleView;
     private boolean revHeld = false;
     private EngineSound sound;
     private final Runnable rpmTick = new Runnable() { @Override public void run() {
         rpmText.setText(r.engineOn ? (Math.round(r.eng.rpm / 50) * 50) + " RPM" : "");
-        rpmText.setTextColor(r.eng.rpm > 8000 ? 0xffff3b5c : accent);
+        rpmText.setTextColor(r.eng.rpm > r.eng.red() * 0.9f ? 0xffff3b5c : accent);
         rpmText.postDelayed(this, 80);
     } };
     private void revBg(TextView t, boolean on) {
@@ -145,8 +151,8 @@ public class ShowroomActivity extends Activity {
     }
 
     private String specsText() {
-        StringBuilder s = new StringBuilder("AMPY KAGE GT\n");
-        for (String[] row : CarHd.SPECS) s.append("\n").append(row[0]).append("\n").append(row[1]).append("\n");
+        StringBuilder s = new StringBuilder(CarHd.MODEL_NAMES[r.power] + "\n");
+        for (String[] row : CarHd.SPECS_BY[r.power]) s.append("\n").append(row[0]).append("\n").append(row[1]).append("\n");
         return s.toString();
     }
 

@@ -32,7 +32,7 @@
   <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
   <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
-  <button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
+  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
 <div id="rpm"></div>
@@ -375,8 +375,20 @@ const RIG = {
   wheels: { FL: [-0.92, 0.36, 1.42], FR: [0.92, 0.36, 1.42], RL: [-0.92, 0.36, -1.45], RR: [0.92, 0.36, -1.45] },
   wheelRadius: 0.365,
   steering: { pivot: [-0.40, 0.84, 0.10], tilt: 0.47 },    // column tilt about x (rad)
-  driverEye: [-0.40, 1.02, -0.36]
+  driverEye: [-0.40, 1.02, -0.36],
+  // SPIDER: two-panel retractable hard top. Front panel A folds over rear panel B (hinge at the joint),
+  // then the stack flips backwards around the B pivot into the well under the rear deck lid (tonneau).
+  roof: { pivotB: [0, 0.86, -1.32], joint: [0, 1.235, -0.35], fold: Math.PI - 0.08, flip: Math.PI - 0.10 },
+  tonneau: { pivot: [0, 0.85, -2.22], open: -1.15 },
+  winDrop: 0.32,
+  // levitation spheres (RSQ-style) instead of wheels
+  sphere: { r: 0.335, lift: 0.04 }
 };
+/** retractable roof timeline: r 0 (closed) → 1 (stowed). Same in car_render.js and CarHd.java */
+function roofPhases(r) {
+  const sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+  return { win: sm(r / 0.2), lid: sm((r - 0.12) / 0.2) * (1 - sm((r - 0.80) / 0.18)), fold: sm((r - 0.25) / 0.25), flip: sm((r - 0.42) / 0.40) };
+}
 
 /* ---------------------------------------------------------------- mesh parts */
 function Part(name, pivot) {
@@ -554,13 +566,17 @@ function roofY(z) {
 function beltY(z) { const [, , Ys, Yt] = station(z); return Ys + (Yt - Ys) * 0.69 - 0.012; }
 function cabinPt(u, v) {
   const z = lerp(CZ0, CZ1, u);
-  const side = v < 0.5 ? -1 : 1, vv = v < 0.5 ? v * 2 : (1 - v) * 2;
+  const side = v < 0.5 ? -1 : 1, vv = v < 0.5 ? v * 2 : (1 - v) * 2;   // 0 beltline → 1 roof centre line
   const [W] = station(z);
-  const Wb = W * 0.88, Wr = 0.62 + 0.04 * Math.sin(u * Math.PI), yb = beltY(z), Yr = Math.max(yb + 0.01, roofY(z));
-  let x, y;
-  if (vv < 0.6) { const k = vv / 0.6; x = side * lerp(Wb, Wr, Math.pow(k, 0.9)); y = lerp(yb, Yr - 0.05, k); }
-  else { const k = (vv - 0.6) / 0.4; x = side * Wr * (1 - k); y = Yr - 0.05 + 0.05 * Math.sin(k * Math.PI / 2); }
-  return [x, y, z];
+  const Wb = W * 0.88, yb = beltY(z), Yr = Math.max(yb + 0.01, roofY(z));
+  // plan view: roof narrower than the beltline and slightly bowed, tapering into screen and fastback
+  const Wr = (0.60 + 0.06 * Math.sin(u * Math.PI)) * (0.9 + 0.1 * smooth(u * 3));
+  const ph = vv * Math.PI / 2, c = Math.cos(ph), sn = Math.sin(ph);
+  // superellipse (n ≈ 3): flat-ish crown, generous radius at the cant rail, curved side glass (tumblehome)
+  const cx = Math.pow(c, 2 / 3.2), sy = Math.pow(sn, 2 / 2.4);
+  const w = lerp(Wb, Wr * 1.08, Math.pow(sn, 1.4));
+  const bulge = 0.018 * Math.sin(Math.min(1, vv / 0.62) * Math.PI) * (vv < 0.62 ? 1 : 0);   // side glass bows outwards
+  return [side * (w * cx + bulge), yb + (Yr - yb) * sy, z];
 }
 
 /* ---------------------------------------------------------------- build */
@@ -570,6 +586,9 @@ function build(opt) {
   const parts = {};
   const P = (name, pivot) => (parts[name] = parts[name] || Part(name, pivot));
   const body = P('body'), hood = P('hood', RIG.hood.pivot), doorL = P('doorL', RIG.doorL.pivot), doorR = P('doorR', RIG.doorR.pivot);
+  const roofA = P('roofA', RIG.roof.joint), roofB = P('roofB', RIG.roof.pivotB), tonneau = P('tonneau', RIG.tonneau.pivot);
+  const winL = P('winL'), winR = P('winR'), exhaust = P('exhaust'), bay = P('bay');
+  const engineW = P('engineW'), engineE = P('engineE'), magPads = P('magPads');
   const interior = P('interior'), engine = P('engine'), wheel = P('steeringWheel', RIG.steering.pivot);
   const NU = Math.round(170 * q), NV = Math.round(104 * q);
   // cut lines snapped to grid lines so the panels split exactly where the gap lines are drawn
@@ -579,6 +598,8 @@ function build(opt) {
   const HZ0 = snapZ(0.96), HZ1 = snapZ(2.16);              // hood cut
   const DV0 = snapVV(0.07), DV1 = snapVV(0.72), HV0 = snapVV(0.80);
   const inDoor = (z, vv) => z > DZ0 && z < DZ1 && vv > DV0 && vv < DV1;
+  const TZ0 = snapZ(-2.22), TZ1 = snapZ(-1.32), TV0 = snapVV(0.78);
+  const inLid = (z, vv) => z > TZ0 && z < TZ1 && vv > TV0;
   const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > HV0;
   const inCabin = (u, v) => {
     const p = bodyPt(u, v), z = p[2];
@@ -592,6 +613,7 @@ function build(opt) {
     const mat = vv < 0.09 ? M.CARBON : M.PAINT;
     if (inDoor(z, vv)) return { part: left ? doorL : doorR, mat };
     if (inHood(z, vv)) return { part: hood, mat: M.PAINT };
+    if (inLid(z, vv)) return { part: tonneau, mat: M.PAINT };
     if (inCabin(u, v)) return null;              // the greenhouse sits here: open the shell
     return { part: body, mat };
   }, [5, 3], { id: 'body' });
@@ -603,6 +625,7 @@ function build(opt) {
       return { part: left ? doorL : doorR, mat: (vv > 0.6 && vv < 0.64) ? M.INEON : (vv > 0.6 ? M.DASH : mat), offset: -0.07 };
     }
     if (inHood(z, vv)) return { part: hood, mat: M.TRIM, offset: -0.02 };
+    if (inLid(z, vv)) return { part: tonneau, mat: M.TRIM, offset: -0.02 };
     return null;
   }, [5, 3], { id: 'inner' });
   // panel gaps: crisp dark ribbons exactly on the cut lines (both sides of the car)
@@ -640,6 +663,13 @@ function build(opt) {
   }
   gap(body, t => [uOf(HZ0), lerp(1 - HV0 / 2, HV0 / 2, t) < 0.5 ? lerp(1 - HV0 / 2, HV0 / 2, t) : lerp(1 - HV0 / 2, HV0 / 2, t)], 40, 0.006, M.TRIM, 0.0025);
   gap(body, t => [uOf(HZ1), lerp(1 - HV0 / 2, HV0 / 2, t)], 40, 0.006, M.TRIM, 0.0025);
+  gap(tonneau, t => [uOf(TZ0), lerp(1 - TV0 / 2, TV0 / 2, t)], 30, 0.006, M.TRIM, 0.0025);
+  gap(body, t => [uOf(TZ1), lerp(1 - TV0 / 2, TV0 / 2, t)], 30, 0.006, M.TRIM, 0.0025);
+  for (const left of [true, false]) gap(tonneau, t => [uOf(lerp(TZ0, TZ1, t)), vOf(TV0, left)], 40, 0.006, M.TRIM, 0.0025);
+  // roof stowage well under the lid
+  box(body, [0, 0.47, -1.78], [0.66, 0.01, 0.44], M.CARPET);
+  for (const sx of [-0.67, 0.67]) box(body, [sx, 0.64, -1.78], [0.01, 0.17, 0.44], M.TRIM);
+  box(body, [0, 0.64, -2.21], [0.66, 0.17, 0.01], M.TRIM);
   // shoulder neon line, door handles, hood vents
   surface(bodyPt, NU * 2, NV * 4, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
@@ -677,26 +707,34 @@ function build(opt) {
   // ---- greenhouse: glass + carbon roof + pillars; side windows belong to the doors
   surface(cabinPt, Math.round(70 * q), Math.round(48 * q), (u, v) => {
     const z = lerp(CZ0, CZ1, u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
-    if (vv > 0.62 && z > -1.0 && z < 0.32) return { part: body, mat: M.CARBON };
+    if (vv > 0.62 && z > -0.35 && z < 0.32) return { part: roofA, mat: Math.abs(vv - 0.64) < 0.02 ? M.TRIM : M.CARBON };
+    if (vv > 0.62 && z > -1.0 && z <= -0.35) return { part: roofB, mat: Math.abs(vv - 0.64) < 0.02 || z > -0.37 ? M.TRIM : M.CARBON };
+    if (vv > 0.62 && z <= -1.0) return { part: roofB, mat: z > -1.04 ? M.TRIM : M.GLASS };   // rear screen travels with the roof
     if (z > 0.30 && z < 0.40) return { part: body, mat: M.TRIM };                  // A pillar
-    if (z < -0.95 && vv < 0.62) return { part: body, mat: M.PAINT };                // fastback C pillars
+    if (z < -0.95 && vv < 0.62) return { part: body, mat: M.PAINT };                // flying-buttress C pillars
     if (z > -0.66 && z < -0.58 && vv < 0.62) return { part: body, mat: M.TRIM };   // B pillar
-    if (z > -0.58 && z < 0.30 && vv < 0.62) return { part: left ? doorL : doorR, mat: M.GLASS };
+    if (z > -0.58 && z < 0.30 && vv < 0.62) return { part: left ? winL : winR, mat: M.GLASS };   // drop glass
     return { part: body, mat: M.GLASS };
   }, [3, 3], { id: 'cabin' });
+  surface(cabinPt, Math.round(70 * q), Math.round(48 * q), (u, v) => {
+    const z = lerp(CZ0, CZ1, u), vv = v < 0.5 ? v * 2 : (1 - v) * 2;
+    if (vv > 0.63 && z > -0.34 && z < 0.31) return { part: roofA, mat: M.ALCANTARA, offset: -0.012 };
+    if (vv > 0.63 && z > -0.99 && z < -0.36) return { part: roofB, mat: M.ALCANTARA, offset: -0.012 };
+    return null;
+  }, [3, 3], { id: 'headliner' });
   // ---- spoiler (airfoil) with endplates and neon edge
   const foil = (u, v) => { const x = lerp(-0.92, 0.92, u), a = v * Math.PI * 2, c = 0.34; return [x, 1.10 + Math.sin(a) * 0.03 * (Math.cos(a) > 0 ? 1 : 0.5), -2.06 + Math.cos(a) * c / 2]; };
-  surface(foil, 30, 16, () => ({ part: body, mat: M.CARBON }), [6, 1], { id: 'wing' });
-  surface((u, v) => { const p = foil(u, 0.5); return [p[0], 1.105 + v * 0.012, -2.23]; }, 30, 1, () => ({ part: body, mat: M.NEON }), [1, 1], { id: 'wingneon' });
-  for (const sx of [-0.94, 0.94]) box(body, [sx, 1.08, -2.06], [0.012, 0.09, 0.2], M.CARBON);
-  for (const sx of [-0.55, 0.55]) box(body, [sx, 0.98, -2.0], [0.02, 0.12, 0.05], M.TRIM, 0.25);
+  surface(foil, 30, 16, () => ({ part: tonneau, mat: M.CARBON }), [6, 1], { id: 'wing' });
+  surface((u, v) => { const p = foil(u, 0.5); return [p[0], 1.105 + v * 0.012, -2.23]; }, 30, 1, () => ({ part: tonneau, mat: M.NEON }), [1, 1], { id: 'wingneon' });
+  for (const sx of [-0.94, 0.94]) box(tonneau, [sx, 1.08, -2.06], [0.012, 0.09, 0.2], M.CARBON);
+  for (const sx of [-0.55, 0.55]) box(tonneau, [sx, 0.98, -2.0], [0.02, 0.12, 0.05], M.TRIM, 0.25);
   // ---- splitter, diffuser, exhausts, side mirrors
   box(body, [0, 0.235, 2.30], [0.78, 0.012, 0.14], M.CARBON);
   box(body, [0, 0.235, 2.445], [0.78, 0.012, 0.006], M.NEON);
   for (let i = -2; i <= 2; i++) box(body, [i * 0.18, 0.29, -2.12], [0.008, 0.06, 0.2], M.TRIM, -0.2);
   for (const ex of [-0.38, -0.22, 0.22, 0.38]) {
-    lathe(body, [ex, 0.33, -2.38], [[0, 0.052], [0.12, 0.052], [0.12, 0.044], [0.0, 0.044]], 20, M.CHROME, 'z');
-    lathe(body, [ex, 0.33, -2.35], [[0, 0.0], [0, 0.044]], 20, M.ENGNEON, 'z');
+    lathe(exhaust, [ex, 0.33, -2.38], [[0, 0.052], [0.12, 0.052], [0.12, 0.044], [0.0, 0.044]], 28, M.CHROME, 'z');
+    lathe(exhaust, [ex, 0.33, -2.35], [[0, 0.0], [0, 0.044]], 28, M.ENGNEON, 'z');
   }
   // ---- side mirrors: aero housing (paint over carbon), LED repeater, carbon bezel, real mirror glass,
   //      and a swan-neck blade support that grows out of the door top
@@ -790,12 +828,12 @@ function build(opt) {
     tube(sw, [[0, 0, 0.06], [0, 0, 0.30]], 0.03, 12, M.DASH);       // column
   }
   // ---- engine bay + twin-turbo V8 hybrid (visible with the hood open)
-  box(engine, [0, 0.30, 1.56], [0.86, 0.01, 0.58], M.TRIM);
+  box(bay, [0, 0.30, 1.56], [0.86, 0.01, 0.58], M.TRIM);
   // bay walls follow the underside of the hood/fenders so nothing pokes through the bodywork
   const topAt = (z, X) => { for (let v = 0.5; v > 0; v -= 0.002) { const p = bodyPt(uOf(z), v); if (Math.abs(p[0]) >= X) return p[1]; } return 0.6; };
-  for (const sx of [-1, 1]) surface((u, v) => { const z = lerp(0.99, 2.12, u); return [sx * 0.84, lerp(0.30, topAt(z, 0.84) - 0.04, v), z]; }, 16, 2, () => ({ part: engine, mat: M.TRIM }), [1, 1], { id: 'bay' + sx });
-  surface((u, v) => { const x = lerp(-0.84, 0.84, u); return [x, lerp(0.30, topAt(0.99, Math.abs(x)) - 0.04, v), 0.99]; }, 16, 2, () => ({ part: engine, mat: M.TRIM }), [1, 1], { id: 'bayF' });
-  box(engine, [0, 0.42, 2.10], [0.74, 0.11, 0.02], M.GRILLE);                 // radiator
+  for (const sx of [-1, 1]) surface((u, v) => { const z = lerp(0.99, 2.12, u); return [sx * 0.84, lerp(0.30, topAt(z, 0.84) - 0.04, v), z]; }, 16, 2, () => ({ part: bay, mat: M.TRIM }), [1, 1], { id: 'bay' + sx });
+  surface((u, v) => { const x = lerp(-0.84, 0.84, u); return [x, lerp(0.30, topAt(0.99, Math.abs(x)) - 0.04, v), 0.99]; }, 16, 2, () => ({ part: bay, mat: M.TRIM }), [1, 1], { id: 'bayF' });
+  box(bay, [0, 0.42, 2.10], [0.74, 0.11, 0.02], M.GRILLE);                 // radiator
   blob(engine, [0, 0.38, 1.52], [0.24, 0.08, 0.44], 0.2, M.ALU);              // block
   for (const sx of [-1, 1]) {
     blob(engine, [sx * 0.21, 0.47, 1.52], [0.11, 0.05, 0.40], 0.18, M.ALU, 0, 0, 10, 16);
@@ -848,6 +886,63 @@ function build(opt) {
     box(C, [X(0.066), 0.10, -0.10], [0.002, 0.05, 0.02], M.NEON, 0.75);
     wheels[key] = { wheel: W, caliper: C };
   }
+  // ---- KAGE R4-H: quad-rotor Wankel 2.6 L (4 × 654 cc) running on hydrogen, hybrid
+  {
+    const R0 = 0.135, E = 0.022;                      // generating radius / eccentricity of the epitrochoid housing
+    const troch = (t, g) => [(E * Math.cos(3 * t) + R0 * Math.cos(t)) * g, (E * Math.sin(3 * t) + R0 * Math.sin(t)) * g * 0.86];
+    for (let i = 0; i < 4; i++) {
+      const z0 = 1.22 + i * 0.125, cy = 0.44;
+      // housing: extruded epitrochoid (axis along z), long axis vertical
+      surface((u, v) => { const [a, b] = troch(u * Math.PI * 2, 1); return [b, cy + a * 0.92, z0 + v * 0.095]; }, 64, 4, () => ({ part: engineW, mat: M.ALU }), [8, 1], { id: 'rotH' + i });
+      for (const zc of [z0, z0 + 0.095]) surface((u, v) => { const [a, b] = troch(u * Math.PI * 2, 1 - v); return [b, cy + a * 0.92, zc]; }, 64, 2, () => ({ part: engineW, mat: M.ALU }), [1, 1], { id: 'rotF' + i + zc });
+      // glowing side plate between rotors + spark plug pairs
+      surface((u, v) => { const [a, b] = troch(u * Math.PI * 2, 1.04); return [b, cy + a * 0.92, z0 + 0.1 + v * 0.02]; }, 64, 1, () => ({ part: engineW, mat: M.ENGNEON }), [1, 1], { id: 'rotP' + i });
+      for (const sx of [-1, 1]) tube(engineW, [[sx * 0.10, cy + 0.06, z0 + 0.047], [sx * 0.17, cy + 0.09, z0 + 0.047]], 0.009, 8, M.CHROME);
+    }
+    // eccentric shaft nose, flywheel / e-motor
+    lathe(engineW, [0, 0.44, 1.16], [[0, 0.03], [0.06, 0.03]], 20, M.CHROME, 'z');
+    lathe(engineW, [0, 0.44, 1.02], [[0, 0.0], [0, 0.15], [0.12, 0.15], [0.12, 0.0]], 40, M.CARBON, 'z');
+    lathe(engineW, [0, 0.44, 1.141], [[0, 0.11], [0, 0.15]], 40, M.ENGNEON, 'z');
+    // twin carbon-wrapped hydrogen tanks (700 bar) with glowing bands
+    for (const sx of [-1, 1]) {
+      lathe(engineW, [sx * 0.55, 0.46, 1.10], [[0, 0.0], [0.04, 0.09], [0.12, 0.115], [0.78, 0.115], [0.86, 0.09], [0.90, 0.0]], 36, M.CARBON, 'z', 8);
+      for (const zb of [1.30, 1.55, 1.80]) lathe(engineW, [sx * 0.55, 0.46, zb], [[0, 0.117], [0.02, 0.117]], 36, M.ENGNEON, 'z');
+      tube(engineW, [[sx * 0.55, 0.46, 2.0], [sx * 0.40, 0.56, 2.02], [sx * 0.15, 0.58, 1.70]], 0.012, 8, M.CHROME);      // H2 line
+      tube(engineW, [[sx * 0.16, 0.50, 1.30 + 0.12], [sx * 0.30, 0.56, 1.45], [sx * 0.33, 0.52, 1.75]], 0.028, 10, M.CARBON);  // intake runner
+    }
+    box(engineW, [0, 0.60, 1.42], [0.06, 0.02, 0.26], M.CARBON);
+    box(engineW, [0, 0.623, 1.42], [0.04, 0.004, 0.22], M.ENGNEON);
+  }
+  // ---- LEVITA: electromagnetic drive (no combustion, no exhaust): flux core + capacitor banks
+  {
+    lathe(engineE, [0, 0.45, 1.55], [[-0.30, 0.0], [-0.30, 0.16], [-0.26, 0.19], [0.26, 0.19], [0.30, 0.16], [0.30, 0.0]], 48, M.CARBON, 'z', 4);
+    for (let i = 0; i < 9; i++) lathe(engineE, [0, 0.45, 1.31 + i * 0.06], [[0, 0.192], [0.02, 0.192], [0.02, 0.2], [0, 0.2]], 48, i % 2 ? M.ALU : M.ENGNEON, 'z');
+    lathe(engineE, [0, 0.45, 1.86], [[0, 0.0], [0, 0.13], [0.012, 0.13], [0.012, 0.0]], 40, M.ENGNEON, 'z');
+    for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
+      box(engineE, [sx * 0.55, 0.40, 1.20 + i * 0.30], [0.13, 0.08, 0.12], M.TRIM);
+      box(engineE, [sx * 0.55, 0.485, 1.20 + i * 0.30], [0.11, 0.004, 0.10], M.INEON);
+      tube(engineE, [[sx * 0.42, 0.42, 1.20 + i * 0.30], [sx * 0.30, 0.50, 1.30 + i * 0.22], [sx * 0.18, 0.50, 1.40 + i * 0.15]], 0.014, 8, M.ENGNEON);
+    }
+  }
+  // ---- levitation spheres + arch emitters + ground field rings
+  for (const key of ['FL', 'FR', 'RL', 'RR']) {
+    const hub = RIG.wheels[key], Sp = P('sphere' + key, hub), r = RIG.sphere.r;
+    const sph = (u, v, rr) => { const th = (u - 0.5) * Math.PI, ph = v * Math.PI * 2; return [Math.sin(th) * rr, Math.cos(th) * Math.cos(ph) * rr, Math.cos(th) * Math.sin(ph) * rr]; };
+    surface((u, v) => sph(u, v, r), 48, 72, (u, v) => {
+      const lat = Math.abs(u - 0.5);
+      if (lat < 0.012) return { part: Sp, mat: M.NEON, offset: 0.002 };                    // equator light
+      if (Math.abs(lat - 0.16) < 0.008 || Math.abs(lat - 0.30) < 0.006) return { part: Sp, mat: M.ENGNEON, offset: 0.001 };
+      const groove = Math.abs(((v * 24) % 1) - 0.5) < 0.06 && lat < 0.36;
+      return { part: Sp, mat: groove ? M.TRIM : M.TIRE };
+    }, [24, 6], { id: 'sph' + key });
+    const out = hub[0] > 0 ? 1 : -1;
+    surface((u, v) => { const p = sph(0.5 + out * (0.42 + v * 0.08), u, r * 1.002); return p; }, 40, 3, () => ({ part: Sp, mat: M.CHROME }), [1, 1], { id: 'sphc' + key });
+    // emitter ribbon along the top of the arch + glowing field ring on the ground
+    const [W] = station(hub[2]);
+    surface((u, v) => { const a = Math.PI * (0.2 + 0.6 * u), R = ARCH_R - 0.035; return [out * lerp(W * 0.70, W * 0.93, v), Math.min(station(hub[2] + Math.cos(a) * R)[2] - 0.08, 0.36 + Math.sin(a) * R), hub[2] + Math.cos(a) * R]; },
+      32, 2, (u) => ({ part: magPads, mat: Math.floor(u * 12) % 2 ? M.ENGNEON : M.TRIM }), [1, 1], { id: 'mag' + key });
+    surface((u, v) => { const a = u * Math.PI * 2, rr = lerp(0.20, 0.27, v); return [hub[0] + Math.cos(a) * rr * 0.55, 0.012, hub[2] + Math.sin(a) * rr]; }, 48, 1, () => ({ part: magPads, mat: M.NEON }), [1, 1], { id: 'magR' + key });
+  }
   // ---- orient every quad for exporters (two-sided anyway in our shaders) and pack
   const list = Object.values(parts).filter(p => p.pos.length);
   let tris = 0, verts = 0;
@@ -873,7 +968,35 @@ const SPECS = {
   battery: '6,2 kWh · boost elettrico 18 s · ricarica in frenata'
 };
 
-const api = { build, M, MAT_NAMES, RIG, SPECS, bodyPt, station };
+const SPECS_BY = {
+  v8: SPECS,
+  wankel: Object.assign({}, SPECS, {
+    name: 'AMPY KAGE GT R4-H',
+    engine: 'Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale',
+    power: '860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min',
+    torque: '1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)',
+    redline: '10.500 giri/min',
+    accel: '0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s',
+    vmax: '352 km/h (con N₂O) · 268 km/h senza boost',
+    weight: '1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)',
+    battery: '5,0 kWh · allo scarico solo vapore acqueo'
+  }),
+  mag: Object.assign({}, SPECS, {
+    name: 'AMPY KAGE GT LEVITA',
+    engine: 'Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati',
+    power: '4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico',
+    torque: '2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)',
+    redline: '22.000 giri/min (motori-sfera)',
+    gearbox: 'Presa diretta · controllo di campo per ogni sfera',
+    accel: '0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s',
+    vmax: '380 km/h (boost di campo) · 290 km/h di serie',
+    weight: '1.480 kg · altezza di levitazione 4 cm',
+    tyres: 'Sfere Ø 670 mm con battistrada in elastomero a grafene',
+    battery: '28 kWh a stato solido · ronzio elettrostatico di serie'
+  })
+};
+const POWER = { v8: 'V8 BITURBO IBRIDO', wankel: 'WANKEL 4 ROTORI H₂', mag: 'LEVITA ELETTRICA' };
+const api = { build, M, MAT_NAMES, RIG, SPECS, SPECS_BY, POWER, bodyPt, station, roofPhases };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;
 root.CarHD = api;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -905,9 +1028,18 @@ const RY = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Arra
 const RZ = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]); };
 
 /** Model matrix of every part for a given state {steer, spin, wheelSteer, hood, doors, steerWheel}. */
+const sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+function roofPhases(r) { return { win: sm(r / 0.2), lid: sm((r - 0.12) / 0.2) * (1 - sm((r - 0.80) / 0.18)), fold: sm((r - 0.25) / 0.25), flip: sm((r - 0.42) / 0.40) }; }
+const about = (p, R) => mul(T(p[0], p[1], p[2]), mul(R, T(-p[0], -p[1], -p[2])));
 function partMatrix(name, rig, car, st) {
   const pv = rig.hood.pivot;
+  const ph = roofPhases(st.roof || 0);
   switch (name) {
+    case 'roofB': return mul(car, about(rig.roof.pivotB, RX(-rig.roof.flip * ph.flip)));
+    case 'roofA': return mul(car, mul(about(rig.roof.pivotB, RX(-rig.roof.flip * ph.flip)), about(rig.roof.joint, RX(-rig.roof.fold * ph.fold))));
+    case 'tonneau': return mul(car, about(rig.tonneau.pivot, RX(rig.tonneau.open * ph.lid)));
+    case 'winL': return mul(partMatrix('doorL', rig, car, st), T(0, -rig.winDrop * ph.win, 0));
+    case 'winR': return mul(partMatrix('doorR', rig, car, st), T(0, -rig.winDrop * ph.win, 0));
     case 'hood': return mul(car, mul(T(pv[0], pv[1], pv[2]), mul(RX(rig.hood.open * st.hood), T(-pv[0], -pv[1], -pv[2]))));
     case 'doorL': case 'doorR': {
       const d = rig[name], k = name === 'doorL' ? st.doorL : st.doorR, p = d.pivot;
@@ -915,6 +1047,11 @@ function partMatrix(name, rig, car, st) {
     }
     case 'steeringWheel': { const p = rig.steering.pivot; return mul(car, mul(T(p[0], p[1], p[2]), mul(RX(rig.steering.tilt), RZ(-st.steerWheel)))); }
     default:
+      if (name.startsWith('sphere')) {
+        const key = name.slice(6), hub = rig.wheels[key], steer = key[0] === 'F' ? st.wheelSteer : 0;
+        const bob = rig.sphere.lift + 0.006 * Math.sin((st.time || 0) * 2.3 + hub[2] * 3 + hub[0]);
+        return mul(car, mul(T(hub[0], hub[1] + bob, hub[2]), mul(RY(steer), RX(st.spin * 0.365 / rig.sphere.r))));
+      }
       if (name.startsWith('wheel') || name.startsWith('caliper')) {
         const key = name.slice(name.startsWith('wheel') ? 5 : 7), hub = rig.wheels[key];
         const steer = key[0] === 'F' ? st.wheelSteer : 0;
@@ -926,6 +1063,12 @@ function partMatrix(name, rig, car, st) {
   }
 }
 
+/** parts hidden for a power unit: 'v8' | 'wankel' | 'mag' */
+const SKIP = {
+  v8: new Set(['engineW', 'engineE', 'magPads', 'sphereFL', 'sphereFR', 'sphereRL', 'sphereRR']),
+  wankel: new Set(['engine', 'engineE', 'magPads', 'sphereFL', 'sphereFR', 'sphereRL', 'sphereRR']),
+  mag: new Set(['engine', 'engineW', 'exhaust', 'wheelFL', 'wheelFR', 'wheelRL', 'wheelRR', 'caliperFL', 'caliperFR', 'caliperRL', 'caliperRR'])
+};
 function CarRender(gl, prog, model) {
   this.gl = gl; this.prog = prog; this.rig = model.rig;
   const buf = (arr, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; };
@@ -945,6 +1088,7 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
   const gl = this.gl, L = this.loc, u = this.prog.u;
   gl.useProgram(this.prog.p);
   gl.uniform1f(u.uGlassPass, pass === 'glass' ? 1 : 0);
+  if (!skip) skip = SKIP[st.power || 'v8'];
   for (const p of this.parts) {
     if (skip && skip.has(p.name)) continue;
     const ib = pass === 'glass' ? p.gidx : p.idx, n = pass === 'glass' ? p.gn : p.n;
@@ -959,7 +1103,7 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
 };
 
 root.CarRender = CarRender;
-root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
+root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix, roofPhases, SKIP };
 })(typeof window !== 'undefined' ? window : globalThis);
 </script>
 <script>/* AMPY KAGE GT — engine simulation, synthesized V8 sound and exhaust effects (smoke + backfire flames).
@@ -970,105 +1114,163 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
   const ENG = {
     idle: 900, red: 8900, limiter: 9100,
     ratios: [3.30, 2.35, 1.80, 1.45, 1.20, 1.02, 0.88, 0.76], final: 4.70, wheelR: 0.365,
-    tips: [[-0.38, 0.33, -2.40], [-0.22, 0.33, -2.40], [0.22, 0.33, -2.40], [0.38, 0.33, -2.40]]
+    tips: [[-0.38, 0.33, -2.40], [-0.22, 0.33, -2.40], [0.22, 0.33, -2.40], [0.38, 0.33, -2.40]],
+    hubs: [[-0.92, 0.36, 1.42], [0.92, 0.36, 1.42], [-0.92, 0.36, -1.45], [0.92, 0.36, -1.45]]
+  };
+  /* power units: V8 biturbo hybrid, quad-rotor Wankel on hydrogen (hybrid), LEVITA electromagnetic (no gears) */
+  const TYPES = {
+    v8: { idle: 900, red: 8900, limiter: 9100, final: 4.70, gears: true },
+    wankel: { idle: 1150, red: 10200, limiter: 10500, final: 5.40, gears: true },
+    mag: { idle: 600, red: 21000, limiter: 22000, final: 0, gears: false }
   };
   let seed = 12345;
   const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
 
   /* ------------------------------------------------------------------ engine state */
-  function EngineSim() {
-    this.rpm = ENG.idle; this.gear = 0; this.load = 0; this.boost = 0; this.shift = 0;
+  function EngineSim(type) {
+    this.setType(type || 'v8');
+    this.rpm = this.T.idle; this.gear = 0; this.load = 0; this.boost = 0; this.shift = 0;
     this.thr = 0; this.prevThr = 0; this.crackle = 0; this.crackleT = 0; this.cut = 0;
     this.pops = 0;          // pops fired this frame (consumed by sound + fx)
     this.popStrength = 0;
   }
+  EngineSim.prototype.setType = function (t) { this.type = TYPES[t] ? t : 'v8'; this.T = TYPES[this.type]; };
   EngineSim.prototype.firePop = function (s) { this.pops++; this.popStrength = Math.max(this.popStrength, s); };
   /** o: { speed (m/s, along the car), throttle 0..1, boost bool, free bool (neutral: showroom revs) } */
   EngineSim.prototype.update = function (dt, o) {
     this.pops = 0; this.popStrength = 0;
+    const T = this.T, idle = T.idle;
     const thrIn = Math.max(0, Math.min(1, o.throttle || 0));
     this.thr += (thrIn - this.thr) * Math.min(1, dt * (thrIn > this.thr ? 14 : 9));
     let target;
-    if (o.free) {
+    const v = Math.abs(o.speed || 0), wheelRpm = v / (2 * Math.PI * ENG.wheelR) * 60;
+    if (!T.gears) {
+      // electromagnetic: motor speed follows the spheres; free = spinning the field up in the showroom
+      target = o.free ? idle + Math.pow(this.thr, 1.1) * (T.limiter - idle) : Math.max(idle + this.thr * 2500, wheelRpm * 6.9);
+      this.rpm += (target - this.rpm) * Math.min(1, dt * (target > this.rpm ? 4 : 2));
+      this.gear = -2;
+    } else if (o.free) {
       // neutral: the engine spins up fast and falls back with its own inertia
-      target = ENG.idle + Math.pow(this.thr, 1.15) * (ENG.limiter + 200 - ENG.idle);
-      const k = target > this.rpm ? 7.5 : 2.6;
+      target = idle + Math.pow(this.thr, 1.15) * (T.limiter + 200 - idle);
+      const k = target > this.rpm ? (this.type === 'wankel' ? 9.5 : 7.5) : (this.type === 'wankel' ? 3.4 : 2.6);
       this.rpm += (target - this.rpm) * Math.min(1, dt * k);
       this.gear = -1;
     } else {
-      const v = Math.abs(o.speed || 0), wheelRpm = v / (2 * Math.PI * ENG.wheelR) * 60;
       if (this.gear < 0) this.gear = 0;
-      let r = wheelRpm * ENG.ratios[this.gear] * ENG.final;
+      let r = wheelRpm * ENG.ratios[this.gear] * T.final;
       if (this.shift <= 0) {
-        if (r > ENG.red - 250 && this.gear < 7) { this.gear++; this.shift = 0.14; if (this.thr > 0.6) this.firePop(0.9); }
-        else if (this.gear > 0 && r < 3300) { this.gear--; this.shift = 0.10; }
+        if (r > T.red - 250 && this.gear < 7) { this.gear++; this.shift = 0.14; if (this.thr > 0.6) this.firePop(0.9); }
+        else if (this.gear > 0 && r < T.red * 0.37) { this.gear--; this.shift = 0.10; }
       }
-      r = wheelRpm * ENG.ratios[this.gear] * ENG.final;
-      // clutch slip at low speed: the revs stay up with the throttle
+      r = wheelRpm * ENG.ratios[this.gear] * T.final;
       const slip = Math.max(0, 1 - v / 9);
-      target = Math.max(ENG.idle + this.thr * 600, r, ENG.idle + slip * this.thr * 3600);
+      target = Math.max(idle + this.thr * 600, r, idle + slip * this.thr * T.red * 0.4);
       if (this.shift > 0) { this.shift -= dt; target *= 0.93; }
       this.rpm += (target - this.rpm) * Math.min(1, dt * 12);
     }
-    // rev limiter: fuel cut bounces the needle and spits pops
     if (this.cut > 0) this.cut -= dt;
-    if (this.rpm > ENG.limiter) { this.rpm = ENG.limiter - 350; this.cut = 0.06; if (rnd() < 0.6) this.firePop(0.55); }
-    this.rpm = Math.max(ENG.idle * 0.92, this.rpm);
+    if (T.gears && this.rpm > T.limiter) { this.rpm = T.limiter - 350; this.cut = 0.06; if (rnd() < 0.6) this.firePop(0.55); }
+    this.rpm = Math.max(idle * 0.92, this.rpm);
     this.load = this.cut > 0 ? 0 : this.thr;
-    const boostT = o.boost ? 1 : Math.max(0, (this.rpm - 2500) / 6000) * this.thr;
+    const boostT = o.boost ? 1 : Math.max(0, (this.rpm - idle * 2.6) / (T.red * 0.68)) * this.thr;
     this.boost += (boostT - this.boost) * Math.min(1, dt * 3);
-    // overrun crackle: lifting off at high revs lights the unburnt fuel in the hot exhaust
-    if (this.thr > 0.6 && this.rpm > 4200) this.armed = true;          // latched: we were on the throttle at high revs
-    if (this.armed && this.thr < 0.3) { this.armed = false; if (this.rpm > 3800) { this.crackle = 0.55 + rnd() * 0.6; this.crackleT = 0.02; this.firePop(1); } }
+    this.speed = v;
+    // overrun crackle (combustion) / field discharge zaps (LEVITA)
+    const hi = T.red * 0.47;
+    if (this.thr > 0.6 && this.rpm > hi) this.armed = true;
+    if (this.armed && this.thr < 0.3) { this.armed = false; if (this.rpm > hi * 0.9) { this.crackle = 0.55 + rnd() * 0.6; this.crackleT = 0.02; this.firePop(1); } }
     if (this.crackle > 0) {
       this.crackle -= dt; this.crackleT -= dt;
-      if (this.crackleT <= 0 && this.thr < 0.3 && this.rpm > 2400) { this.firePop(0.35 + rnd() * 0.65); this.crackleT = 0.03 + rnd() * 0.11; }
+      if (this.crackleT <= 0 && this.thr < 0.3 && this.rpm > T.red * 0.27) { this.firePop(0.35 + rnd() * 0.65); this.crackleT = 0.03 + rnd() * 0.11; }
     }
     return this;
   };
 
   /* ------------------------------------------------------------------ synthesizer (same as EngineSound.java) */
   const PAT = [1.0, 0.68, 0.94, 0.58, 0.9, 0.74, 1.0, 0.55];   // cross-plane V8 firing unevenness → burble
-  function EngineSynth(sr) {
+  function EngineSynth(sr, type) {
+    this.type = type || 'v8'; this.lump = 1; this.zap = 0; this.zph = 0; this.hum = 0; this.eph = 0; this.crk = 0; this.bp1 = 0; this.bp2 = 0;
     this.sr = sr; this.ph = 0; this.cyl = 0; this.amp = 0; this.rpm = ENG.idle; this.load = 0; this.boost = 0;
     this.low = 0; this.band = 0; this.low2 = 0; this.tph = 0; this.hiss = 0;
     this.popEnv = 0; this.popPh = 0; this.popQ = 0; this.popGap = 0; this.popAmp = 0; this.vol = 0.8; this.n = 1;
   }
   EngineSynth.prototype.noise = function () { this.n = (this.n * 16807) % 2147483647; return this.n / 1073741823.5 - 1; };
-  EngineSynth.prototype.render = function (out, rpmT, loadT, boostT, pops, popS) {
-    const sr = this.sr, len = out.length;
+  EngineSynth.prototype.render = function (out, rpmT, loadT, boostT, pops, popS, speed) {
     if (pops > 0) { this.popQ += pops; this.popAmp = Math.max(this.popAmp, popS); }
+    if (this.type === 'mag') return this.renderMag(out, rpmT, loadT, boostT, speed || 0);
+    const sr = this.sr, len = out.length, W = this.type === 'wankel';
     for (let i = 0; i < len; i++) {
-      this.rpm += (rpmT - this.rpm) * 0.0016; this.load += (loadT - this.load) * 0.002; this.boost += (boostT - this.boost) * 0.0008;
+      this.rpm += (rpmT - this.rpm) * (W ? 0.0022 : 0.0016); this.load += (loadT - this.load) * 0.002; this.boost += (boostT - this.boost) * 0.0008;
       const rpm = this.rpm, load = this.load;
-      this.ph += rpm / 60 * 4 / sr;                       // 4 firings per revolution
+      this.ph += rpm / 60 * 4 / sr;                       // V8: 4 firings / rev · quad rotor: 4 rotor faces / rev, evenly spaced
       if (this.ph >= 1) {
         this.ph -= 1; this.cyl = (this.cyl + 1) & 7;
-        this.amp = PAT[this.cyl] * (0.42 + 0.58 * load) * (0.9 + 0.2 * (this.noise() * 0.5 + 0.5));
+        if (W) {
+          // bridge-ported rotary: lumpy "brap-brap" idle that smooths out with revs and load
+          const lumpy = Math.max(0, 1 - (rpm - 1100) / 2500) * (1 - load);
+          if ((this.cyl & 3) === 0) this.lump = 1 - lumpy * (0.55 + 0.45 * (this.noise() * 0.5 + 0.5));
+          this.amp = (0.5 + 0.5 * load) * this.lump * (0.95 + 0.1 * (this.noise() * 0.5 + 0.5));
+        } else this.amp = PAT[this.cyl] * (0.42 + 0.58 * load) * (0.9 + 0.2 * (this.noise() * 0.5 + 0.5));
       }
       const p = this.ph, a = this.amp;
-      let x = a * (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6;
-      x += this.noise() * a * Math.exp(-p * 4) * (0.12 + 0.4 * load);
-      // exhaust resonance (state-variable filter), opens with revs and throttle
-      const fc = Math.min(sr * 0.2, 110 + rpm * 0.085 + load * 1100);
+      let x;
+      if (W) {
+        x = a * (Math.exp(-p * 2.6) - Math.exp(-p * 70)) * 1.25 - a * 0.25;   // sharp sawtooth-like exhaust port opening: the rotary buzz
+        x += this.noise() * a * Math.exp(-p * 3) * (0.2 + 0.55 * load);
+      } else {
+        x = a * (Math.exp(-p * 6) - Math.exp(-p * 38)) * 1.6;
+        x += this.noise() * a * Math.exp(-p * 4) * (0.12 + 0.4 * load);
+      }
+      const fc = Math.min(sr * 0.22, W ? 220 + rpm * 0.13 + load * 1700 : 110 + rpm * 0.085 + load * 1100);
       const f1 = 2 * Math.sin(Math.PI * fc / sr);
-      this.low += f1 * this.band; const high = x - this.low - 0.55 * this.band; this.band += f1 * high;
-      // muffler body: heavy low pass for the deep rumble
-      this.low2 += (x - this.low2) * (2 * Math.PI * 70 / sr);
-      let y = this.low * 0.85 + this.band * 0.35 + this.low2 * 1.4;
-      // turbo whistle + blow-off hiss
+      this.low += f1 * this.band; const high = x - this.low - (W ? 0.42 : 0.55) * this.band; this.band += f1 * high;
+      this.low2 += (x - this.low2) * (2 * Math.PI * (W ? 110 : 70) / sr);
+      let y = this.low * 0.85 + this.band * (W ? 0.5 : 0.35) + this.low2 * (W ? 0.8 : 1.4);
       this.tph += (2200 + rpm * 0.55) / sr; if (this.tph > 1) this.tph -= 1;
       y += Math.sin(this.tph * 6.2831853) * 0.035 * this.boost * (0.3 + load);
       this.hiss += (this.noise() - this.hiss) * 0.25; y += this.hiss * 0.03 * this.boost * (1 - load);
-      // backfire pops: sharp crack + low thump
-      if (this.popEnv < 0.05 && this.popQ > 0 && this.popGap <= 0) { this.popQ--; this.popEnv = 0.6 + 0.4 * this.popAmp; this.popPh = 0; this.popGap = sr * 0.025; if (this.popQ === 0) this.popAmp = 0; }
+      if (W) {   // hybrid e-motor whine on top of the rotors
+        this.eph += (600 + (speed || 0) * 95) / sr; if (this.eph > 1) this.eph -= 1;
+        y += Math.sin(this.eph * 6.2831853) * 0.03 * Math.min(1, (speed || 0) / 20 + load * 0.3);
+      }
+      if (this.popEnv < 0.05 && this.popQ > 0 && this.popGap <= 0) { this.popQ--; this.popEnv = 0.6 + 0.4 * this.popAmp; this.popPh = 0; this.popGap = sr * (W ? 0.018 : 0.025); if (this.popQ === 0) this.popAmp = 0; }
       if (this.popGap > 0) this.popGap--;
       if (this.popEnv > 0.001) {
-        this.popPh += 85 / sr;
-        y += this.popEnv * (this.noise() * 0.9 + Math.sin(this.popPh * 6.2831853) * 0.9);
-        this.popEnv *= 1 - 32 / sr * 1.0;
+        this.popPh += (W ? 140 : 85) / sr;
+        y += this.popEnv * (this.noise() * (W ? 1.1 : 0.9) + Math.sin(this.popPh * 6.2831853) * (W ? 0.6 : 0.9));
+        this.popEnv *= 1 - (W ? 45 : 32) / sr;
       }
       out[i] = Math.tanh(y * 1.1) * this.vol;
+    }
+  };
+  /* LEVITA: electrostatic hum (100 Hz buzz + harmonics), rising field whine, crackling micro-discharges, zaps */
+  EngineSynth.prototype.renderMag = function (out, rpmT, loadT, boostT, speed) {
+    const sr = this.sr, len = out.length;
+    for (let i = 0; i < len; i++) {
+      this.rpm += (rpmT - this.rpm) * 0.0012; this.load += (loadT - this.load) * 0.002; this.boost += (boostT - this.boost) * 0.001;
+      const k = Math.min(1, this.rpm / 22000), load = this.load;
+      this.hum += 100 / sr; if (this.hum > 1) this.hum -= 1;
+      const h = this.hum * 6.2831853;
+      // mains-like buzz: odd-rich, slightly clipped, swelling with the field strength
+      let buzz = Math.sin(h) + 0.55 * Math.sin(2 * h + 0.3) + 0.4 * Math.sin(3 * h) + 0.22 * Math.sin(5 * h + 1.1) + 0.12 * Math.sin(7 * h);
+      buzz = Math.tanh(buzz * 1.6) * (0.16 + 0.22 * k + 0.12 * load);
+      // field whine: two detuned sines gliding up with the sphere speed
+      this.eph += (180 + this.rpm * 0.075) / sr; if (this.eph > 1) this.eph -= 1;
+      this.zph += (183 + this.rpm * 0.0756) / sr; if (this.zph > 1) this.zph -= 1;
+      const whine = (Math.sin(this.eph * 6.2831853) + Math.sin(this.zph * 6.2831853 * 2) * 0.4) * (0.03 + 0.10 * k) * (0.6 + 0.4 * load);
+      // crackle: sparse micro-discharges, more under load
+      if (this.noise() * 0.5 + 0.5 < (3 + load * 45 + k * 20) / sr) this.crk = 0.6 + 0.4 * (this.noise() * 0.5 + 0.5);
+      const n = this.noise();
+      this.bp1 += (n - this.bp1) * 0.45; const hp = n - this.bp1;
+      let y = buzz + whine + hp * this.crk * 0.5 + this.hiss * 0.02;
+      this.hiss += (n - this.hiss) * 0.1;
+      this.crk *= 1 - 400 / sr;
+      // big zaps on throttle lift (field discharge)
+      if (this.zap < 0.05 && this.popQ > 0 && this.popGap <= 0) { this.popQ--; this.zap = 0.7 + 0.3 * this.popAmp; this.popGap = sr * 0.03; if (this.popQ === 0) this.popAmp = 0; }
+      if (this.popGap > 0) this.popGap--;
+      if (this.zap > 0.001) { this.popPh += (900 + 2400 * this.zap) / sr; y += this.zap * (hp * 1.2 + Math.sign(Math.sin(this.popPh * 6.2831853)) * 0.25); this.zap *= 1 - 60 / sr; }
+      this.low2 += (y - this.low2) * 0.5;
+      out[i] = Math.tanh(this.low2 * 1.3) * this.vol;
     }
   };
 
@@ -1078,14 +1280,15 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     const ctx = this.ctx = new AC();
-    const syn = this.syn = new EngineSynth(ctx.sampleRate);
+    const syn = this.syn = new EngineSynth(ctx.sampleRate, this.type || 'v8');
     const node = ctx.createScriptProcessor(1024, 0, 1);
     const pend = { pops: 0, s: 0 }; this.pend = pend;
     node.onaudioprocess = (e) => {
       const out = e.outputBuffer.getChannelData(0), s = this.sim;
       if (!s || !this.on) { out.fill(0); return; }
       syn.vol = this.master;
-      syn.render(out, s.rpm, s.load, s.boost, pend.pops, pend.s); pend.pops = 0; pend.s = 0;
+      if (syn.type !== s.type) { syn.type = s.type; syn.rpm = s.rpm; }
+      syn.render(out, s.rpm, s.load, s.boost, pend.pops, pend.s, s.speed || 0); pend.pops = 0; pend.s = 0;
     };
     node.connect(ctx.destination); this.node = node;
   };
@@ -1098,8 +1301,9 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
   function ExhaustFX(max) { this.max = max || 700; this.p = []; this.data = new Float32Array(this.max * STRIDE); this.smokeN = 0; this.flameN = 0; this.acc = 0; }
   ExhaustFX.prototype.shift = function (dx, dy, dz) { for (const q of this.p) { q.x += dx; q.y += dy; q.z += dz; } };
   /** tips: world positions of the 4 pipes; dir: world exhaust direction (unit); vel: car velocity (m/s) */
-  ExhaustFX.prototype.update = function (dt, tips, dir, vel, sim) {
-    const P = this.p, speed = Math.hypot(vel[0], vel[2]);
+  ExhaustFX.prototype.update = function (dt, tips, dir, vel, sim, hubs) {
+    const P = this.p, speed = Math.hypot(vel[0], vel[2]), ty = sim.type || 'v8', H2 = ty === 'wankel';
+    if (ty === 'mag') { this.sparks(dt, hubs || [], vel, sim); return this.integrate(dt); }
     // smoke: light haze at idle, thicker under load, thinner at speed (it is spread out by the airflow)
     const rate = sim.off ? 0 : (6 + sim.load * 22 + Math.max(0, sim.rpm - 3000) / 6000 * 6) / (1 + speed * 0.06);
     this.acc += rate * dt;
@@ -1111,7 +1315,7 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
         P.push({ k: 0, x: t[0] + (rnd() - 0.5) * 0.03, y: t[1] + (rnd() - 0.5) * 0.03, z: t[2] + (rnd() - 0.5) * 0.03,
           vx: vel[0] + dir[0] * ex + (rnd() - 0.5) * 0.3, vy: vel[1] + dir[1] * ex + 0.15 + rnd() * 0.2, vz: vel[2] + dir[2] * ex + (rnd() - 0.5) * 0.3,
           age: 0, life: 1.3 + rnd() * 1.3 - Math.min(0.8, speed * 0.02), s0: 0.07, s1: 0.75 + rnd() * 0.55 + sim.load * 0.4,
-          c: 0.55 + rnd() * 0.15 - sim.load * 0.12, a: 0.13 + sim.load * 0.08, seed: rnd() });
+          c: H2 ? 0.86 + rnd() * 0.1 : 0.55 + rnd() * 0.15 - sim.load * 0.12, a: H2 ? 0.08 + sim.load * 0.05 : 0.13 + sim.load * 0.08, seed: rnd() });
       }
     }
     // flames for every pop
@@ -1124,12 +1328,31 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
           const ex = 3 + rnd() * 5 * st, off = rnd() * 0.12;
           P.push({ k: 1, x: t[0] + dir[0] * off, y: t[1] + dir[1] * off, z: t[2] + dir[2] * off,
             vx: vel[0] + dir[0] * ex + (rnd() - 0.5) * 0.8, vy: vel[1] + dir[1] * ex + (rnd() - 0.3) * 0.6, vz: vel[2] + dir[2] * ex + (rnd() - 0.5) * 0.8,
-            age: 0, life: 0.05 + rnd() * 0.09 * (0.6 + st), s0: 0.06 + 0.07 * st, s1: 0.13 + 0.17 * st * rnd(), seed: rnd(), hot: rnd() });
+            age: 0, life: 0.05 + rnd() * 0.09 * (0.6 + st), s0: 0.06 + 0.07 * st, s1: 0.13 + 0.17 * st * rnd(), seed: rnd(), hot: rnd(), h2: H2 });
         }
         if (P.length < this.max) P.push({ k: 0, x: t[0], y: t[1], z: t[2], vx: vel[0] + dir[0] * 2, vy: vel[1] + 0.3, vz: vel[2] + dir[2] * 2, age: 0, life: 0.9 + rnd() * 0.6,
-          s0: 0.15, s1: 0.9, c: 0.3, a: 0.32, seed: rnd() });
+          s0: 0.15, s1: 0.9, c: H2 ? 0.9 : 0.3, a: H2 ? 0.16 : 0.32, seed: rnd() });
       }
     }
+    this.integrate(dt);
+  };
+  /* LEVITA: blue-white sparks crawling between the spheres and the arch emitters; bursts on discharges */
+  ExhaustFX.prototype.sparks = function (dt, hubs, vel, sim) {
+    const P = this.p, k = Math.min(1, sim.rpm / 22000);
+    this.acc += (4 + sim.load * 30 + k * 12) * dt;
+    const burst = sim.pops > 0 ? 6 + Math.floor(sim.popStrength * 10) : 0;
+    const emit = (h, big) => {
+      if (P.length >= this.max) return;
+      const a = rnd() * Math.PI * 2, r = 0.30 + rnd() * 0.06, ring = rnd() < 0.5;
+      const x = h[0] + (ring ? Math.cos(a) * 0.15 : (rnd() - 0.5) * 0.25), y = ring ? 0.03 : h[1] + Math.sin(a) * r * 0.9 + 0.04, z = h[2] + (ring ? Math.sin(a) * r * 0.8 : Math.cos(a) * r);
+      P.push({ k: 1, x, y, z, vx: vel[0] * 0.9 + (rnd() - 0.5) * 1.5, vy: (rnd() - 0.3) * 1.2, vz: vel[2] * 0.9 + (rnd() - 0.5) * 1.5,
+        age: 0, life: 0.04 + rnd() * (big ? 0.16 : 0.08), s0: big ? 0.08 : 0.04, s1: big ? 0.02 : 0.01, seed: rnd(), hot: 1, mag: true });
+    };
+    while (this.acc >= 1) { this.acc -= 1; emit(hubs[Math.floor(rnd() * hubs.length)] || [0, 0.4, 0], false); }
+    for (let i = 0; i < burst; i++) for (const h of hubs) emit(h, true);
+  };
+  ExhaustFX.prototype.integrate = function (dt) {
+    const P = this.p;
     // integrate: air drag pulls the gas to rest in the world, smoke rises a little
     let sN = 0, fN = 0;
     const d = this.data;
@@ -1151,8 +1374,10 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
         d[o + 3] = q.c; d[o + 4] = q.c; d[o + 5] = q.c * 1.05; d[o + 6] = a;
         d[o + 7] = q.s0 + (q.s1 - q.s0) * Math.sqrt(f); d[o + 8] = 0 + q.seed * 0.9; sN++;
       } else {
-        // white-blue at birth → orange → dark red
-        const r = 1.0, g = 0.5 - f * 0.32 + q.hot * 0.12, b = Math.max(0, 0.35 - f * 1.6) + 0.03;
+        // white-blue at birth → orange → dark red · hydrogen: pale violet-blue · LEVITA sparks: electric blue-white
+        let r = 1.0, g = 0.5 - f * 0.32 + q.hot * 0.12, b = Math.max(0, 0.35 - f * 1.6) + 0.03;
+        if (q.h2) { r = 0.35 + 0.25 * (1 - f); g = 0.45 + 0.2 * (1 - f); b = 1.0; }
+        if (q.mag) { r = 0.55 + 0.45 * (1 - f); g = 0.8 + 0.2 * (1 - f); b = 1.0; }
         d[o + 3] = r; d[o + 4] = g; d[o + 5] = b; d[o + 6] = 0.75 * (1 - f) * (1 - f * 0.5);
         d[o + 7] = q.s0 + (q.s1 - q.s0) * f; d[o + 8] = 1 + q.seed * 0.9; fN++;
       }
@@ -1182,13 +1407,13 @@ root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
   /** car model matrix (column major) → world tips + exhaust direction */
   function tipsFrom(M) {
     const tr = (x, y, z) => [M[0] * x + M[4] * y + M[8] * z + M[12], M[1] * x + M[5] * y + M[9] * z + M[13], M[2] * x + M[6] * y + M[10] * z + M[14]];
-    const tips = ENG.tips.map(t => tr(t[0], t[1], t[2]));
+    const tips = ENG.tips.map(t => tr(t[0], t[1], t[2])), hubs = ENG.hubs.map(t => tr(t[0], t[1] + 0.04, t[2]));
     const dir = [-M[8], -M[9] + 0.04, -M[10]];
     const l = Math.hypot(dir[0], dir[1], dir[2]) || 1;
-    return { tips, dir: [dir[0] / l, dir[1] / l, dir[2] / l] };
+    return { tips, hubs, dir: [dir[0] / l, dir[1] / l, dir[2] / l] };
   }
 
-  const api = { ENG, EngineSim, EngineSynth, EngineAudio, ExhaustFX, ExhaustGL, tipsFrom };
+  const api = { ENG, TYPES, EngineSim, EngineSynth, EngineAudio, ExhaustFX, ExhaustGL, tipsFrom };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.EngineFX = api;
 })(typeof window !== 'undefined' ? window : this);
@@ -1227,8 +1452,9 @@ function Showroom(canvas, opts) {
   const b = (arr, ix) => { const x = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, x); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return x; };
   this.quad = { a: b([-1, -1, 1, -1, 1, 1, -1, 1]), i: b([0, 1, 2, 0, 2, 3], true) };
   this.ground = { a: b([-40, -40, 40, -40, 40, 40, -40, 40]), i: b([0, 1, 2, 0, 2, 3], true) };
-  this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0 };
-  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0 };
+  this.st = { hood: 0, doorL: 0, doorR: 0, wheelSteer: 0, steerWheel: 0, spin: 0, roof: 0, power: opts.power || 'v8', time: 0 };
+  this.tg = { hood: 0, doors: 0, steerDemo: false, lights: 1, engine: true, rev: 0, roof: 0 };
+  this.eng.setType(this.st.power);
   this.cam = { yaw: 0.7, pitch: 0.18, dist: 7.2, mode: 'orbit', auto: true, look: 0, lookP: 0 };
   this.t = 0; this.turn = 0;
 }
@@ -1242,6 +1468,10 @@ Showroom.prototype.frame = function (dt) {
   const pal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   this.t += dt; const t = this.t;
   const ease = (cur, target, k) => cur + (target - cur) * Math.min(1, dt * k);
+  st.time = t; st.power = o.power || 'v8'; if (this.eng.type !== st.power) this.eng.setType(st.power);
+  // the roof moves at constant speed (≈ 14 s like a real folding hard top… shortened to 5 s)
+  st.roof += Math.max(-dt / 5, Math.min(dt / 5, tg.roof - st.roof));
+  if (st.power === 'mag') st.spin += dt * (eng => eng.rpm / 22000 * 9)(this.eng);
   st.hood = ease(st.hood, tg.hood, 3); st.doorL = ease(st.doorL, tg.doors, 2.6); st.doorR = ease(st.doorR, tg.doors, 2.4);
   const steer = tg.steerDemo ? Math.sin(t * 1.4) : 0;
   st.wheelSteer = ease(st.wheelSteer, steer * 0.55, 6); st.steerWheel = ease(st.steerWheel, steer * 2.6, 6);
@@ -1306,7 +1536,7 @@ Showroom.prototype.frame = function (dt) {
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   this.car.draw(carM, st, 'glass');
   const tp = EngineFX.tipsFrom(carM);
-  this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng);
+  this.fx.update(dt, tp.tips, tp.dir, [0, 0, 0], eng, tp.hubs);
   set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov * Math.PI / 360)));
   gl.depthMask(true); gl.disable(gl.BLEND);
 };
@@ -1316,15 +1546,15 @@ window.Showroom = Showroom;
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
-  const o={palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',preserve:q.has('shot')};
+  const o={palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',power:q.get('power')||'v8',preserve:q.has('shot')};
   const cv=document.getElementById('c'); let sr;
   try{ sr=new Showroom(cv,o); }catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
   window.__sr=sr;
   function resize(){ const s=Math.min(devicePixelRatio||1,2); cv.width=Math.round(innerWidth*s); cv.height=Math.round(innerHeight*s); } addEventListener('resize',resize); resize();
   const $=id=>document.getElementById(id);
-  const S=CarHD.SPECS, rows=[['MOTORE',S.engine],['POTENZA',S.power],['COPPIA',S.torque],['REGIME MAX',S.redline],['TRASMISSIONE',S.gearbox],['ACCELERAZIONE',S.accel],
+  let S=CarHD.SPECS_BY[o.power]||CarHD.SPECS; const specs=()=>{ S=CarHD.SPECS_BY[o.power]; const rows=[['MOTORE',S.engine],['POTENZA',S.power],['COPPIA',S.torque],['REGIME MAX',S.redline],['TRASMISSIONE',S.gearbox],['ACCELERAZIONE',S.accel],
     ['VELOCITÀ MAX',S.vmax],['FRENATA',S.braking],['PESO',S.weight],['AERODINAMICA',S.aero],['DIMENSIONI',S.dims],['PNEUMATICI',S.tyres],['BATTERIA',S.battery]];
-  $('specs').innerHTML='<div style="font-size:2.4vmin;letter-spacing:.2em">'+S.name+'</div>'+rows.map(r=>'<b>'+r[0]+'</b>'+r[1]).join('');
+  $('specs').innerHTML='<div style="font-size:2.4vmin;letter-spacing:.2em">'+S.name+'</div>'+rows.map(r=>'<b>'+r[0]+'</b>'+r[1]).join(''); $('title').querySelector('h1').textContent=S.name; }; specs();
   const accent=()=>{ const p=CYBER_PALETTES[o.palette]; document.body.style.setProperty('--a','rgb('+p.neonA.map(v=>v*255|0)+')'); }; accent();
   const tog=(id,on)=>$(id).classList.toggle('on',on);
   const mode=m=>{ sr.cam.mode=sr.cam.mode===m?'orbit':m; tog('bInt',sr.cam.mode==='interior'); tog('bCock',sr.cam.mode==='cockpit'); tog('bEng',sr.cam.mode==='engine');
@@ -1338,6 +1568,9 @@ window.Showroom = Showroom;
   $('bPaint').onclick=()=>{ const ks=Object.keys(CarRenderUtil.PAINTS); o.paint=ks[(ks.indexOf(o.paint)+1)%ks.length]; };
   $('bPal').onclick=()=>{ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; accent(); };
   $('bSpecs').onclick=()=>{ $('specs').classList.toggle('open'); tog('bSpecs',$('specs').classList.contains('open')); };
+  $('bRoof').onclick=()=>{ sr.tg.roof=sr.tg.roof?0:1; $('bRoof').textContent=sr.tg.roof?'CAPOTE: APERTA (SPIDER)':'CAPOTE: CHIUSA'; tog('bRoof',!!sr.tg.roof); };
+  const PW=['v8','wankel','mag']; $('bPower').textContent=CarHD.POWER[o.power];
+  $('bPower').onclick=()=>{ o.power=PW[(PW.indexOf(o.power)+1)%PW.length]; $('bPower').textContent=CarHD.POWER[o.power]; specs(); sr.eng.rpm=sr.eng.T.idle; };
   // engine sound starts with the first touch (browser rule), SU DI GIRI: hold to rev, release for the crackle
   const snd=()=>sr.audio.start(); addEventListener('pointerdown',snd); addEventListener('keydown',snd);
   $('bMotor').onclick=()=>{ sr.tg.engine=!sr.tg.engine; tog('bMotor',sr.tg.engine); $('bMotor').textContent=sr.tg.engine?'MOTORE ON':'MOTORE OFF';
@@ -1362,10 +1595,11 @@ window.Showroom = Showroom;
     if(q.has('mode')) sr.cam.mode=q.get('mode');
     if(q.has('steer')){ sr.st.wheelSteer=0.5; sr.st.steerWheel=2.4; }
     if(q.has('yaw')) sr.cam.yaw=parseFloat(q.get('yaw')); if(q.has('pitch')) sr.cam.pitch=parseFloat(q.get('pitch')); if(q.has('dist')) sr.cam.dist=parseFloat(q.get('dist'));
+    if(q.has('roof')){ sr.tg.roof=sr.st.roof=parseFloat(q.get('roof')); }
     if(q.has('tgt')) sr.cam.tgt=q.get('tgt').split(',').map(parseFloat);
     if(q.has('specs')) $('specs').classList.add('open');
     sr.cam.auto=false;
-    if(q.has('fx')){ const fx=q.get('fx'), M=CarRenderUtil.RY(0), tp=EngineFX.tipsFrom(M), stp=th=>{ sr.eng.update(1/60,{free:true,throttle:th}); sr.fx.update(1/60,tp.tips,tp.dir,[0,0,0],sr.eng); };
+    if(q.has('fx')){ const fx=q.get('fx'), M=CarRenderUtil.RY(0), tp=EngineFX.tipsFrom(M); sr.eng.setType(o.power); const stp=th=>{ sr.eng.update(1/60,{free:true,throttle:th}); sr.fx.update(1/60,tp.tips,tp.dir,[0,0,0],sr.eng,tp.hubs); };
       for(let i=0;i<70;i++) stp(1); for(let i=0;i<4;i++) stp(0); if(fx==='smoke') for(let i=0;i<60;i++) stp(0); else for(let i=0;i<60&&sr.fx.flameN<8;i++) stp(0); sr.turn=0; }
     sr.frame(0.001); window.__done=true; return;
   }

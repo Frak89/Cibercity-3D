@@ -232,8 +232,9 @@ function stepCar(c, inp, dt, city) {
   const fx = Math.sin(c.h), fz = Math.cos(c.h), rx = Math.cos(c.h), rz = -Math.sin(c.h);
   let vF = c.vx * fx + c.vz * fz, vR = c.vx * rx + c.vz * rz;
   const boosting = inp.boost && c.boost > 0.02 && vF > 2;
-  const maxF = boosting ? 95 : 72;
-  if (inp.gas) vF += (boosting ? 30 : 17) * (1 - Math.max(0, vF) / (maxF + 8)) * dt;
+  const pk = c.pk || 1;                           // power unit: V8 1 · Wankel 1.03 · LEVITA 1.1
+  const maxF = (boosting ? 95 : 72) * pk;
+  if (inp.gas) vF += (boosting ? 30 : 17) * (pk * pk) * (1 - Math.max(0, vF) / (maxF + 8)) * dt;
   if (inp.brake) vF -= (vF > 0.5 ? 34 : 10) * dt;
   if (!inp.gas && !inp.brake) vF -= Math.sign(vF) * Math.min(Math.abs(vF), 3.5 * dt);
   vF = Math.max(-14, Math.min(maxF + 5, vF));
@@ -374,7 +375,7 @@ function Game(canvas, hud, opts) {
   if (window.EngineFX) {
     const F = window.EngineFX;
     this.P.fx = prog('particle.vert', 'particle.frag');
-    this.eng = new F.EngineSim(); this.fx = new F.ExhaustFX(700); this.fxgl = new F.ExhaustGL(gl, this.P.fx); this.audio = new F.EngineAudio();
+    this.eng = new F.EngineSim(opts.power || 'v8'); this.fx = new F.ExhaustFX(700); this.fxgl = new F.ExhaustGL(gl, this.P.fx); this.audio = new F.EngineAudio();
     this.fxO = null;
   }
   this.buildCar();
@@ -409,12 +410,14 @@ Game.prototype.frame = function (dt, inp) {
   this.t += dt; const t = this.t;
   this.flash = Math.max(0, this.flash - dt * 3.5);
   if (wx && wx.light > 0) { this.nextFlash -= dt; if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = Math.random() < 0.35 ? 0.15 : 4 + Math.random() * 9; } }
+  this.c.pk = { v8: 1, wankel: 1.03, mag: 1.1 }[o.power || 'v8'] || 1;
   const phys = stepCar(this.c, inp, dt, this.city);
   this.phys = phys;
   const c = this.c;
   const cv = cameraFor(this.view, c, this.cam, dt, t);
   this.cv = cv;
   if (this.eng) {
+    if (this.eng.type !== (o.power || 'v8')) { this.eng.setType(o.power || 'v8'); this.eng.rpm = this.eng.T.idle; }
     this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting });
     this.audio.feed(this.eng);
     // particles live in the camera-relative frame: move them when the camera origin moves (torus-wrapped)
@@ -454,7 +457,8 @@ Game.prototype.frame = function (dt, inp) {
   gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
   gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
   const carM = model(c.h, carRel[0], 0, carRel[2]);
-  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin };
+  this.roof = (this.roof || 0) + Math.max(-dt / 5, Math.min(dt / 5, (o.roof ? 1 : 0) - (this.roof || 0)));
+  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t };
   if (cv.drawCar && this.hd) {
     gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB);
     gl.uniform1f(P.hd.u.uKey, 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
@@ -472,7 +476,7 @@ Game.prototype.frame = function (dt, inp) {
   }
   if (this.eng) {
     const tp = EngineFX.tipsFrom(carM);
-    this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng);
+    this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, tp.hubs);
     gl.useProgram(P.fx.p); set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov / 2)));
     gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   }
@@ -519,11 +523,11 @@ Game.prototype.drawHud = function (inp) {
   g.fillStyle = B; g.fillRect(cx - r, cy + r * 0.95, r * 2 * c.boost, m * 0.012);
   g.font = (m * 0.016 | 0) + 'px monospace'; g.fillStyle = '#ecfcff'; g.fillText('NITRO', cx, cy + r * 0.95 + m * 0.035);
   if (this.eng) {   // rev counter: thin inner arc + gear
-    const e = this.eng, kr = Math.min(1, e.rpm / 9000);
+    const e = this.eng, kr = Math.min(1, e.rpm / e.T.limiter);
     g.lineWidth = m * 0.006; g.strokeStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.arc(cx, cy, r * 0.8, Math.PI * 0.75, Math.PI * 2.25); g.stroke();
-    g.strokeStyle = e.rpm > 8000 ? '#ff3b5c' : B; g.beginPath(); g.arc(cx, cy, r * 0.8, Math.PI * 0.75, Math.PI * (0.75 + 1.5 * kr)); g.stroke();
+    g.strokeStyle = e.rpm > e.T.red * 0.9 ? '#ff3b5c' : B; g.beginPath(); g.arc(cx, cy, r * 0.8, Math.PI * 0.75, Math.PI * (0.75 + 1.5 * kr)); g.stroke();
     g.font = 'bold ' + (m * 0.026 | 0) + 'px monospace'; g.fillStyle = e.rpm > 8000 ? '#ff3b5c' : '#ecfcff';
-    g.fillText((e.gear < 0 ? 'N' : e.gear + 1) + '  ' + (Math.round(e.rpm / 100) * 100), cx, cy - r * 0.38);
+    g.fillText((e.gear === -2 ? 'E' : e.gear < 0 ? 'N' : e.gear + 1) + '  ' + (Math.round(e.rpm / 100) * 100), cx, cy - r * 0.38);
     if (!this.audio.ctx) { g.font = (m * 0.016 | 0) + 'px monospace'; g.fillStyle = 'rgba(236,252,255,0.6)'; g.fillText('🔊 tocca / premi un tasto per il suono', W / 2, H - m * 0.03); }
   }
   // top-left: view + score
@@ -550,7 +554,7 @@ Game.prototype.drawHud = function (inp) {
   g.fillStyle = '#ecfcff'; g.font = (m * 0.016 | 0) + 'px monospace'; g.textAlign = 'center'; g.fillText('N', mx, my - mr + m * 0.022);
   if (this.o.help) {
     g.textAlign = 'left'; g.fillStyle = 'rgba(236,252,255,0.7)'; g.font = (m * 0.017 | 0) + 'px monospace';
-    ['W/↑ accelera · S/↓ frena · A D/← → sterza', 'SPAZIO derapata · SHIFT nitro · C vista', 'P atmosfera · M meteo · V colore auto · B suono · R riparti · H aiuto']
+    ['W/↑ accelera · S/↓ frena · A D/← → sterza', 'SPAZIO derapata · SHIFT nitro · C vista', 'P atmosfera · M meteo · V colore · E propulsione · T capote · B suono · R riparti · H aiuto']
       .forEach((s, i) => g.fillText(s, m * 0.03, H - m * 0.12 + i * m * 0.03));
   }
 };

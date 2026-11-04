@@ -35,7 +35,8 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
     private final ExhaustFx exhaust = new ExhaustFx();
     private Gl.Prog fxProg;
     public volatile boolean engineOn = true;
-    public volatile float rev = 0;
+    public volatile float rev = 0, tRoof = 0;
+    public volatile int power = 0;
     private final float[] body = new float[16];
 
     public ShowroomRenderer(Context c) { ctx = c.getApplicationContext(); }
@@ -72,6 +73,9 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         long now = SystemClock.uptimeMillis();
         float dt = last == 0 ? 1 / 60f : Math.min(0.05f, (now - last) / 1000f);
         last = now; t += dt;
+        eng.setType(power); st.power = power; st.time = t;
+        st.roof += Math.max(-dt / 5, Math.min(dt / 5, tRoof - st.roof));
+        if (power == 2) st.spin += dt * eng.rpm / 22000 * 9;
         eng.off = !engineOn;
         eng.update(dt, 0, rev, false, true);
         Palette pal = Palette.of(palette);

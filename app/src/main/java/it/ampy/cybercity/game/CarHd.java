@@ -27,6 +27,11 @@ public final class CarHd {
     static final float[][] HUBS = {{-0.92f, 0.36f, 1.42f}, {0.92f, 0.36f, 1.42f}, {-0.92f, 0.36f, -1.45f}, {0.92f, 0.36f, -1.45f}};
     static final String[] HUB_KEYS = {"FL", "FR", "RL", "RR"};
     public static final float WHEEL_R = 0.365f;
+    /* spider hard top + levitation spheres (RIG.roof / RIG.tonneau / RIG.sphere) */
+    static final float[] ROOF_PIVOT_B = {0, 0.86f, -1.32f}, ROOF_JOINT = {0, 1.235f, -0.35f}, LID_PIVOT = {0, 0.85f, -2.22f};
+    static final float ROOF_FOLD = (float) Math.PI - 0.08f, ROOF_FLIP = (float) Math.PI - 0.10f, LID_OPEN = -1.15f, WIN_DROP = 0.32f;
+    static final float SPHERE_R = 0.335f, SPHERE_LIFT = 0.04f;
+    private static float sm(float t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
 
     public static final String[] PAINT_KEYS = {"nero", "rosso", "perla", "oro", "ciano", "viola"};
     public static final String[] PAINT_NAMES = {"NERO NEON", "ROSSO CORSA", "BIANCO PERLA", "ORO", "CIANO", "VIOLA"};
@@ -34,11 +39,11 @@ public final class CarHd {
     public static int paintIndex(String k) { for (int i = 0; i < PAINT_KEYS.length; i++) if (PAINT_KEYS[i].equals(k)) return i; return 0; }
 
     /** Animated state (radians / 0..1). */
-    public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin; }
+    public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin, roof, time; public int power; }   // power: 0 V8, 1 Wankel, 2 LEVITA
 
     static final class Part {
         String name; int kind; int hub = -1;          // kind: 0 static, 1 hood, 2 doorL, 3 doorR, 4 wheel, 5 caliper, 6 steering wheel
-        int vPos, vNorm, vUV, vMat, ibo, gibo, n, gn;
+        int vPos, vNorm, vUV, vMat, ibo, gibo, n, gn, mask = 7;
     }
     private final List<Part> parts = new ArrayList<>();
     private Gl.Prog prog;
@@ -71,6 +76,13 @@ public final class CarHd {
             else if (n.startsWith("wheel")) { part.kind = 4; part.hub = hubIndex(n.substring(5)); }
             else if (n.startsWith("caliper")) { part.kind = 5; part.hub = hubIndex(n.substring(7)); }
             else if (n.equals("steeringWheel")) part.kind = 6;
+            else if (n.equals("roofA")) part.kind = 7; else if (n.equals("roofB")) part.kind = 8; else if (n.equals("tonneau")) part.kind = 9;
+            else if (n.equals("winL")) part.kind = 10; else if (n.equals("winR")) part.kind = 11;
+            else if (n.startsWith("sphere")) { part.kind = 12; part.hub = hubIndex(n.substring(6)); }
+            // which power units show this part (bit 0 V8, 1 Wankel, 2 LEVITA)
+            part.mask = 7;
+            if (n.equals("engine")) part.mask = 1; else if (n.equals("engineW")) part.mask = 2; else if (n.equals("engineE") || n.equals("magPads") || part.kind == 12) part.mask = 4;
+            else if (n.equals("exhaust") || part.kind == 4 || part.kind == 5) part.mask = 3;
             parts.add(part);
         }
     }
@@ -117,9 +129,33 @@ public final class CarHd {
         GLES20.glUniform4fv(prog.u("uMatPar"), 20, c4, 0);
     }
 
+    private static void about(float[] m, float[] p, float rad) {
+        Matrix.translateM(m, 0, p[0], p[1], p[2]); Matrix.rotateM(m, 0, (float) Math.toDegrees(rad), 1, 0, 0); Matrix.translateM(m, 0, -p[0], -p[1], -p[2]);
+    }
     private void partMatrix(Part p, float[] car, State s, float[] out) {
         System.arraycopy(car, 0, out, 0, 16);
+        float r = s.roof, win = sm(r / 0.2f), lid = sm((r - 0.12f) / 0.2f) * (1 - sm((r - 0.80f) / 0.18f)), fold = sm((r - 0.25f) / 0.25f), flip = sm((r - 0.42f) / 0.40f);
         switch (p.kind) {
+            case 7: about(out, ROOF_PIVOT_B, -ROOF_FLIP * flip); about(out, ROOF_JOINT, -ROOF_FOLD * fold); return;
+            case 8: about(out, ROOF_PIVOT_B, -ROOF_FLIP * flip); return;
+            case 9: about(out, LID_PIVOT, LID_OPEN * lid); return;
+            case 10: case 11: {
+                float[] pv = p.kind == 10 ? DOOR_L : DOOR_R; float k = p.kind == 10 ? s.doorL : s.doorR, o2 = p.kind == 10 ? DOOR_OUT : -DOOR_OUT;
+                Matrix.translateM(out, 0, pv[0], pv[1], pv[2]);
+                Matrix.rotateM(out, 0, (float) Math.toDegrees(o2 * k), 0, 0, 1);
+                Matrix.rotateM(out, 0, (float) Math.toDegrees(DOOR_OPEN * k), 1, 0, 0);
+                Matrix.translateM(out, 0, -pv[0], -pv[1], -pv[2]);
+                Matrix.translateM(out, 0, 0, -WIN_DROP * win, 0);
+                return;
+            }
+            case 12: {
+                float[] h = HUBS[p.hub];
+                float bob = SPHERE_LIFT + 0.006f * (float) Math.sin(s.time * 2.3f + h[2] * 3 + h[0]);
+                Matrix.translateM(out, 0, h[0], h[1] + bob, h[2]);
+                if (p.hub < 2) Matrix.rotateM(out, 0, (float) Math.toDegrees(s.wheelSteer), 0, 1, 0);
+                Matrix.rotateM(out, 0, (float) Math.toDegrees((s.spin * WHEEL_R / SPHERE_R) % (2 * Math.PI)), 1, 0, 0);
+                return;
+            }
             case 1:
                 Matrix.translateM(out, 0, HOOD_PIVOT[0], HOOD_PIVOT[1], HOOD_PIVOT[2]);
                 Matrix.rotateM(out, 0, (float) Math.toDegrees(HOOD_OPEN * s.hood), 1, 0, 0);
@@ -158,6 +194,7 @@ public final class CarHd {
         for (Part p : parts) {
             int ib = glass ? p.gibo : p.ibo, n = glass ? p.gn : p.n;
             if (ib == 0 || n == 0) continue;
+            if ((p.mask & (1 << s.power)) == 0) continue;
             partMatrix(p, car, s, T);
             GLES20.glUniformMatrix4fv(lm, 1, false, T, 0);
             bind(aPos, p.vPos, 3); bind(aNorm, p.vNorm, 3); bind(aUV, p.vUV, 2); bind(aMat, p.vMat, 1);
@@ -173,20 +210,57 @@ public final class CarHd {
         GLES20.glVertexAttribPointer(loc, size, GLES20.GL_FLOAT, false, 0, 0);
     }
 
-    /* performance sheet (fictional) — same as SPECS in web/car_hd.js */
-    public static final String[][] SPECS = {
-        {"MOTORE", "V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore"},
-        {"POTENZA", "780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min"},
-        {"COPPIA", "1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)"},
-        {"REGIME MAX", "9.000 giri/min"},
-        {"TRASMISSIONE", "Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring"},
-        {"ACCELERAZIONE", "0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s"},
-        {"VELOCITÀ MAX", "345 km/h (con N₂O) · 260 km/h senza boost"},
-        {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
-        {"PESO", "1.420 kg · rapporto peso/potenza 1,42 kg/CV"},
-        {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
-        {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
-        {"PNEUMATICI", "265/30 R21 ant. · 325/25 R22 post."},
-        {"BATTERIA", "6,2 kWh · boost elettrico 18 s · ricarica in frenata"},
+    /* performance sheets (fictional) — generated from SPECS_BY in web/car_hd.js */
+    public static final String[] POWER_KEYS = {"v8", "wankel", "mag"};
+    public static final String[] POWER_NAMES = {"V8 BITURBO IBRIDO", "WANKEL 4 ROTORI H₂", "LEVITA ELETTRICA"};
+    public static final String[] MODEL_NAMES = {"AMPY KAGE GT", "AMPY KAGE GT R4-H", "AMPY KAGE GT LEVITA"};
+    public static int powerIndex(String k) { for (int i = 0; i < 3; i++) if (POWER_KEYS[i].equals(k)) return i; return 0; }
+    public static final String[][][] SPECS_BY = {
+        {
+            {"MOTORE", "V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore"},
+            {"POTENZA", "780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min"},
+            {"COPPIA", "1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)"},
+            {"REGIME MAX", "9.000 giri/min"},
+            {"TRASMISSIONE", "Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring"},
+            {"ACCELERAZIONE", "0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s"},
+            {"VELOCITÀ MAX", "345 km/h (con N₂O) · 260 km/h senza boost"},
+            {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
+            {"PESO", "1.420 kg · rapporto peso/potenza 1,42 kg/CV"},
+            {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
+            {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
+            {"PNEUMATICI", "265/30 R21 ant. · 325/25 R22 post."},
+            {"BATTERIA", "6,2 kWh · boost elettrico 18 s · ricarica in frenata"}
+        },
+        {
+            {"MOTORE", "Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale"},
+            {"POTENZA", "860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min"},
+            {"COPPIA", "1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)"},
+            {"REGIME MAX", "10.500 giri/min"},
+            {"TRASMISSIONE", "Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring"},
+            {"ACCELERAZIONE", "0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s"},
+            {"VELOCITÀ MAX", "352 km/h (con N₂O) · 268 km/h senza boost"},
+            {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
+            {"PESO", "1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)"},
+            {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
+            {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
+            {"PNEUMATICI", "265/30 R21 ant. · 325/25 R22 post."},
+            {"BATTERIA", "5,0 kWh · allo scarico solo vapore acqueo"}
+        },
+        {
+            {"MOTORE", "Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati"},
+            {"POTENZA", "4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico"},
+            {"COPPIA", "2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)"},
+            {"REGIME MAX", "22.000 giri/min (motori-sfera)"},
+            {"TRASMISSIONE", "Presa diretta · controllo di campo per ogni sfera"},
+            {"ACCELERAZIONE", "0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s"},
+            {"VELOCITÀ MAX", "380 km/h (boost di campo) · 290 km/h di serie"},
+            {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
+            {"PESO", "1.480 kg · altezza di levitazione 4 cm"},
+            {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
+            {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
+            {"PNEUMATICI", "Sfere Ø 670 mm con battistrada in elastomero a grafene"},
+            {"BATTERIA", "28 kWh a stato solido · ronzio elettrostatico di serie"}
+        },
     };
+    public static final String[][] SPECS = SPECS_BY[0];
 }

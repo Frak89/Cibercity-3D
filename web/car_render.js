@@ -25,9 +25,18 @@ const RY = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Arra
 const RZ = a => { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]); };
 
 /** Model matrix of every part for a given state {steer, spin, wheelSteer, hood, doors, steerWheel}. */
+const sm = t => { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
+function roofPhases(r) { return { win: sm(r / 0.2), lid: sm((r - 0.12) / 0.2) * (1 - sm((r - 0.80) / 0.18)), fold: sm((r - 0.25) / 0.25), flip: sm((r - 0.42) / 0.40) }; }
+const about = (p, R) => mul(T(p[0], p[1], p[2]), mul(R, T(-p[0], -p[1], -p[2])));
 function partMatrix(name, rig, car, st) {
   const pv = rig.hood.pivot;
+  const ph = roofPhases(st.roof || 0);
   switch (name) {
+    case 'roofB': return mul(car, about(rig.roof.pivotB, RX(-rig.roof.flip * ph.flip)));
+    case 'roofA': return mul(car, mul(about(rig.roof.pivotB, RX(-rig.roof.flip * ph.flip)), about(rig.roof.joint, RX(-rig.roof.fold * ph.fold))));
+    case 'tonneau': return mul(car, about(rig.tonneau.pivot, RX(rig.tonneau.open * ph.lid)));
+    case 'winL': return mul(partMatrix('doorL', rig, car, st), T(0, -rig.winDrop * ph.win, 0));
+    case 'winR': return mul(partMatrix('doorR', rig, car, st), T(0, -rig.winDrop * ph.win, 0));
     case 'hood': return mul(car, mul(T(pv[0], pv[1], pv[2]), mul(RX(rig.hood.open * st.hood), T(-pv[0], -pv[1], -pv[2]))));
     case 'doorL': case 'doorR': {
       const d = rig[name], k = name === 'doorL' ? st.doorL : st.doorR, p = d.pivot;
@@ -35,6 +44,11 @@ function partMatrix(name, rig, car, st) {
     }
     case 'steeringWheel': { const p = rig.steering.pivot; return mul(car, mul(T(p[0], p[1], p[2]), mul(RX(rig.steering.tilt), RZ(-st.steerWheel)))); }
     default:
+      if (name.startsWith('sphere')) {
+        const key = name.slice(6), hub = rig.wheels[key], steer = key[0] === 'F' ? st.wheelSteer : 0;
+        const bob = rig.sphere.lift + 0.006 * Math.sin((st.time || 0) * 2.3 + hub[2] * 3 + hub[0]);
+        return mul(car, mul(T(hub[0], hub[1] + bob, hub[2]), mul(RY(steer), RX(st.spin * 0.365 / rig.sphere.r))));
+      }
       if (name.startsWith('wheel') || name.startsWith('caliper')) {
         const key = name.slice(name.startsWith('wheel') ? 5 : 7), hub = rig.wheels[key];
         const steer = key[0] === 'F' ? st.wheelSteer : 0;
@@ -46,6 +60,12 @@ function partMatrix(name, rig, car, st) {
   }
 }
 
+/** parts hidden for a power unit: 'v8' | 'wankel' | 'mag' */
+const SKIP = {
+  v8: new Set(['engineW', 'engineE', 'magPads', 'sphereFL', 'sphereFR', 'sphereRL', 'sphereRR']),
+  wankel: new Set(['engine', 'engineE', 'magPads', 'sphereFL', 'sphereFR', 'sphereRL', 'sphereRR']),
+  mag: new Set(['engine', 'engineW', 'exhaust', 'wheelFL', 'wheelFR', 'wheelRL', 'wheelRR', 'caliperFL', 'caliperFR', 'caliperRL', 'caliperRR'])
+};
 function CarRender(gl, prog, model) {
   this.gl = gl; this.prog = prog; this.rig = model.rig;
   const buf = (arr, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; };
@@ -65,6 +85,7 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
   const gl = this.gl, L = this.loc, u = this.prog.u;
   gl.useProgram(this.prog.p);
   gl.uniform1f(u.uGlassPass, pass === 'glass' ? 1 : 0);
+  if (!skip) skip = SKIP[st.power || 'v8'];
   for (const p of this.parts) {
     if (skip && skip.has(p.name)) continue;
     const ib = pass === 'glass' ? p.gidx : p.idx, n = pass === 'glass' ? p.gn : p.n;
@@ -79,5 +100,5 @@ CarRender.prototype.draw = function (car, st, pass, skip) {
 };
 
 root.CarRender = CarRender;
-root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix };
+root.CarRenderUtil = { materials, PAINTS, mul, T, RX, RY, RZ, I, partMatrix, roofPhases, SKIP };
 })(typeof window !== 'undefined' ? window : globalThis);
