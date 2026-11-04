@@ -131,11 +131,11 @@ public class GameHud extends View {
         p.setColor(second); c.drawRect(cx - rr, cy + rr * 0.9f, cx - rr + 2 * rr * r.hudBoost, cy + rr * 0.9f + m * 0.014f, p);
         // KAGE CHRONO gauge + era label
         if (r.hudChrono >= 0) {
-            float bw = m * 0.34f, bx = cx - bw / 2, by = cy - rr * 1.55f, k = r.hudChrono;
+            float bw = m * 0.34f, bx = cx - bw / 2, by = cy - rr * 1.55f, kc = r.hudChrono;
             p.setStyle(Paint.Style.FILL); p.setColor(0x1fffffff); c.drawRect(bx, by, bx + bw, by + m * 0.012f, p);
-            p.setColor(accent); p.setShadowLayer(m * 0.02f * k, 0, 0, accent); c.drawRect(bx, by, bx + bw * k, by + m * 0.012f, p); p.clearShadowLayer();
+            p.setColor(accent); p.setShadowLayer(m * 0.02f * kc + 0.01f, 0, 0, accent); c.drawRect(bx, by, bx + bw * kc, by + m * 0.012f, p); p.clearShadowLayer();
             t.setTextAlign(Paint.Align.CENTER); t.setTextSize(m * 0.022f); t.setColor(0xffecfcff);
-            c.drawText(r.hudCool > 0 ? "CRONO · RICARICA" : k > 0 ? "CRONO · TIENI 300 KM/H" : "CRONO · PRONTO A 300 KM/H", cx, by - m * 0.014f, t);
+            c.drawText(r.hudCool > 0 ? "CRONO · RICARICA" : kc > 0 ? "CRONO · TIENI 300 KM/H" : "CRONO · PRONTO A 300 KM/H", cx, by - m * 0.014f, t);
         }
         if (r.hudPast) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.032f); t.setColor(0xfffff6c8); c.drawText("⏳ PRATERIA DEL PASSATO", m * 0.04f, m * 0.2f, t); }
         // minimap
