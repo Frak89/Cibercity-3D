@@ -197,12 +197,20 @@ const zOf = u => lerp(Z0, Z1, u);
 const uOf = z => (z - Z0) / (Z1 - Z0);
 
 // cabin / greenhouse
-const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.55, 1.10], [0.98, 0.795]];
+const CB = [[-1.30, 0.88], [-0.95, 1.16], [-0.40, 1.235], [0.15, 1.235], [0.42, 1.165], [0.98, 0.76]];
 const CZ0 = -1.30, CZ1 = 0.98;
+// monotone cubic (Fritsch–Carlson) through the side-view keys: a fair, wave-free windscreen and roof line
+const CBm = (() => {
+  const n = CB.length, d = [], m = [];
+  for (let i = 0; i < n - 1; i++) d.push((CB[i + 1][1] - CB[i][1]) / (CB[i + 1][0] - CB[i][0]));
+  m.push(d[0]); for (let i = 1; i < n - 1; i++) m.push(d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2); m.push(d[n - 2]);
+  for (let i = 0; i < n - 1; i++) { if (d[i] === 0) { m[i] = m[i + 1] = 0; continue; } const a = m[i] / d[i], b = m[i + 1] / d[i], h = a * a + b * b; if (h > 9) { const t = 3 / Math.sqrt(h); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; } }
+  return m;
+})();
 function roofY(z) {
   let k = 0; while (k < CB.length - 2 && z > CB[k + 1][0]) k++;
-  const a = CB[k], b = CB[k + 1], t = smooth((z - a[0]) / (b[0] - a[0]));
-  return lerp(a[1], b[1], t);
+  const a = CB[k], b = CB[k + 1], h = b[0] - a[0], t = clamp((z - a[0]) / h, 0, 1), t2 = t * t, t3 = t2 * t;
+  return (2 * t3 - 3 * t2 + 1) * a[1] + (t3 - 2 * t2 + t) * h * CBm[k] + (-2 * t3 + 3 * t2) * b[1] + (t3 - t2) * h * CBm[k + 1];
 }
 // height of the body surface where the greenhouse meets it (x = 0.88 W): glass grows out of the body, no slit
 function beltY(z) { const [, , Ys, Yt] = station(z); return Ys + (Yt - Ys) * 0.69 - 0.012; }
@@ -218,7 +226,11 @@ function cabinPt(u, v) {
   const cx = Math.pow(c, 2 / 3.2), sy = Math.pow(sn, 2 / 2.4);
   const w = lerp(Wb, Wr * 1.08, Math.pow(sn, 1.4));
   const bulge = 0.018 * Math.sin(Math.min(1, vv / 0.62) * Math.PI) * (vv < 0.62 ? 1 : 0);   // side glass bows outwards
-  return [side * (w * cx + bulge), yb + (Yr - yb) * sy, z];
+  const pC = [side * (w * cx + bulge), yb + (Yr - yb) * sy, z];
+  // where the canopy would dip under the bodywork (screen base on the cowl, fastback tail) it lies on the skin instead
+  const pB = bodyPt((z - Z0) / (Z1 - Z0), side < 0 ? lerp(0.34, 0.5, vv) : lerp(0.66, 0.5, vv));
+  const wB = smooth((pB[1] + 0.004 - pC[1]) / 0.012 + 0.5);
+  return [lerp(pC[0], pB[0], wB), lerp(pC[1], pB[1] + 0.004, wB), z];
 }
 
 /* ---------------------------------------------------------------- build */
@@ -243,11 +255,8 @@ function build(opt) {
   const TZ0 = snapZ(-2.22), TZ1 = snapZ(-1.32), TV0 = snapVV(0.78);
   const inLid = (z, vv) => z > TZ0 && z < TZ1 && vv > TV0;
   const inHood = (z, vv) => z > HZ0 && z < HZ1 && vv > HV0;
-  const inCabin = (u, v) => {
-    const p = bodyPt(u, v), z = p[2];
-    if (z < CZ0 + 0.03 || z > CZ1 - 0.03) return false;
-    return Math.abs(p[0]) < station(z)[0] * 0.88 - 0.015 && p[1] > 0.78;
-  };
+  const CC0 = snapZ(CZ0 + 0.03), CC1 = snapZ(CZ1 - 0.03), CV = snapVV(0.70);
+  const inCabin = (u, v) => { const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2; return z > CC0 && z < CC1 && vv > CV; };
   // ---- main body loft, cut into body / doors / hood
   surface(bodyPt, NU, NV, (u, v) => {
     const z = zOf(u), vv = v < 0.5 ? v * 2 : (1 - v) * 2, left = v < 0.5;
@@ -340,11 +349,13 @@ function build(opt) {
   // floor
   surface((u, v) => { const p0 = bodyPt(u, 0.0001), p1 = bodyPt(u, 0.9999); return [lerp(p0[0], p1[0], v), Math.min(p0[1], 0.25), p0[2]]; }, 40, 4, () => ({ part: body, mat: M.TRIM }), [1, 1], { id: 'floor' });
   // wheel arch liners
+  // liners follow the local width and always stay under the fender / hood skin (the fenders rise above the hood centre)
+  const skinY = (z, X) => { for (let v = 0.5; v > 0; v -= 0.002) { const p = bodyPt(uOf(z), v); if (Math.abs(p[0]) >= X) return p[1]; } return 0.6; };
   for (const ax of AXLES) for (const sx of [-1, 1]) {
-    const W = station(ax)[0];
-    const Ys = station(ax)[2];
-    surface((u, v) => { const a = Math.PI * u; return [sx * lerp(W * 0.6, W * 0.95, v), Math.min(Ys - 0.07, 0.36 + Math.sin(a) * ARCH_R), ax + Math.cos(a) * ARCH_R]; }, 24, 3,
-      () => ({ part: body, mat: M.TRIM }), [1, 1], { id: 'arch' + ax + sx });
+    surface((u, v) => {
+      const a = Math.PI * u, z = ax + Math.cos(a) * ARCH_R, [W, , Ys] = station(z), x = lerp(W * 0.72, W * 0.94, v);
+      return [sx * x, Math.min(Ys - 0.07, 0.36 + Math.sin(a) * ARCH_R, skinY(z, x) - 0.035), z];
+    }, 32, 4, () => ({ part: body, mat: M.TRIM }), [1, 1], { id: 'arch' + ax + sx });
   }
   // ---- greenhouse: glass + carbon roof + pillars; side windows belong to the doors
   surface(cabinPt, Math.round(70 * q), Math.round(48 * q), (u, v) => {
