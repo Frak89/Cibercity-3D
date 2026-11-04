@@ -73,8 +73,8 @@ final class EngineSim {
                 else if (gear > 0 && g < red * 0.37f) { gear--; shift = 0.10f; }
             }
             g = wheelRpm * RATIOS[gear] * fin;
-            float slip = Math.max(0, 1 - v / 9);
-            target = Math.max(Math.max(idle + thr * 600, g), idle + slip * thr * red * 0.4f);
+            float clutch = Math.max(0, 1 - v / 9);
+            target = Math.max(Math.max(idle + thr * 600, g), idle + clutch * thr * red * 0.4f);
             if (shift > 0) { shift -= dt; target *= 0.93f; }
             r += (target - r) * Math.min(1, dt * 12);
         }
