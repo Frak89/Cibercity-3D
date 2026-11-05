@@ -5,18 +5,41 @@
 const NR = window.NeonRun, U = window.CarRenderUtil;
 const { S, GP, wrapD, isWater } = NR;
 const wrapP = v => ((v % S) + S) % S, wrapA = a => { a = (a + Math.PI) % (Math.PI * 2); if (a < 0) a += Math.PI * 2; return a - Math.PI; };
-const ease = (c, t, k, dt) => c + (t - c) * Math.min(1, dt * k);
+const ease = (c, t, k, dt) => c + (t - c) * Math.min(1, dt * k), PI = Math.PI;
+/** third-person movement: push a direction (stick / WASD) and the pilot turns and walks that way, relative to the camera.
+ *  o[hKey] = pilot heading, o[cKey] = camera heading; returns the target speed. Shared with the starship decks and planets. */
+function dirMove(o, inp, dt, hKey, cKey, run) {
+  const mx = inp.mx || 0, my = inp.my || 0, mag = Math.min(1, Math.hypot(mx, my));
+  o[cKey] = wrapA((o[cKey] || 0) - (inp.cam || 0) * 2.2 * dt);
+  if (mag < 0.15) return 0;
+  const c = o[cKey], vx = Math.sin(c) * my - Math.cos(c) * mx, vz = Math.cos(c) * my + Math.sin(c) * mx, tgt = Math.atan2(vx, vz);
+  const d = wrapA(tgt - o[hKey]); o[hKey] = wrapA(o[hKey] + d * Math.min(1, dt * 10));
+  // the camera swings round behind you while you walk away from it (not when you walk towards it)
+  const back = Math.cos(o[hKey] - c); if (back > 0.2) o[cKey] = wrapA(c + wrapA(o[hKey] - c) * Math.min(1, dt * 1.4 * back));
+  return mag * (run ? 6.2 : 1.9) * Math.max(0.15, Math.cos(d));
+}
 function OnFoot(game) { this.g = game; this.active = false; this.x = 0; this.z = 0; this.y = 0; this.h = 0; this.v = 0; this.vy = 0; this.ph = 0; this.camH = 0; this.air = false; this.t = 0; }
 OnFoot.prototype.canExit = function () { const g = this.g; return !g.veh && !this.active && Math.hypot(g.c.vx, g.c.vz) < 3 && (g.c.y || 0) < 0.5; };
 OnFoot.prototype.nearCar = function () { const c = this.g.c; return Math.hypot(wrapD(c.x - this.x), wrapD(c.z - this.z)) < 3.6; };
 OnFoot.prototype.toggle = function () {
   const g = this.g, c = g.c;
-  if (this.active) { if (this.nearCar()) { this.active = false; g.cam.h = c.h; } return; }
+  const F = g.fleet;
+  if (this.trans) return;
+  if (this.active) {
+    if (F && F.nearParked()) { F.enterParked(); return; }
+    if (this.nearCar()) {   // walk to the open door, then sit in
+      const dx = c.x - Math.cos(c.h) * 1.05, dz = c.z + Math.sin(c.h) * 1.05;
+      this.trans = { t: 0, dur: 0.75, a: [this.x, 0, this.z], b: [wrapP(dx), 0, wrapP(dz)], into: true }; this.h = Math.atan2(wrapD(dx - this.x), wrapD(dz - this.z)); g.doorT = 1.8;
+    }
+    return; }
   if (!this.canExit()) return;
-  // out of the driver's door (the driver sits on the car's -x side)
-  this.x = wrapP(c.x - Math.cos(c.h) * 1.7); this.z = wrapP(c.z + Math.sin(c.h) * 1.7); this.y = 0; this.h = c.h - 0.4; this.v = 0; this.vy = 0; this.camH = c.h; this.active = true;
+  // out of the driver's door (the driver sits on the car's -x side): the door opens, the pilot steps out, the door closes
+  const sx = c.x - Math.cos(c.h) * 0.4, sz = c.z + Math.sin(c.h) * 0.4;
+  this.x = wrapP(c.x - Math.cos(c.h) * 1.7); this.z = wrapP(c.z + Math.sin(c.h) * 1.7); this.y = 0; this.h = c.h - PI / 2 - 0.3; this.v = 0; this.vy = 0; this.camH = c.h; this.active = true;
+  this.trans = { t: 0, dur: 0.9, a: [wrapP(sx), 0.05, wrapP(sz)], b: [this.x, 0, this.z] }; g.doorT = 1.8;
 };
 OnFoot.prototype.collide = function () {
+  if (this.g.world === 'meadow') return;   // no city in the past
   const r = 0.38, bx = Math.floor(this.x / GP), bz = Math.floor(this.z / GP), city = this.g.city;
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
     const ix = ((bx + i) % 15 + 15) % 15, iz = ((bz + j) % 15 + 15) % 15, sx = (bx + i) * GP - ix * GP, sz = (bz + j) * GP - iz * GP;
@@ -36,10 +59,15 @@ OnFoot.prototype.collide = function () {
 };
 OnFoot.prototype.update = function (dt, inp) {
   this.t += dt;
-  const run = !!inp.boost, fwd = inp.fwd || 0, side = inp.strafe || 0;
-  this.h = wrapA(this.h + (inp.yaw || 0) * 2.6 * dt);
-  const tv = fwd * (run ? 6.2 : 1.9), ts = side * 1.4;
-  this.v = ease(this.v, tv, 8, dt); this.vs = ease(this.vs || 0, ts, 8, dt);
+  if (this.trans) {   // getting off / on: glide from the seat to the ground (a little hop off boats and hovercraft)
+    const T = this.trans; T.t += dt; const k = Math.min(1, T.t / T.dur), e = k * k * (3 - 2 * k);
+    this.x = wrapP(T.a[0] + wrapD(T.b[0] - T.a[0]) * e); this.z = wrapP(T.a[2] + wrapD(T.b[2] - T.a[2]) * e); this.y = T.a[1] + (T.b[1] - T.a[1]) * e + (T.jump ? Math.sin(k * PI) * 0.6 : 0);
+    this.anim = T.jump && k > 0.15 && k < 0.85 ? 'salta' : 'cammina'; this.ph += dt * 1.3; this.v = 0;
+    if (k >= 1) { this.trans = null; this.y = 0; if (T.into) { this.active = false; this.g.cam.h = this.g.c.h; } }
+    return { vF: 0 }; }
+  const run = !!inp.boost;
+  const tv = dirMove(this, inp, dt, 'h', 'camH', run);
+  this.v = ease(this.v, tv, 8, dt); this.vs = 0;
   const fx = Math.sin(this.h), fz = Math.cos(this.h), rx = -Math.cos(this.h), rz = Math.sin(this.h);
   const ox = this.x, oz = this.z;
   this.x = wrapP(this.x + (fx * this.v + rx * this.vs) * dt); this.z = wrapP(this.z + (fz * this.v + rz * this.vs) * dt);
@@ -57,7 +85,6 @@ OnFoot.prototype.update = function (dt, inp) {
 };
 OnFoot.prototype.camera = function (view, dt) {
   const c = this.g.c;
-  this.camH += wrapA(this.h - this.camH) * Math.min(1, dt * 3);
   const fx = Math.sin(this.camH), fz = Math.cos(this.camH), px = wrapD(this.x - c.x), pz = wrapD(this.z - c.z);
   const far = view % 3 === 1, top = view % 3 === 2, D = far ? 6.5 : 3.3, H = far ? 2.8 : 1.95;
   let e, l, fov = 58;
@@ -75,12 +102,13 @@ OnFoot.prototype.draw = function (ctx) {
 OnFoot.prototype.drawHud = function (hud) {
   const g = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);
   let line = '';
-  if (this.active) line = this.nearCar() ? 'INVIO · sali in auto' : 'A PIEDI · W/S cammina · A/D gira · Q/E laterale · SHIFT corri · SPAZIO salta · INVIO vicino all\'auto per salire';
+  if (this.trans) line = ''; else if (this.active) line = this.g.fleet && this.g.fleet.nearParked() ? 'INVIO · risali sul veicolo' : this.nearCar() ? 'INVIO · sali in auto' : ('A PIEDI · WASD / joystick: muoviti · Q/E gira la visuale · SHIFT corri · SPAZIO salta · INVIO vicino all\'auto per salire');
   else if (this.canExit()) line = 'INVIO · scendi dall\'auto';
   if (!line) return;
   g.font = (m * 0.02 | 0) + 'px monospace'; g.textAlign = 'center';
   const w = g.measureText(line).width + m * 0.03; g.fillStyle = 'rgba(7,11,19,0.6)'; g.fillRect(W / 2 - w / 2, H - m * 0.12, w, m * 0.04);
   g.fillStyle = '#00ffe2'; g.fillText(line, W / 2, H - m * 0.093); g.textAlign = 'left';
 };
+OnFoot.dirMove = dirMove;
 window.KageOnFoot = OnFoot;
 })();

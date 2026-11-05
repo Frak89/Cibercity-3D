@@ -533,7 +533,7 @@ function poseSpec(name, t, opt) {
     case 'indica': spec.ik.handR = { t: at(-0.2, 1.42, 0.62), pole: [-1, -0.5, 0] }; rot.chest = [0, -0.15, 0]; rot.head = [0, -0.12, 0]; break;
     case 'pollice': spec.ik.handR = { t: at(-0.16, 1.22, 0.3), pole: [-1, -1, 0] }; rot.handR = [-1.3, 0, 0.2]; break;
     case 'braccia conserte': spec.ik.handL = { t: at(-0.07, 1.25, 0.17), pole: [1, -0.6, 0.3] }; spec.ik.handR = { t: at(0.07, 1.28, 0.15), pole: [-1, -0.6, 0.3] }; rot.handL = [0, -1.4, 0]; rot.handR = [0, 1.4, 0]; break;
-    case 'mani sui fianchi': spec.ik.handL = { t: at(0.17, 1.0, 0.03), pole: [1, 0, -1] }; spec.ik.handR = { t: at(-0.17, 1.0, 0.03), pole: [-1, 0, -1] }; rot.handL = [0, 0, 0.6]; rot.handR = [0, 0, -0.6]; break;
+    case 'mani sui fianchi': { const w = opt.W || 1; spec.ik.handL = { t: at(0.235 * w, 1.0, -0.05), pole: [1.2, 0.1, -0.8] }; spec.ik.handR = { t: at(-0.235 * w, 1.0, -0.05), pole: [-1.2, 0.1, -0.8] }; rot.handL = [0.2, -0.9, 0.9]; rot.handR = [0.2, 0.9, -0.9]; rot.chest = [-0.04, 0, 0]; break; }
     case 'esulta': { const j = Math.abs(Math.sin(t * 4)) * 0.04; spec.root = at(0, j, 0); spec.ik.handL = { t: at(0.3, 1.95 + j, 0.05), pole: [1, 0, -0.3] }; spec.ik.handR = { t: at(-0.3, 1.95 + j, 0.05), pole: [-1, 0, -0.3] }; rot.head = [-0.2, 0, 0]; break; }
     case 'pensieroso': spec.ik.handR = { t: at(-0.02, 1.53, 0.12), pole: [-1, -1, 0] }; spec.ik.handL = { t: at(-0.05, 1.18, 0.12), pole: [1, -1, 0] }; rot.head = [0.12, -0.2, 0.05]; break;
     case 'cammina': case 'corre': {
@@ -542,7 +542,10 @@ function poseSpec(name, t, opt) {
       rot.thighL = [-A * s1, 0, 0.02]; rot.thighR = [A * s1, 0, -0.02];
       rot.shinL = [Math.max(0, Math.sin(ph - 1.2)) * (run ? 1.4 : 0.75) + 0.05, 0, 0]; rot.shinR = [Math.max(0, Math.sin(ph + PI - 1.2)) * (run ? 1.4 : 0.75) + 0.05, 0, 0];
       rot.footL = [Math.sin(ph - 0.3) * 0.25, 0, 0]; rot.footR = [-Math.sin(ph - 0.3) * 0.25, 0, 0];
-      rot.armL = [A * 0.8 * s1, 0, 0.1]; rot.armR = [-A * 0.8 * s1, 0, -0.1]; rot.foreL = [run ? -1.3 : -0.35, 0, 0]; rot.foreR = [run ? -1.3 : -0.35, 0, 0];
+      // arms swing opposite to the legs, close to the body; running: elbows bent ~90°, fists forward
+      rot.armL = [A * 0.85 * s1, 0, run ? 0.2 : 0.12]; rot.armR = [-A * 0.85 * s1, 0, run ? -0.2 : -0.12];
+      rot.foreL = [run ? -1.1 - 0.2 * Math.max(0, s1) : -0.3 - 0.15 * Math.max(0, s1), run ? 0.35 : 0, 0]; rot.foreR = [run ? -1.1 - 0.2 * Math.max(0, -s1) : -0.3 - 0.15 * Math.max(0, -s1), run ? -0.35 : 0, 0];
+      rot.handL = [0, -1.25, 0]; rot.handR = [0, 1.25, 0];
       rot.pelvis = [run ? 0.18 : 0.04, s1 * 0.1, 0]; rot.chest = [0, -s1 * 0.12, 0]; rot.head = [run ? -0.12 : -0.03, s1 * 0.05, 0];
       spec.root = at(0, -Math.abs(c1) * (run ? 0.06 : 0.025) + (run ? -0.03 : 0), 0); void sp;
       break; }

@@ -1,6 +1,10 @@
 # Italian → English for every user-visible text of Cybercity 3D (screensaver, NEON RUN, showroom, KAGE CIRCUIT).
 # Whole phrases first; the translator replaces the longest matches first, on word boundaries.
 PAIRS = [
+("A PIEDI · WASD / joystick: muoviti · Q/E gira la visuale · SHIFT corri · SPAZIO salta · INVIO vicino all'auto per salire", "ON FOOT · WASD / joystick: move · Q/E turn the camera · SHIFT run · SPACE jump · ENTER near the car to get in"),
+("INVIO · risali sul veicolo", "ENTER · get back on the vehicle"), ("FINISCI O LASCIA LA GARA PER SCENDERE", "FINISH OR QUIT THE RACE TO GET OFF"), ("RALLENTA PER SCENDERE", "SLOW DOWN TO GET OFF"),
+("ATTERRA (X) PER SCENDERE", "LAND (X) TO GET OFF"), ("EMERGI (SPAZIO) PER SCENDERE", "SURFACE (SPACE) TO GET OFF"), ("AVVICINATI ALLA RIVA PER SCENDERE", "GET CLOSER TO THE SHORE TO GET OFF"),
+("INVIO scendi · K gara", "ENTER get off · K race"), ("INVIO scendi · K regata", "ENTER get off · K regatta"), ("premi K per una gara", "press K for a race"),
 ("W/S impulso · A/D virata · SPAZIO/X quota · 1-9 / 0 warp · J ingrana · T decolla · L atterra · N rotta · C vista · INVIO alzati", "W/S impulse · A/D yaw · SPACE/X altitude · 1-9 / 0 warp · J engage · T take off · L land · N course · C view · ENTER stand up"),
 ("ATTIVITÀ EXTRAVEICOLARE · W/S/Q/E propulsori · SPAZIO/X su e giù", "EXTRAVEHICULAR ACTIVITY · W/S/Q/E thrusters · SPACE/X up and down"),
 ("EVA · tuta spaziale · torna al portello verde per rientrare", "EVA · space suit · go back to the green hatch to come in"),

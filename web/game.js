@@ -679,6 +679,10 @@ Game.prototype.frame = function (dt, inp) {
   if (past) {
     const g = P.meadow; gl.useProgram(g.p); set(g); gl.uniform3fv(g.u.uSunDir, pal.sunDir); gl.uniform3fv(g.u.uSunCol, pal.sun); this.draw(g, this.M.ground);
     const nt = P.nature; gl.useProgram(nt.p); set(nt); gl.uniform3fv(nt.u.uSunDir, pal.sunDir); gl.uniform3fv(nt.u.uSunCol, pal.sun); for (const m of this.M.nature) this.draw(nt, m);
+    // in the past too: your vehicle, your pilot on foot and the EPOCH cabin
+    if (this.fleet) this.fleet.drawPlayer({ set, camX, camZ, t, pal, dt });
+    if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
+    if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt, past: true });
   } else if (SPACE) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
   } else {
@@ -704,7 +708,8 @@ Game.prototype.frame = function (dt, inp) {
   const carM = U.mul(U.T(carRel[0], c.y || 0, carRel[2]), U.mul(U.RY(c.h), U.mul(U.RX(this.pitch), U.RZ(this.bank))));
   this.roof = (this.roof || 0) + Math.max(-dt / 5, Math.min(dt / 5, (o.roof ? 1 : 0) - (this.roof || 0)));
   this.chronoPh = (this.chronoPh || 0) + dt * (1 + this.tj.charge * 14);
-  const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
+  this.doorT = Math.max(0, (this.doorT || 0) - dt); const doorK = this.doorT > 0 ? Math.sin(Math.min(1, (1.8 - this.doorT) / 1.8) * Math.PI) : 0;
+  const hdState = { hood: 0, doorL: doorK, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
     exhaust: o.exhaust || 'serie', chrono: !!o.chrono, chronoPh: this.chronoPh, fly: fsm,
     kit: this.car.kit, rim: this.car.rim, livery: this.car.livery, text: this.car.text, hand: (this.handK = (this.handK || 0) + ((inp.hand ? 1 : 0) - (this.handK || 0)) * Math.min(1, dt * 12)) };
   if (VEH) { /* the player's vehicle is drawn by the fleet */ }

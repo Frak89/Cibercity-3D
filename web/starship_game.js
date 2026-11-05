@@ -142,7 +142,7 @@ Star.prototype.footUpdate = function (f, dt, inp) {
     if (f.bt > 1.9) {
       if (f.ss === 'beamout' || f.ss === 'beamup') {   // → transporter pad
         if (f.from === 'city') { f.cityX = f.x; f.cityZ = f.z; }
-        f.ss = 'beamin'; f.bt = 0; f.deck = 1; f.lx = RIG.pads[0][0]; f.lz = RIG.pads[0][1]; f.lh = PI; f.ly = 0.3; this.greetT = 7;
+        f.ss = 'beamin'; f.bt = 0; f.deck = 1; f.lx = RIG.pads[0][0]; f.lz = RIG.pads[0][1]; f.lh = PI; f.lcam = PI; f.ly = 0.3; this.greetT = 7;
         if (this.g.world !== s.world && !(s.world === 'city' && this.g.world === 'city')) this.g.world = s.world === 'city' ? 'city' : s.world;
         this.syncFoot(f);
       } else if (f.ss === 'beamin') { f.ss = 'in'; }
@@ -150,7 +150,7 @@ Star.prototype.footUpdate = function (f, dt, inp) {
         f.bt = 0;
         if (s.world === 'city' || (s.world === 'space' && KS.DEST[s.loc].land === 'city')) { this.g.world = 'city'; f.ss = null; f.x = f.cityX !== undefined ? f.cityX : 30; f.z = f.cityZ !== undefined ? f.cityZ : 45; f.y = 0; f.h = 0; f.vis = 1;
           if (s.world === 'space') { /* the ship stays in orbit */ } }
-        else { const site = s.world === 'planet' ? this.site : KS.DEST[s.loc].land; this.site = site; this.g.world = 'planet'; f.ss = 'planetin'; f.px = 6; f.pz = -6; f.ph = 0; f.h = 0; f.py = KS.siteHeight(site, 6, -6); }
+        else { const site = s.world === 'planet' ? this.site : KS.DEST[s.loc].land; this.site = site; this.g.world = 'planet'; f.ss = 'planetin'; f.px = 6; f.pz = -6; f.ph = 0; f.h = 0; f.pcam = 0; f.py = KS.siteHeight(site, 6, -6); }
         this.flash = 0.3;
       }
     }
@@ -159,8 +159,8 @@ Star.prototype.footUpdate = function (f, dt, inp) {
   if (f.ss === 'planetin') { f.bt += dt; f.anim = 'in piedi'; if (f.bt > 1.9) f.ss = 'planet'; return true; }
   const run = !!inp.boost;
   if (f.ss === 'in') {
-    f.lh = wrapA(f.lh + (inp.yaw || 0) * 2.6 * dt);
-    f.v = ease(f.v, (inp.fwd || 0) * (run ? 4.2 : 1.9), 8, dt); f.vs = ease(f.vs || 0, (inp.strafe || 0) * 1.4, 8, dt);
+    if (f.lcam === undefined) f.lcam = f.lh;
+    f.v = ease(f.v, Math.min(4.2, window.KageOnFoot.dirMove(f, inp, dt, 'lh', 'lcam', run)), 8, dt); f.vs = 0;
     const fx = Math.sin(f.lh), fz = Math.cos(f.lh), rx = -Math.cos(f.lh), rz = Math.sin(f.lh);
     f.lx += (fx * f.v + rx * f.vs) * dt; f.lz += (fz * f.v + rz * f.vs) * dt;
     this.collideDeck(f); this.syncFoot(f);
@@ -182,8 +182,8 @@ Star.prototype.footUpdate = function (f, dt, inp) {
   }
   if (f.ss === 'planet') {
     const site = this.site, gr = (KS.DEST[Object.keys(KS.DEST).find(k => KS.DEST[k].land === site)] || {}).g || 1;
-    f.h = wrapA(f.h + (inp.yaw || 0) * 2.6 * dt);
-    f.v = ease(f.v, (inp.fwd || 0) * (run ? 6.2 : 1.9), 8, dt); f.vs = ease(f.vs || 0, (inp.strafe || 0) * 1.4, 8, dt);
+    if (f.pcam === undefined) f.pcam = f.h;
+    f.v = ease(f.v, window.KageOnFoot.dirMove(f, inp, dt, 'h', 'pcam', run), 8, dt); f.vs = 0;
     const fx = Math.sin(f.h), fz = Math.cos(f.h), rx = -Math.cos(f.h), rz = Math.sin(f.h);
     f.px = clamp(f.px + (fx * f.v + rx * f.vs) * dt, -280, 280); f.pz = clamp(f.pz + (fz * f.v + rz * f.vs) * dt, -280, 280);
     const gh = KS.siteHeight(site, f.px, f.pz);
@@ -232,11 +232,11 @@ Star.prototype.enter = function () {
   else if (w === 'badge_off') { this.badge = false; LS.set('kageBadge', '0'); this.say('BADGE RIMESSO AL SUO POSTO', 3); }
   else if (w === 'lift') this.menu('decks');
   else if (w === 'chair') { f.ss = 'helm'; f.lx = RIG.chair[0]; f.lz = RIG.chair[1]; f.lh = 0; this.g.view = 0; this.say('AI COMANDI · W/S impulso · A/D virata · SPAZIO/X quota · 1-9 · 0 = WARP 10', 5); }
-  else if (w === 'leave') { f.ss = 'in'; f.lz = RIG.chair[1] - 1.2; f.lh = PI; }
+  else if (w === 'leave') { f.ss = 'in'; f.lz = RIG.chair[1] - 1.2; f.lh = PI; f.lcam = PI; }
   else if (w === 'pad') this.beamDown();
   else if (w === 'astro') this.menu('course');
   else if (w === 'airlock') { f.ss = 'eva'; f.ex = 25.5; f.ey = -3.2; f.ez = 20; f.lh = PI / 2; f.evx = f.evy = f.evz = 0; this.say('ATTIVITÀ EXTRAVEICOLARE · W/S/Q/E propulsori · SPAZIO/X su e giù', 5); }
-  else if (w === 'reenter') { f.ss = 'in'; f.deck = 3; f.lx = RIG.airlock[0] - 1.5; f.lz = RIG.airlock[1]; f.lh = -PI / 2; this.syncFoot(f); }
+  else if (w === 'reenter') { f.ss = 'in'; f.deck = 3; f.lx = RIG.airlock[0] - 1.5; f.lz = RIG.airlock[1]; f.lh = -PI / 2; f.lcam = -PI / 2; this.syncFoot(f); }
   return true;
 };
 Star.prototype.beamIn = function () {
@@ -309,7 +309,7 @@ Star.prototype.menu = function (kind) {
   h += '<button data-close="1" style="margin-top:1vmin">✕ CHIUDI</button>';
   mn.innerHTML = h; mn.style.display = 'block';
   mn.querySelectorAll('button').forEach(b => { const go = e => { e.preventDefault(); e.stopPropagation(); const d = b.dataset;
-      if (d.deck !== undefined) { f.deck = +d.deck; f.lx = 0; f.lz = KS.LIFT_Z + 1.4; f.lh = 0; this.syncFoot(f); this.say(D[f.deck].title, 2); }
+      if (d.deck !== undefined) { f.deck = +d.deck; f.lx = 0; f.lz = KS.LIFT_Z + 1.4; f.lh = 0; f.lcam = 0; this.syncFoot(f); this.say(D[f.deck].title, 2); }
       if (d.dest) { s.course = d.dest; this.say('ROTTA IMPOSTATA · ' + KS.DEST[d.dest].name + ' · ' + fmtLy(KS.dist(s.loc, d.dest)), 4); }
       mn.style.display = 'none'; };
     b.addEventListener('click', go); b.addEventListener('touchstart', go); });
@@ -324,7 +324,7 @@ Star.prototype.camera = function (cv, dt) {
   let E, L, fov = 62;
   const W = p => this.toW(p);
   if (f.ss === 'in' || f.ss === 'beamin') {
-    const d = D[f.deck], y = d.y + (f.ly || 0), fx = Math.sin(f.lh), fz = Math.cos(f.lh);
+    const d = D[f.deck], y = d.y + (f.ly || 0), ch = f.lcam === undefined ? f.lh : f.lcam, fx = Math.sin(ch), fz = Math.cos(ch);
     let ex = f.lx - fx * 3.0, ez = f.lz - fz * 3.0;
     if (d.round) { const r = Math.hypot(ex, ez - d.cz), m = d.round - 0.4; if (r > m) { ex = ex / r * m; ez = d.cz + (ez - d.cz) / r * m; } }
     else { ex = clamp(ex, d.box[0] + 0.35, d.box[1] - 0.35); ez = clamp(ez, d.box[2] + 0.35, d.box[3] - 0.35); }
@@ -337,7 +337,7 @@ Star.prototype.camera = function (cv, dt) {
   } else if (f.ss === 'beamout') { return cv; }
   else if (f.ss === 'beamdown') { const d = D[1]; E = W([0, d.y + 2.6, 15.5]); L = W([0, d.y + 1.2, 21.6]); }
   else if (f.ss === 'planet' || f.ss === 'planetin' || f.ss === 'beamup') {
-    const fx = Math.sin(f.h), fz = Math.cos(f.h), view = g.view % 3, D2 = view === 1 ? 7 : 4, H2 = view === 1 ? 3 : 2;
+    const ch = f.pcam === undefined ? f.h : f.pcam, fx = Math.sin(ch), fz = Math.cos(ch), view = g.view % 3, D2 = view === 1 ? 7 : 4, H2 = view === 1 ? 3 : 2;
     E = [f.px - fx * D2, f.py + H2, f.pz - fz * D2]; E[1] = Math.max(E[1], KS.siteHeight(this.site, E[0], E[2]) + 0.6); L = [f.px + fx * 2, f.py + 1.4, f.pz + fz * 2]; fov = 62;
     if (view === 2) { E = [f.px, f.py + 30, f.pz - 6]; L = [f.px, f.py, f.pz]; }
   } else return cv;

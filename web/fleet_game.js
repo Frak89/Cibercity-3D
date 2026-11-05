@@ -352,7 +352,7 @@ const LOD = { low: 'lo', high: 'hi', ultra: 'ultra' };
 FleetGame.prototype.setQuality = function (q) { this.quality = q; if (this.kind) this.pm = this.model(this.kind, Object.assign({}, this.cfg, { lod: LOD[q] || 'hi' })); };
 FleetGame.prototype.applyCfg = function (cfg) { if (!this.kind) return; this.cfg = Object.assign({}, cfg); KF.saveCfg(this.kind, this.cfg); this.pm = this.model(this.kind, Object.assign({}, this.cfg, { lod: LOD[this.quality] || 'hi' })); };
 /** switch the player between the KAGE GT ('car') and the fleet */
-FleetGame.prototype.setVehicle = function (kind) {
+FleetGame.prototype.setVehicle = function (kind, st0) {
   const g = this.g;
   if (kind === 'car' || !kind) {
     if (this.carSave) Object.assign(g.c, this.carSave); this.carSave = null;
@@ -361,7 +361,8 @@ FleetGame.prototype.setVehicle = function (kind) {
   if (!this.kind) this.carSave = Object.assign({}, g.c);
   this.kind = kind; this.cfg = KF.loadCfg(kind); this.race = null;
   this.pm = this.model(kind, Object.assign({}, this.cfg, { lod: LOD[this.quality] || 'hi' }));
-  this.respawn(); g.veh = { kind }; this.audio.on = true;
+  this.respawn(); if (st0) { this.st = st0; this.camH = st0.h; } g.veh = { kind }; this.audio.on = true;
+  if (this.parked && this.parked.kind === kind) this.parked = null;
 };
 FleetGame.prototype.respawn = function () {
   const g = this.g, k = this.kind;
@@ -596,12 +597,50 @@ FleetGame.prototype.drawWorld = function (ctx) {
     gl.uniform3f(u.uTint, -1, 0, 0);
     for (const r of R.racers) if (!r.me) this.drawModel(r.model, r.st, ctx);
   }
-  // the player's vehicle
+  this.drawPlayer(ctx);
+};
+/** the player's vehicle (+ pilot) and the vehicle parked when you got off — also drawn in the meadow of the past */
+FleetGame.prototype.drawPlayer = function (ctx) {
+  const gl = this.gl, P = this.g.P.veh, u = P.u;
+  gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uGlowOnly, 0);
+  if (this.parked) this.drawModel(this.parked.model, this.parked.st, ctx);
   if (this.kind && this.cv && this.cv.drawCar) {
     const Mv = this.drawModel(this.pm, this.st, ctx);
     if (Mv && this.kind !== 'drone' && this.g.view % 5 !== 2) this.drawPilot(ctx.set, Mv, this.kind);
   }
 };
+/* ---------------- getting off / on any vehicle ---------------- */
+FleetGame.prototype.say = function (m) { if (this.g.star) this.g.star.say(m, 3); };
+FleetGame.prototype.exitInfo = function () {
+  const st = this.st, k = this.kind; if (!k || !st || k === 'ufo') return null;
+  if (this.race && this.race.state !== 'finished') return { msg: 'FINISCI O LASCIA LA GARA PER SCENDERE' };
+  if (Math.hypot(st.vx, st.vz) > 3) return { msg: 'RALLENTA PER SCENDERE' };
+  if (k === 'drone' && st.y > 1.6) return { msg: 'ATTERRA (X) PER SCENDERE' };
+  if (k === 'sub' && st.y < -1.6) return { msg: 'EMERGI (SPAZIO) PER SCENDERE' };
+  const c = Math.cos(st.h), s = Math.sin(st.h), side = { moto: 0.9, drone: 1.3, hover: 3.4, boat: 2.8, sub: 3.4, galleon: 7 }[k] || 2;
+  let spot = [st.x - c * side, st.z + s * side];
+  if (isWater(spot[0], spot[1]) || k === 'boat' || k === 'galleon' || k === 'sub') {   // step ashore on the nearest quay
+    let best = null; for (let r = side; r <= 70 && !best; r += 2) for (let a = 0; a < 32; a++) { const x = st.x + Math.cos(a / 32 * TAU) * r, z = st.z + Math.sin(a / 32 * TAU) * r; if (!isWater(x, z) && !isWater(x + Math.cos(a / 32 * TAU) * 2, z + Math.sin(a / 32 * TAU) * 2)) { best = [x + Math.cos(a / 32 * TAU) * 1.5, z + Math.sin(a / 32 * TAU) * 1.5]; break; } }
+    if (!best) return { msg: 'AVVICINATI ALLA RIVA PER SCENDERE' }; spot = best; }
+  return { spot };
+};
+FleetGame.prototype.exitVehicle = function () {
+  const info = this.exitInfo(); if (!info) return null; if (!info.spot) { this.say(info.msg); return info; }
+  const k = this.kind, st = Object.assign({}, this.st, { vx: 0, vz: 0, vy: 0, vF: 0, thrust: 0, blur: 0 });
+  if (k === 'drone') st.y = Math.min(st.y, 0.32); if (k === 'sub') st.y = Math.max(st.y, -1.0);
+  this.parked = { kind: k, st, model: this.pm };
+  this.setVehicle('car');
+  const f = this.g.foot; if (!f) return info;
+  f.active = true; f.x = wrapP(info.spot[0]); f.z = wrapP(info.spot[1]); f.y = 0; f.v = 0; f.h = Math.atan2(wrapD(f.x - st.x), wrapD(f.z - st.z)); f.camH = f.h;
+  f.trans = { t: 0, dur: 0.85, a: [st.x, Math.max(0, st.y) + 0.6, st.z], b: [f.x, 0, f.z], jump: k !== 'moto' && k !== 'drone' };
+  return info;
+};
+FleetGame.prototype.nearParked = function () {
+  const P = this.parked, f = this.g.foot; if (!P || !f || !f.active || f.ss || f.xs || f.trans) return false;
+  const r = { moto: 2.6, drone: 2.6, hover: 6, boat: 10, sub: 12, galleon: 32 }[P.kind] || 4;
+  return Math.hypot(wrapD(f.x - P.st.x), wrapD(f.z - P.st.z)) < r;
+};
+FleetGame.prototype.enterParked = function () { const P = this.parked; if (!P) return; this.parked = null; this.g.foot.active = false; this.setVehicle(P.kind, P.st); };
 /** seabed + life under the lagoon (only when the camera is below the surface or you pilot the submarine) */
 FleetGame.prototype.drawUnder = function (ctx) {
   if (!ctx.under && this.kind !== 'sub') return;
@@ -667,11 +706,11 @@ FleetGame.prototype.drawHud = function (hud) {
   }
   g.fillStyle = 'rgba(236,252,255,0.55)'; g.font = (m * 0.017 | 0) + 'px monospace';
   g.fillText(KF.KINDS[k].title + ' · ' + ['INSEGUIMENTO', 'LONTANA', k === 'drone' ? 'FPV' : k === 'moto' ? 'IN SELLA' : 'PLANCIA', 'CINEMATICA', "DALL'ALTO"][this.g.view % 5], m * 0.03, m * 0.045);
-  const help = k === 'ufo' ? 'W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi' : k === 'sub' ? 'W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara' : k === 'moto' ? 'W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara' : k === 'hover' ? 'W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara' : k === 'drone' ? 'W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara'
-    : k === 'boat' ? 'W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO gara'
-    : 'W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO regata';
+  const help = k === 'ufo' ? 'W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi' : k === 'sub' ? 'W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO scendi · K gara' : k === 'moto' ? 'W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO scendi · K gara' : k === 'hover' ? 'W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO scendi · K gara' : k === 'drone' ? 'W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO scendi · K gara'
+    : k === 'boat' ? 'W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO scendi · K gara'
+    : 'W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO scendi · K regata';
   g.fillText(help, m * 0.03, H - m * 0.02);
-  if (!R) { g.fillStyle = A; g.fillText(COURSES[k] ? 'GIRO LIBERO · premi INVIO per una gara (' + COURSES[k][0].name + ')' : 'VOLO LIBERO · F raggio traente sopra strade e persone', m * 0.03, m * 0.075); this.minimap(g, W, H, m, A, B, null); return; }
+  if (!R) { g.fillStyle = A; g.fillText(COURSES[k] ? 'GIRO LIBERO · premi K per una gara (' + COURSES[k][0].name + ')' : 'VOLO LIBERO · F raggio traente sopra strade e persone', m * 0.03, m * 0.075); this.minimap(g, W, H, m, A, B, null); return; }
   // race panel
   const me = R.me, rank = R.racers.slice().sort((a, b) => this.progress(b) - this.progress(a)), pos = rank.indexOf(me) + 1;
   box(m * 0.02, m * 0.09, m * 0.42, m * 0.2);

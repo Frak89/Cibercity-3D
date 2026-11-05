@@ -129,8 +129,7 @@ XenoGame.prototype.footUpdate = function (f, dt, inp) {
   // inside: same controls as on the street, in the ship's frame
   f.t += dt;
   const run = !!inp.boost, s = this.state();
-  f.h = wrapA(f.h + (inp.yaw || 0) * 2.6 * dt);
-  f.v = ease(f.v, (inp.fwd || 0) * (run ? 4.2 : 1.9), 8, dt); f.vs = ease(f.vs || 0, (inp.strafe || 0) * 1.4, 8, dt);
+  f.v = ease(f.v, Math.min(4.2, window.KageOnFoot.dirMove(f, inp, dt, 'h', 'camH', run)), 8, dt); f.vs = 0;
   const lh = f.h - s.h, fx = Math.sin(lh), fz = Math.cos(lh), rx = -Math.cos(lh), rz = Math.sin(lh);
   f.lx += (fx * f.v + rx * f.vs) * dt; f.lz += (fz * f.v + rz * f.vs) * dt;
   const push = (cx, cz, r, out) => { const dx = f.lx - cx, dz = f.lz - cz, d = Math.hypot(dx, dz) || 1e-3;
@@ -164,11 +163,12 @@ XenoGame.prototype.footCamera = function (f, cv) {
 XenoGame.prototype.drawWorld = function (ctx) {
   const g = this.g, gl = this.gl, F = g.fleet; if (!F) return;
   const P = g.P.veh, u = P.u, s = this.state(), t = ctx.t, fly = this.flying();
-  const near = Math.hypot(wrapD(s.x - ctx.camX), wrapD(s.z - ctx.camZ));
+  const near = ctx.past ? 1e9 : Math.hypot(wrapD(s.x - ctx.camX), wrapD(s.z - ctx.camZ));
   gl.useProgram(P.p); ctx.set(P);
   gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uGlowOnly, 0);
   const st = { x: s.x, y: s.y, z: s.z, h: s.h, pitch: s.pitch || 0, roll: s.roll || 0, rot: fly ? s.rot : t * 0.8 };
   if (!fly && near < 900) F.drawModel(this.ext, st, ctx);
+  if (ctx.past) this.items = [];
   if (near < 60) { gl.uniform1f(u.uLit, 1.9); F.drawModel(this.int, Object.assign({}, st, { rot: t * 0.9 }), ctx); gl.uniform1f(u.uLit, 1); }
   // crew
   if (near < 60) { const Ms = this.shipM(ctx), f = g.foot, inside = f && f.active && f.xs === 'in';

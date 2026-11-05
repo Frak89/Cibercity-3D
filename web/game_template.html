@@ -11,6 +11,8 @@
   .tb{position:fixed;bottom:4vmin;width:16vmin;height:16vmin;border:2px solid rgba(0,255,226,.5);border-radius:50%;
       background:rgba(7,11,19,.35);color:#ecfcff;font:bold 3vmin monospace;display:none;align-items:center;justify-content:center;user-select:none}
   body.touch .tb{display:flex}
+  #joy{position:fixed;left:3vmin;bottom:3vmin;width:30vmin;height:30vmin;border-radius:50%;border:2px solid rgba(0,255,226,.45);background:rgba(0,255,226,.06);display:none;z-index:6;touch-action:none}
+  body.touch #joy{display:block} #joyK{position:absolute;left:50%;top:50%;width:12vmin;height:12vmin;margin:-6vmin 0 0 -6vmin;border-radius:50%;background:rgba(0,255,226,.35);border:2px solid rgba(0,255,226,.8)}
   body.touch.veh-drone #tdn{display:flex}
   #tdn{display:none!important} body.touch.veh-drone #tdn,body.touch.veh-sub #tdn{display:flex!important}
   #tnx{display:none!important} body.touch.nx #tnx{display:flex!important}
@@ -34,18 +36,19 @@
 <body>
 <canvas id="c"></canvas>
 <canvas id="hud"></canvas>
-<div class="tb" id="tl" style="left:3vmin">◀</div>
-<div class="tb" id="tr" style="left:21vmin">▶</div>
-<div class="tb" id="tg" style="right:3vmin;bottom:24vmin">GAS</div>
-<div class="tb" id="tbk" style="right:21vmin">FRENO</div>
-<div class="tb" id="th" style="right:39vmin">DRIFT</div>
-<div class="tb" id="tn" style="right:3vmin;bottom:44vmin">N₂O</div>
-<div class="tb" id="tv" style="right:39vmin;bottom:24vmin">VISTA</div>
-<div class="tb" id="tdn" style="right:39vmin;bottom:44vmin">GIÙ</div>
-<div class="tb" id="tex" style="left:21vmin;bottom:24vmin;border-color:rgba(255,210,80,.7)">AUTO</div>
-<div class="tb" id="tfr" style="right:57vmin;bottom:24vmin;border-color:rgba(150,255,120,.8)">RAGGIO</div>
-<div class="tb" id="tgar" style="left:39vmin;bottom:24vmin;border-color:rgba(255,80,200,.8);font-size:2.6vmin">GARAGE</div>
-<div class="tb" id="tnx" style="left:3vmin;bottom:24vmin;border-color:rgba(255,80,200,.7)">NEXUS</div>
+<div id="joy"><div id="joyK"></div></div>
+<div class="tb" id="tl" style="display:none!important">◀</div>
+<div class="tb" id="tr" style="display:none!important">▶</div>
+<div class="tb" id="tg" style="display:none!important">GAS</div>
+<div class="tb" id="tbk" style="display:none!important">FRENO</div>
+<div class="tb" id="th" style="right:3vmin;bottom:4vmin">DRIFT</div>
+<div class="tb" id="tn" style="right:21vmin;bottom:4vmin">N₂O</div>
+<div class="tb" id="tv" style="right:21vmin;bottom:22vmin">VISTA</div>
+<div class="tb" id="tdn" style="right:3vmin;bottom:22vmin">GIÙ</div>
+<div class="tb" id="tex" style="left:37vmin;bottom:4vmin;border-color:rgba(255,210,80,.7)">AUTO</div>
+<div class="tb" id="tfr" style="right:39vmin;bottom:4vmin;border-color:rgba(150,255,120,.8)">RAGGIO</div>
+<div class="tb" id="tgar" style="left:37vmin;bottom:22vmin;border-color:rgba(255,80,200,.8);font-size:2.6vmin">GARAGE</div>
+<div class="tb" id="tnx" style="left:55vmin;bottom:4vmin;border-color:rgba(255,80,200,.7)">NEXUS</div>
 <button id="fbtn">🚁⛵ FLOTTA</button>
 <div id="fleet"></div>
 <div id="err"></div>
@@ -110,7 +113,8 @@
     if(game.veh){
       if(e.code==='KeyG'){ F.renderUI(); fp.classList.toggle('open'); }
       if(e.code==='KeyC') game.view=(game.view+1)%5;
-      if(e.code==='Enter'){ if(F.race&&F.race.state!=='finished') F.stopRace(); else F.startRace(F.race?F.race.course.id:undefined); }
+      if(e.code==='Enter'){ if(F.race&&F.race.state!=='finished') F.stopRace(); else F.exitVehicle(); }
+      if(e.code==='KeyK'){ if(F.race&&F.race.state!=='finished') F.stopRace(); else F.startRace(F.race?F.race.course.id:undefined); }
       if(e.code==='KeyR') F.respawn();
       if(e.code==='KeyP'){ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; save(); }
       if(e.code==='KeyM'){ const ks=['',...Object.keys(CYBER_WEATHER)]; o.weather=ks[(ks.indexOf(o.weather)+1)%ks.length]; save(); }
@@ -136,21 +140,31 @@
     // on touch screens the prompts name the on-screen buttons instead of the keys
     const C2=CanvasRenderingContext2D.prototype, f0=C2.fillText, m0=C2.measureText, tz=t=>String(t).replace(/\bINVIO ·/g,'AZIONE ·').replace('premi G per','tocca GARAGE per');
     C2.fillText=function(t,...a){ return f0.call(this,tz(t),...a); }; C2.measureText=function(t){ return m0.call(this,tz(t)); }; }
+  // directional joystick (left thumb): x = right, y = forward
+  const joy={x:0,y:0,id:null}; { const J=document.getElementById('joy'), K=document.getElementById('joyK');
+    const upd=(t)=>{ const r=J.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, R0=r.width/2; let dx=(t.clientX-cx)/R0, dy=(cy-t.clientY)/R0; const m=Math.hypot(dx,dy); if(m>1){ dx/=m; dy/=m; }
+      joy.x=Math.abs(dx)<0.12?0:dx; joy.y=Math.abs(dy)<0.12?0:dy; K.style.transform='translate('+(dx*R0*0.62)+'px,'+(-dy*R0*0.62)+'px)'; };
+    J.addEventListener('touchstart',e=>{ e.preventDefault(); snd(); const t=e.changedTouches[0]; joy.id=t.identifier; upd(t); });
+    J.addEventListener('touchmove',e=>{ e.preventDefault(); for(const t of e.changedTouches) if(t.identifier===joy.id) upd(t); });
+    const end=e=>{ for(const t of e.changedTouches) if(t.identifier===joy.id){ joy.id=null; joy.x=joy.y=0; K.style.transform=''; } };
+    J.addEventListener('touchend',end); J.addEventListener('touchcancel',end); }
   const tb={}; for(const id of ['tl','tr','tg','tbk','th','tn','tv','tdn','tfr']){ const el=document.getElementById(id);
     el.addEventListener('touchstart',e=>{e.preventDefault(); tb[id]=true; if(id==='tv') game.view=(game.view+1)%(game.veh?5:NeonRun.VIEWS.length);});
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
   document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
-  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
+  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.veh&&F){ F.exitVehicle(); return; } if(game.foot) game.foot.toggle(); });
   function readInput(){
-    inp.gas=keys.KeyW||keys.ArrowUp||tb.tg; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk;
-    inp.steer=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0);
+    inp.gas=keys.KeyW||keys.ArrowUp||tb.tg||joy.y>0.3; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk||joy.y<-0.3;
+    inp.steer=Math.max(-1,Math.min(1,((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0)-joy.x*1.1));
     inp.hand=keys.Space||tb.th; inp.boost=keys.ShiftLeft||keys.ShiftRight||tb.tn;
     if(game.veh||(game.foot&&game.foot.active)){
       const k=game.veh?game.veh.kind:'foot', b=v=>v?1:0;
       inp.fwd=b(keys.KeyW||keys.ArrowUp||tb.tg)-b(keys.KeyS||keys.ArrowDown||tb.tbk);
       inp.yaw=b(keys.KeyA||keys.ArrowLeft||tb.tl)-b(keys.KeyD||keys.ArrowRight||tb.tr);
-      inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
+      inp.fwd+=joy.y; inp.yaw-=joy.x; inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
+      // on foot: move in the direction you push (relative to the camera); Q/E turn the camera
+      inp.mx=b(keys.KeyD||keys.ArrowRight)-b(keys.KeyA||keys.ArrowLeft)+joy.x; inp.my=b(keys.KeyW||keys.ArrowUp)-b(keys.KeyS||keys.ArrowDown)+joy.y; inp.cam=b(keys.KeyE)-b(keys.KeyQ);
       inp.lift=k==='drone'||k==='foot'||k==='sub'||k==='ufo'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
       inp.fire=(k==='galleon'&&(keys.Space||tb.th))||(k==='ufo'&&!!(keys.KeyF||tb.tfr)); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
       // gamepad (standard mapping; drone in mode 2: left stick = altitude/yaw, right stick = pitch/roll)
@@ -194,7 +208,8 @@
   if(q.has('shot')&&game.veh){   // test: simulate the vehicle with a fixed input, then render one frame
     const T=parseFloat(q.get('t')||'3'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); F.autoMe=!!vi.ai;
     for(let i=0;i<T*30;i++){ const ii=Object.assign({gas:false,brake:false,steer:0},vi); F.update(1/30,ii); game.t+=1/30; }
-    F.camH=F.st.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
+    if(q.has('exit')){ F.exitVehicle(); for(let i=0;i<parseFloat(q.get('exit'))*30;i++){ game.foot.update(1/30,{}); game.t+=1/30; } }
+    if(F.st) F.camH=F.st.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
     window.__fleet={x:F.st.x,y:F.st.y,z:F.st.z,h:F.st.h,v:Math.hypot(F.st.vx,F.st.vz),race:F.race?{state:F.race.state,next:F.race.me.next,lap:F.race.me.lap}:null}; window.__done=true; return; }
   if(q.has('shot')){
     const T=parseFloat(q.get('t')||'3'), steer=parseFloat(q.get('steer')||'0');
@@ -204,7 +219,7 @@
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
-    { const ft=game.foot, xa=(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=ft&&!game.veh?(ft.active?(ft.nearCar()?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
+    { const ft=game.foot, xa=(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=game.veh&&F?(F.exitInfo()&&F.exitInfo().spot?'SCENDI':''):ft?(ft.active?((ft.nearCar()||(F&&F.nearParked()))?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
       const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
       const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }
