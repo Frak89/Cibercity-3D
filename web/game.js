@@ -26,6 +26,27 @@ function rng(seed) {
 }
 const fract = x => x - Math.floor(x);
 const wrapD = d => { d = ((d % S) + S) % S; return d > S / 2 ? d - S : d; };  // shortest signed distance on the torus
+/* harbour district: blocks HB0..HB1 become a lagoon with an outer ring of islands, four inner islands and a lighthouse islet.
+   Same test as harborWater() in common.glsl and GameCity.isWater() on Android. */
+const HB0 = 8, HB1 = 13;
+const HARBOR = { x0: HB0 * GP + RW / 2, z0: HB0 * GP + RW / 2, x1: (HB1 + 1) * GP - RW / 2, z1: (HB1 + 1) * GP - RW / 2 };
+HARBOR.cx = (HARBOR.x0 + HARBOR.x1) / 2; HARBOR.cz = (HARBOR.z0 + HARBOR.z1) / 2;
+function islandOf(bx, bz) {
+  if (bx < HB0 || bx > HB1 || bz < HB0 || bz > HB1) return null;
+  const ringX = bx === HB0 || bx === HB1, ringZ = bz === HB0 || bz === HB1;
+  const cX = bx <= HB0 + 1 || bx >= HB1 - 1, cZ = bz <= HB0 + 1 || bz >= HB1 - 1;
+  if (!(ringX || ringZ || (cX && cZ))) return { water: true };
+  return { water: false, sW: ringX && bx === HB0 ? 0 : 6, sE: ringX && bx === HB1 ? 0 : 6, sS: ringZ && bz === HB0 ? 0 : 6, sN: ringZ && bz === HB1 ? 0 : 6 };
+}
+function isWater(x, z) {
+  x = ((x % S) + S) % S; z = ((z % S) + S) % S;
+  if (x < HARBOR.x0 || x > HARBOR.x1 || z < HARBOR.z0 || z > HARBOR.z1) return false;
+  if (Math.hypot(x - HARBOR.cx, z - HARBOR.cz) < 11) return false;
+  const bx = Math.floor(x / GP), bz = Math.floor(z / GP), I = islandOf(bx, bz);
+  if (!I || I.water) return true;
+  const lx = x - bx * GP - RW / 2, lz = z - bz * GP - RW / 2, inn = GP - RW;
+  return !(lx >= I.sW && lx <= inn - I.sE && lz >= I.sS && lz <= inn - I.sN);
+}
 
 /* ===================================================================== city */
 function buildGameCity(seed) {
@@ -67,32 +88,45 @@ function buildGameCity(seed) {
     BB.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
   const inner = GP - RW;
+  // quay walls of the lagoon (kind 3: concrete with a neon edge), below street level
+  const wall = (x0, z0, x1, z1) => box((x0 + x1) / 2, (z0 + z1) / 2, Math.max(0.6, x1 - x0), Math.max(0.6, z1 - z0), -3.2, 0.03, 0.5, 3);
+  wall(HARBOR.x0 - 0.3, HARBOR.z0, HARBOR.x0 + 0.3, HARBOR.z1); wall(HARBOR.x1 - 0.3, HARBOR.z0, HARBOR.x1 + 0.3, HARBOR.z1);
+  wall(HARBOR.x0, HARBOR.z0 - 0.3, HARBOR.x1, HARBOR.z0 + 0.3); wall(HARBOR.x0, HARBOR.z1 - 0.3, HARBOR.x1, HARBOR.z1 + 0.3);
   for (let bz = 0; bz < GN; bz++) for (let bx = 0; bx < GN; bx++) {
     const rects = blocks[bz * GN + bx];
-    const ox = bx * GP + RW / 2, oz = bz * GP + RW / 2;
+    const I = islandOf(bx, bz);
+    if (I && I.water) continue;
+    let ox = bx * GP + RW / 2, oz = bz * GP + RW / 2, inX = inner, inZ = inner;
+    if (I) {
+      ox += I.sW; oz += I.sS; inX = inner - I.sW - I.sE; inZ = inner - I.sS - I.sN;
+      if (I.sW) wall(ox - 0.3, oz, ox + 0.3, oz + inZ); if (I.sE) wall(ox + inX - 0.3, oz, ox + inX + 0.3, oz + inZ);
+      if (I.sS) wall(ox, oz - 0.3, ox + inX, oz + 0.3); if (I.sN) wall(ox, oz + inZ - 0.3, ox + inX, oz + inZ + 0.3);
+    }
     const dc = Math.hypot(bx - GN / 2 + 0.5, bz - GN / 2 + 0.5) / (GN / 2);
     const downtown = Math.max(0, 1 - dc);
     const r = R();
     if (r < 0.07) {
       // plaza: a low neon pavilion and a holo sign
       const s = R();
-      box(ox + inner / 2, oz + inner / 2, 14, 14, 0, 5, s, 1);
-      rects.push([ox + inner / 2 - 7, oz + inner / 2 - 7, ox + inner / 2 + 7, oz + inner / 2 + 7]);
+      box(ox + inX / 2, oz + inZ / 2, 14, 14, 0, 5, s, 1);
+      rects.push([ox + inX / 2 - 7, oz + inZ / 2 - 7, ox + inX / 2 + 7, oz + inZ / 2 + 7, 5]);
       continue;
     }
-    const n = R() < 0.45 ? 3 : 2, cell = inner / n;
+    const n = R() < 0.45 ? 3 : 2, cellX = inX / n, cellZ = inZ / n;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
       const s = R();
       const mx = 1.2 + R() * 2.2, mz = 1.2 + R() * 2.2;
-      const w = cell - 2 * mx, d = cell - 2 * mz;
-      const cx = ox + cell * (i + 0.5), cz = oz + cell * (j + 0.5);
+      const w = cellX - 2 * mx, d = cellZ - 2 * mz;
+      const cx = ox + cellX * (i + 0.5), cz = oz + cellZ * (j + 0.5);
       let kind = R() < 0.35 ? 1 : 0;
       let h = 10 + Math.pow(R(), 2) * 55 + downtown * Math.pow(R(), 1.3) * 190;
       if (downtown > 0.55 && R() < 0.12) { h = 200 + R() * 120; kind = 2; }
       box(cx, cz, w, d, 0, h, s, kind);
-      rects.push([cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2]);
+      const rect = [cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, h];
+      rects.push(rect);
       if (h > 50 && R() < 0.55) {
         const h2 = h + h * (0.15 + R() * 0.25);
+        rects.push([cx - w * 0.34, cz - d * 0.34, cx + w * 0.34, cz + d * 0.34, h2]);
         box(cx, cz, w * 0.68, d * 0.68, h, h2, fract(s * 7.7), kind === 2 ? 2 : 1);
         if (R() < 0.5) box(cx, cz, 0.7, 0.7, h2, h2 + 10 + R() * 25, fract(s * 3.3), 1);
       }
@@ -112,10 +146,10 @@ function buildGameCity(seed) {
     // neon street poles at one corner of the block
     const px = ox + 1.2, pz = oz + 1.2;
     box(px, pz, 0.35, 0.35, 0, 7.5, R(), 1);
-    rects.push([px - 0.3, pz - 0.3, px + 0.3, pz + 0.3]);
+    rects.push([px - 0.3, pz - 0.3, px + 0.3, pz + 0.3, 7.5]);
   }
   // traffic (light trails) along every road + flying lanes above them
-  const C = { lane: [], dir: [], corner: [], idx: [] };
+  const C = { lane: [], dir: [], corner: [], idx: [] }, DR = [];   // DR: flying KAGE STRIX drones (lane-instanced)
   function car(ox, oy, oz, speed, dx, dz, len, s) {
     const b = C.lane.length / 4;
     for (const c of [[0,-1],[0,1],[1,1],[1,-1]]) { C.lane.push(ox, oy, oz, speed); C.dir.push(dx, dz, len, s); C.corner.push(c[0], c[1]); }
@@ -132,8 +166,8 @@ function buildGameCity(seed) {
     }
     for (const y of [28, 46, 70]) {
       for (let i = 0; i < 2; i++) {
-        car(a + (R() - 0.5) * 6, y + R() * 4, 0, 25 + R() * 20, 0, R() < 0.5 ? 1 : -1, 5 + R() * 6, R());
-        car(0, y + R() * 4, a + (R() - 0.5) * 6, 25 + R() * 20, R() < 0.5 ? 1 : -1, 0, 5 + R() * 6, R());
+        { const x = a + (R() - 0.5) * 6, yy = y + R() * 4, sp = 25 + R() * 20, d = R() < 0.5 ? 1 : -1; R(); const sd = R(); DR.push([x, yy, 0, sp, 0, d, sd * S, sd]); }
+        { const yy = y + R() * 4, z = a + (R() - 0.5) * 6, sp = 25 + R() * 20, d = R() < 0.5 ? 1 : -1; R(); const sd = R(); DR.push([0, yy, z, sp, d, 0, sd * S, sd]); }
       }
     }
   }
@@ -143,7 +177,7 @@ function buildGameCity(seed) {
     for (const c of [[0,-1],[0,1],[1,1],[1,-1]]) { RN.seed.push(sx, sy, sz); RN.corner.push(c[0], c[1]); }
     RN.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
-  return { chunks, BB, C, RN, blocks };
+  return { chunks, BB, C, RN, blocks, DR };
 }
 
 /* ===================================================================== player car (original design) */
@@ -383,6 +417,16 @@ function collide(c, city) {
         }
       }
     }
+    // quay edge of the harbour lagoon: push back onto the street
+    if ((c.y || 0) < 1 && isWater(px, pz)) {
+      let nx = (isWater(px - 2, pz) ? 1 : 0) - (isWater(px + 2, pz) ? 1 : 0), nz = (isWater(px, pz - 2) ? 1 : 0) - (isWater(px, pz + 2) ? 1 : 0);
+      nx = -nx; nz = -nz;
+      if (!nx && !nz) { const v = Math.hypot(c.vx, c.vz) || 1; nx = -c.vx / v; nz = -c.vz / v; }
+      const l = Math.hypot(nx, nz); nx /= l; nz /= l;
+      c.x += nx * 0.5; c.z += nz * 0.5;
+      const vn = c.vx * nx + c.vz * nz;
+      if (vn < 0) { c.vx -= 1.4 * vn * nx; c.vz -= 1.4 * vn * nz; c.vx *= 0.75; c.vz *= 0.75; c.shake = Math.min(1, c.shake + Math.abs(vn) * 0.04); c.hit = Math.min(1, Math.abs(vn) * 0.05); }
+    }
   }
 }
 
@@ -454,7 +498,8 @@ function Game(canvas, hud, opts) {
   this.P = { sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground_game.frag'),
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
     post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
-  if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); }
+  if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); this.hdQ = opts.quality || 'high'; }
+  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag');
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
@@ -466,6 +511,9 @@ function Game(canvas, hud, opts) {
     ground: this.mesh({ aPos: [[-S / 2, -S / 2, S / 2, -S / 2, S / 2, S / 2, -S / 2, S / 2], 2] }, [0, 1, 2, 0, 2, 3]),
     quad: this.mesh({ aPos: [[-1, -1, 1, -1, 1, 1, -1, 1], 2] }, [0, 1, 2, 0, 2, 3])
   };
+  { const hw = (HARBOR.x1 - HARBOR.x0) / 2 + 1; this.M.water = this.mesh({ aPos: [[-hw, -hw, hw, -hw, hw, hw, -hw, hw], 2] }, [0, 1, 2, 0, 2, 3]); }
+  this.vmesh = m => this.mesh({ aPos: [m.pos, 3], aNorm: [m.norm, 3], aCol: [m.col, 4], aAnim: [m.anim, 4] }, m.idx);
+  if (window.KageFleet) this.T = { drones: KageFleet.bakeTraffic(KageFleet.buildDrone({ lod: 'lo' }), city.DR).map(ch => this.mesh({ aPos: [ch.pos, 3], aNorm: [ch.norm, 3], aCol: [ch.col, 4], aAnim: [ch.anim, 4], aLane: [ch.lane, 4], aDir: [ch.dir, 4] }, ch.idx)) };
   if (window.EngineFX) {
     const F = window.EngineFX;
     this.P.fx = prog('particle.vert', 'particle.frag');
@@ -483,7 +531,16 @@ function Game(canvas, hud, opts) {
   this.buildCar();
   this.c = newCar(); this.cam = { h: 0 }; this.t = 0; this.flash = 0; this.nextFlash = 3; this.view = 0;
   this.stats = { verts: city.chunks.reduce((a, B) => a + B.pos.length / 3, 0), chunks: city.chunks.length };
+  this.fleet = window.FleetGame ? new FleetGame(this) : null;   // drone / boat / galleon (web/fleet_game.js)
+  this.veh = null;
 }
+/** model resolution for the KAGE GT: low / high / ultra */
+Game.prototype.setQuality = function (q) {
+  if (!this.P.hd || this.hdQ === q) return;
+  this.hd = new CarRender(this.gl, this.P.hd, CarHD.build({ quality: q })); this.hdQ = q; this.o.quality = q;
+  if (this.car && this.car.text === 'C') this.hd.replaceParts(CarHD.buildText(this.car.customText || 'KAGE GT'));
+  if (this.fleet) this.fleet.setQuality(q);
+};
 Game.prototype.buildCar = function () {
   const pal = CYBER_PALETTES[this.o.palette] || CYBER_PALETTES.neon;
   const paint = (PAINTS[this.o.paint] || PAINTS.nero).c;
@@ -521,12 +578,14 @@ Game.prototype.frame = function (dt, inp) {
   this.fly = (this.fly || 0) + Math.max(-dt * 0.8, Math.min(dt * 0.8, flyT - (this.fly || 0)));
   const fsm = this.fly * this.fly * (3 - 2 * this.fly);
   this.c.y = fsm * CarHD.RIG.fly.alt + (o.power === 'mag' ? 0.015 * Math.sin(this.t * 2.1) * (1 + fsm * 4) : 0);
-  const phys = stepCar(this.c, inp, dt, this.city);
+  const VEH = this.veh && this.fleet;
+  const phys = VEH ? this.fleet.update(dt, inp) : stepCar(this.c, inp, dt, this.city);
   this.phys = phys;
   const c = this.c;
-  const cv = cameraFor(this.view, c, this.cam, dt, t);
+  const cv = VEH ? this.fleet.camera(this.view, dt, t) : cameraFor(this.view, c, this.cam, dt, t);
   this.cv = cv;
-  if (this.eng) {
+  if (this.eng && VEH) { this.audio.on = false; this.audio.feed(this.eng); this.fxO = null; }
+  if (this.eng && !VEH) {
     if (this.eng.type !== (o.power || 'v8')) { this.eng.setType(o.power || 'v8'); this.eng.rpm = this.eng.T.idle; }
     this.eng.race = o.exhaust === 'race';
     this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting, slip: phys.slip, wheelspin: phys.wheelspin, brakeHard: phys.brakeHard, brake: inp.brake, airborne: (this.fly || 0) > 0.3 });
@@ -574,7 +633,8 @@ Game.prototype.frame = function (dt, inp) {
     f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
-    if (u.uHL) { const fx = Math.sin(c.h), fz = Math.cos(c.h); gl.uniform4f(u.uHL, carRel[0] + fx * 2.3, carRel[2] + fz * 2.3, fx, fz); f1('uHLOn', past ? 0.35 : 1); }
+    if (u.uHL) { const fx = Math.sin(c.h), fz = Math.cos(c.h); gl.uniform4f(u.uHL, carRel[0] + fx * 2.3, carRel[2] + fz * 2.3, fx, fz); f1('uHLOn', VEH ? 0 : past ? 0.35 : 1); }
+    if (u.uHarbor) gl.uniform4f(u.uHarbor, HARBOR.x0, HARBOR.z0, HARBOR.x1, HARBOR.z1);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP); if (u.uV) gl.uniformMatrix4fv(u.uV, false, V.m); if (u.uP) gl.uniformMatrix4fv(u.uP, false, Pm);
   };
   gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -594,6 +654,11 @@ Game.prototype.frame = function (dt, inp) {
     gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
     gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
     gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
+    { const w = P.water; gl.useProgram(w.p); set(w); gl.uniform3f(w.u.uWaterC, HARBOR.cx, -1.2, HARBOR.cz); gl.uniform1f(w.u.uWaterRel, 0);
+      const wk = this.fleet ? this.fleet.wake(camX, camZ) : [0, 0, 0, 0]; gl.uniform4f(w.u.uWake, wk[0], wk[1], wk[2], wk[3]); this.draw(w, this.M.water); }
+    if (this.T) { const v = P.veh, u = v.u; gl.useProgram(v.p); set(v); gl.uniform1f(u.uTraffic, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0);
+      gl.uniform1f(u.uScale, 2.2); gl.uniform1f(u.uBob, 0); gl.uniform1f(u.uBlur, 0.45); gl.uniform1f(u.uFlut, 0.4); gl.uniform1f(u.uSailSide, 1); for (const m of this.T.drones) this.draw(v, m); }
+    if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -605,12 +670,13 @@ Game.prototype.frame = function (dt, inp) {
   const hdState = { hood: 0, doorL: 0, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
     exhaust: o.exhaust || 'serie', chrono: !!o.chrono, chronoPh: this.chronoPh, fly: fsm,
     kit: this.car.kit, rim: this.car.rim, livery: this.car.livery, text: this.car.text, hand: (this.handK = (this.handK || 0) + ((inp.hand ? 1 : 0) - (this.handK || 0)) * Math.min(1, dt * 12)) };
-  if (cv.drawCar && this.hd) {
+  if (VEH) { /* the player's vehicle is drawn by the fleet */ }
+  else if (cv.drawCar && this.hd) {
     gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB, kageExtra(this.car));
     { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
     gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
-  } else if (cv.drawCar) {
+  } else if (cv.drawCar && !this.hd) {
     gl.useProgram(P.solid.p); set(P.solid);
     gl.uniformMatrix4fv(P.solid.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
     gl.uniform1f(P.solid.u.uGloss, (PAINTS[o.paint] || PAINTS.nero).c[0] > 0.6 ? 0.6 : 1);
@@ -618,10 +684,10 @@ Game.prototype.frame = function (dt, inp) {
   }
   // additive lights
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
-  if (cv.drawCar && this.hd) {
+  if (cv.drawCar && this.hd && !VEH) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.hd.p); set(P.hd); this.hd.draw(carM, hdState, "glass"); gl.blendFunc(gl.ONE, gl.ONE);
   }
-  if (this.eng) {
+  if (this.eng && !VEH) {
     const tp = EngineFX.tipsFrom(carM, o.exhaust === 'race');
     this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, tp.hubs);
     this.fx.tyreSmoke(dt, carM, Math.max(this.eng.burn || 0, (this.eng.tyre || 0) * 0.7), [c.vx, 0, c.vz], CarHD.RIG.kitTrack[this.car.kit || 0]);
@@ -631,11 +697,14 @@ Game.prototype.frame = function (dt, inp) {
     gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   }
   if (!past) { gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car); }
+  if (!VEH) {
   gl.useProgram(P.glow.p); set(P.glow);
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
   gl.uniform1f(P.glow.u.uGlow, 0.55 + 0.15 * Math.sin(t * 3)); this.draw(P.glow, this.CM.under);
   gl.uniform1f(P.glow.u.uGlow, 1); this.draw(P.glow, this.CM.heads);
   gl.uniform1f(P.glow.u.uGlow, inp.brake ? 1.8 : 0.7); this.draw(P.glow, this.CM.tail);
+  }
+  if (this.fleet) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   const rainAmt = wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
@@ -654,7 +723,7 @@ Game.prototype.frame = function (dt, inp) {
     this.draw(wp, this.M.quad);
   }
   gl.depthMask(true); gl.disable(gl.BLEND);
-  this.drawHud(inp);
+  if (VEH) this.fleet.drawHud(this.hud); else this.drawHud(inp);
 };
 
 /* ===================================================================== HUD (2D canvas) */
@@ -775,10 +844,18 @@ Autopilot.prototype.step = function (c, dt, game) {
   const along = this.dir % 2 === 0 ? c.z : c.x, sgn = this.dir === 0 || this.dir === 1 ? 1 : -1;
   const cross = this.dir % 2 === 0 ? c.x : c.z, road = Math.round(cross / GP) * GP;
   const ni = sgn > 0 ? Math.ceil((along + 0.5) / GP) * GP : Math.floor((along - 0.5) / GP) * GP;
-  if (isNaN(this.next) || Math.abs(ni - this.next) > 1) { this.next = ni; const r = Math.random(); this.turn = r < 0.25 ? -1 : r < 0.5 ? 1 : 0; this.cruise = 22 + Math.random() * 18; }
+  if (isNaN(this.next) || Math.abs(ni - this.next) > 1) {
+    this.next = ni; this.cruise = 22 + Math.random() * 18;
+    // pick a turn that does not lead into the harbour lagoon
+    const ix = this.dir % 2 === 0 ? road : ni, iz = this.dir % 2 === 0 ? ni : road, ok = [];
+    for (const tr of [-1, 0, 1]) { const nd = (this.dir + tr + 4) % 4, h = nd * Math.PI / 2; if (!isWater(ix + Math.sin(h) * 22, iz + Math.cos(h) * 22)) ok.push(tr); }
+    if (!ok.length) ok.push(2);
+    const r = Math.random(); let want = r < 0.25 ? -1 : r < 0.5 ? 1 : 0;
+    this.turn = ok.includes(want) ? want : ok[Math.floor(Math.random() * ok.length)];
+  }
   const toInt = (this.next - along) * sgn;
   if (this.turn !== 0) {
-    const nd = (this.dir + this.turn + 4) % 4, nl = Autopilot.lane(nd, this.next);
+    const nd = (this.dir + this.turn + 4) % 4, nl = this.turn === 2 ? along + sgn * 3 : Autopilot.lane(nd, this.next);
     if ((nl - along) * sgn < 6.5) { this.dir = nd; this.turn = 0; this.next = NaN; return this.step(c, dt, game); }
   }
   const lc = Autopilot.lane(this.dir, road), v = Math.hypot(c.vx, c.vz), look = 7 + v * 0.35;
@@ -795,5 +872,5 @@ Autopilot.prototype.step = function (c, dt, game) {
   if (game && this.view > this.viewNext) { this.view = 0; this.viewNext = 9 + Math.random() * 8; const vs = [0, 1, 5, 2, 4, 0, 6, 3]; game.view = vs[Math.random() * vs.length | 0]; }
   return inp;
 };
-window.NeonRun = { Autopilot, Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar, cameraFor, lookAt, perspective, mul, model };
+window.NeonRun = { Autopilot, HARBOR, isWater, islandOf, wrapD, Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar, cameraFor, lookAt, perspective, mul, model };
 })();

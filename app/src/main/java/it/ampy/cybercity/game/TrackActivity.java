@@ -42,7 +42,10 @@ public class TrackActivity extends Activity {
         String car = "{\"kit\":" + sp.getInt("cKit", 0) + ",\"rim\":\"" + rim + "\",\"livery\":" + sp.getInt("cLiv", 0)
             + ",\"text\":\"" + (tx < 0 ? "none" : String.valueOf(tx)) + "\",\"stripe\":\"" + CarHd.COLOR_KEYS[Math.max(0, Math.min(6, sp.getInt("cStripe", 0)))]
             + "\",\"rimcol\":\"" + CarHd.COLOR_KEYS[Math.max(0, Math.min(6, sp.getInt("cRimC", 3)))] + "\",\"brakes\":" + sp.getInt("cBrakes", 0) + "}";
-        String url = "file:///android_asset/web/track.html?car=" + Uri.encode(car) + "&paint=" + Uri.encode(sp.getString("gPaint", "rosso"))
+        // the same activity also hosts the KAGE fleet (NEON RUN web build: drone / boat / galleon races)
+        String page = getIntent().getStringExtra("page"), veh = getIntent().getStringExtra("vehicle");
+        if (page == null) page = "track.html";
+        String url = "file:///android_asset/web/" + page + "?" + (veh != null ? "vehicle=" + Uri.encode(veh) + "&" : "") + "quality=" + Prefs.get(this).modelQuality() + "&car=" + Uri.encode(car) + "&paint=" + Uri.encode(sp.getString("gPaint", "rosso"))
             + "&power=" + Uri.encode(sp.getString("gPower", "v8")) + "&exhaust=" + (sp.getBoolean("gRace", false) ? "race" : "serie") + "&roof=" + (sp.getBoolean("gRoof", false) ? "1" : "0") + "&lang=" + (it.ampy.cybercity.L.english() ? "en" : "it");
         web.loadUrl(url);
     }

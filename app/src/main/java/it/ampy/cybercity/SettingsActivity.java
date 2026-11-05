@@ -470,6 +470,9 @@ public class SettingsActivity extends Activity {
         toggle(L.t("Scanlines CRT"), null, p.scanlines(), v -> p.putBool("scanlines", v));
         int qi = 1; for (int i = 0; i < Prefs.QUALITY_VALUES.length; i++) if (Prefs.QUALITY_VALUES[i] == p.quality()) qi = i;
         choice(L.t("QUALITÀ DI RENDERING"), Prefs.QUALITY_LABELS, qi, i -> p.putInt("quality", Prefs.QUALITY_VALUES[i]));
+        { int mi = 1; for (int i = 0; i < Prefs.MODEL_Q.length; i++) if (Prefs.MODEL_Q[i].equals(p.modelQuality())) mi = i;
+          choice(L.t("RISOLUZIONE MODELLI (KAGE GT, DRONE, BARCA, GALEONE)"), Prefs.MODEL_Q_NAMES, mi, i -> p.putString("modelQuality", Prefs.MODEL_Q[i])); }
+        toggle(L.t("Veicoli KAGE nello screensaver"), L.t("Droni KAGE STRIX al posto delle scie volanti, barche e galeone nel canale"), p.fleet(), v -> p.putBool("fleet", v));
         String[] fpsL = {L.t("30 FPS (risparmio)"), "45 FPS", L.t("60 FPS (fluido)")};
         int fi = 1; for (int i = 0; i < Prefs.FPS_VALUES.length; i++) if (Prefs.FPS_VALUES[i] == p.fps()) fi = i;
         choice(L.t("FREQUENZA FOTOGRAMMI"), fpsL, fi, i -> p.putInt("fps", Prefs.FPS_VALUES[i]));

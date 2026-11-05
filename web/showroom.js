@@ -23,7 +23,8 @@ function Showroom(canvas, opts) {
   }
   this.P = { sky: prog('sky.vert', 'sky.frag'), floor: prog('ground.vert', 'studio_floor.frag'), car: prog('car_hd.vert', 'car_hd.frag'), glow: prog('glow.vert', 'glow.frag') };
   const t0 = performance.now();
-  this.model = CarHD.build();
+  this.quality = opts.quality || 'high';
+  this.model = CarHD.build({ quality: this.quality });
   this.buildMs = performance.now() - t0;
   this.car = new CarRender(gl, this.P.car, this.model);
   const F = window.EngineFX;
@@ -39,6 +40,11 @@ function Showroom(canvas, opts) {
   this.cam = { yaw: 0.7, pitch: 0.18, dist: 7.2, mode: 'orbit', auto: true, look: 0, lookP: 0 };
   this.t = 0; this.turn = 0;
 }
+/** model resolution: low / high / ultra (rebuilds the KAGE GT) */
+Showroom.prototype.setQuality = function (q) {
+  if (q === this.quality) return; this.quality = q; this.model = CarHD.build({ quality: q }); this.car = new CarRender(this.gl, this.P.car, this.model);
+  const c = this.carCfg; if (c && c.text === 'C') this.car.replaceParts(CarHD.buildText(c.customText));
+};
 Showroom.prototype.drawQuad = function (pr, m) {
   const gl = this.gl, loc = gl.getAttribLocation(pr.p, 'aPos');
   gl.bindBuffer(gl.ARRAY_BUFFER, m.a); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);

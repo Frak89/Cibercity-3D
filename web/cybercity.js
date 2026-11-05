@@ -3,6 +3,7 @@
 (function () {
 'use strict';
 const L = 420, CELL = 14, ROWS = 30, COLS = 13;
+const CANAL = [-44, -16];   // water x range on the left of the avenue
 
 const PALETTES = {
   neon:      { name: 'NEON TOKYO',    fog: [0.17,0.08,0.26], top: [0.012,0.008,0.035], winA: [1.0,0.72,0.42], winB: [0.35,0.9,1.0], winC: [1.0,0.3,0.82], neonA: [0.0,1.0,0.89], neonB: [1.0,0.23,0.78], sun: [0.9,0.85,1.0], sunDir: [0.25,0.32,1], stripes: 0, fogDen: 0.0062 },
@@ -73,9 +74,15 @@ function buildCity(seed) {
     for (let i = 0; i < 4; i++) { BB.pos.push(...cs[i]); BB.center.push(cx, cz); BB.uv.push(...uvs[i]); BB.misc.push(s, kind, ratio, 0); }
     BB.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
+  // canal along the left side of the avenue (the first two building columns become water) + quay walls
+  for (let r = 0; r < ROWS; r++) {
+    const cz = r * CELL + CELL / 2;
+    box(CANAL[1] + 0.3, cz, 0.6, CELL, -3.2, 0.03, 0.5, 3); box(CANAL[0] - 0.3, cz, 0.6, CELL, -3.2, 0.03, 0.5, 3);
+  }
   for (const side of [-1, 1]) {
     for (let col = 0; col < COLS; col++) {
       const cx = side * (16 + CELL / 2 + col * CELL);
+      const wet = side < 0 && col < 2;   // canal: same random draws, nothing emitted
       for (let r = 0; r < ROWS; r++) {
         if (r % 6 === 0) continue;
         const cz = r * CELL + CELL / 2;
@@ -84,11 +91,11 @@ function buildCity(seed) {
         let kind = R() < 0.35 ? 1 : 0;
         let h = 12 + Math.pow(R(), 2.4) * 105 * (col < 3 ? 1.5 : 1.0);
         if (col >= 2 && R() < 0.05) { h = 170 + R() * 120; kind = 2; }
-        box(cx, cz, w, d, 0, h, s, kind);
+        if (!wet) box(cx, cz, w, d, 0, h, s, kind);
         if (h > 55 && R() < 0.55) {
           const h2 = h + h * (0.15 + R() * 0.25);
-          box(cx, cz, w * 0.68, d * 0.68, h, h2, fract(s * 7.7), kind === 2 ? 2 : 1);
-          if (R() < 0.5) box(cx, cz, 0.7, 0.7, h2, h2 + 10 + R() * 25, fract(s * 3.3), 1);
+          if (!wet) box(cx, cz, w * 0.68, d * 0.68, h, h2, fract(s * 7.7), kind === 2 ? 2 : 1);
+          if (R() < 0.5) { const h3 = h2 + 10 + R() * 25; if (!wet) box(cx, cz, 0.7, 0.7, h2, h3, fract(s * 3.3), 1); }
         }
         if (col === 0 && R() < 0.6) {
           const bw = 2.5 + R() * 3, bh = Math.min(h - 6, 6 + R() * 16);
@@ -96,7 +103,8 @@ function buildCity(seed) {
             const y0 = 5 + R() * Math.max(0, h - bh - 8);
             const lx = -side * (w / 2 + 0.3);
             const z0 = -bw / 2, z1 = bw / 2;
-            board(cx, cz, lx, y0, y0 + bh, z0, z1, R(), Math.floor(R() * 3), side);
+            const bs = R(), bk = Math.floor(R() * 3);
+            if (!wet) board(cx, cz, lx, y0, y0 + bh, z0, z1, bs, bk, side);
           }
         }
       }
@@ -110,11 +118,18 @@ function buildCity(seed) {
     for (const c of cs) { C.lane.push(ox, oy, oz, speed); C.dir.push(dx, dz, len, s); C.corner.push(c[0], c[1]); }
     C.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
+  // flying traffic = KAGE STRIX drones: one speed per lane, evenly spaced (same random draws as the old light trails)
+  const DR = [];
+  function lane(n, ox, oy, oz, dx, dz, jit) {
+    let v = 0;
+    for (let i = 0; i < n; i++) { const jx = jit ? R() - 0.5 : 0, jy = (R() - 0.5) * 3, sp = 22 + R() * 25, len = R(), sd = R(); if (i === 0) v = sp;
+      DR.push([ox + jx, oy + jy, oz, v, dx, dz, (i + sd * 0.3) * L / n, sd]); void len; }
+  }
   const xl = [-10, -6, 6, 10], yl = [13, 24, 37, 55, 78];
   for (const x of xl) for (const y of yl) {
     const dir = x > 0 ? 1 : -1;
     const n = 6 + Math.floor(R() * 6);
-    for (let i = 0; i < n; i++) car(x + (R() - 0.5), y + (R() - 0.5) * 3, 0, 22 + R() * 25, 0, dir, 4 + R() * 6, R());
+    lane(n, x, y, 0, 0, dir, true);
   }
   for (const x of [-7, -3, 3, 7]) {
     const n = 10;
@@ -124,14 +139,19 @@ function buildCity(seed) {
     const cz = r * CELL + CELL / 2;
     for (const [y, off] of [[0.7, -2.5], [0.7, 2.5], [21, 0], [34, 2]]) {
       const n = 6;
-      for (let i = 0; i < n; i++) car(0, y, cz + off, 14 + R() * 18, off >= 0 ? 1 : -1, 0, 3 + R() * 5, R());
+      if (y < 1) { for (let i = 0; i < n; i++) car(0, y, cz + off, 14 + R() * 18, off >= 0 ? 1 : -1, 0, 3 + R() * 5, R()); }
+      else { let v = 0; for (let i = 0; i < n; i++) { const sp = 14 + R() * 18; R(); const sd = R(); if (i === 0) v = sp; DR.push([0, y, cz + off, v, off >= 0 ? 1 : -1, 0, (i + sd * 0.3) * L / n, sd]); } }
     }
   }
   for (let i = 0; i < 18; i++) {
     const x = (R() < 0.5 ? -1 : 1) * (40 + R() * 120), y = 110 + R() * 60;
     const n = 5;
-    for (let k = 0; k < n; k++) car(x, y, 0, 30 + R() * 20, 0, x > 0 ? 1 : -1, 6 + R() * 8, R());
+    let v = 0; for (let k = 0; k < n; k++) { const sp = 30 + R() * 20; R(); const sd = R(); if (k === 0) v = sp; DR.push([x, y, 0, v, 0, x > 0 ? 1 : -1, (k + sd * 0.3) * L / n, sd]); }
   }
+  // boats on the canal: two speedboat lanes and one slow galleon lane (no random draws: keeps the rain identical)
+  const BT = [], GA = [];
+  for (let k = 0; k < 4; k++) { BT.push([CANAL[1] - 6, -1.2, 0, 13, 0, 1, k * L / 4 + 17, fract(k * 0.618 + 0.11)]); BT.push([CANAL[0] + 6, -1.2, 0, 11, 0, -1, k * L / 4 + 61, fract(k * 0.618 + 0.47)]); }
+  GA.push([(CANAL[0] + CANAL[1]) / 2, -1.2, 0, 4.5, 0, 1, 120, 0.37]);
   // rain
   const RN = { seed: [], corner: [], idx: [] };
   for (let i = 0; i < 2600; i++) {
@@ -139,7 +159,7 @@ function buildCity(seed) {
     for (const c of [[0,-1],[0,1],[1,1],[1,-1]]) { RN.seed.push(sx, sy, sz); RN.corner.push(c[0], c[1]); }
     RN.idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
-  return { B, BB, C, RN };
+  return { B, BB, C, RN, DR, BT, GA };
 }
 function fract(x) { return x - Math.floor(x); }
 
@@ -212,7 +232,8 @@ function Cybercity(canvas, opts) {
   }
   this.P = {
     sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground.frag'),
-    board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'), post: prog('post.vert', 'post.frag'), mist: prog('post.vert', 'mist.frag')
+    board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'), post: prog('post.vert', 'post.frag'), mist: prog('post.vert', 'mist.frag'),
+    veh: prog('vehicle.vert', 'vehicle.frag'), water: prog('water.vert', 'water.frag')
   };
   const city = buildCity(opts.seed || 2077);
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
@@ -225,8 +246,12 @@ function Cybercity(canvas, opts) {
     car: mesh({ aLane: [c.C.lane, 4], aDir: [c.C.dir, 4], aCorner: [c.C.corner, 2] }, c.C.idx),
     rain: mesh({ aSeed: [c.RN.seed, 3], aCorner: [c.RN.corner, 2] }, c.RN.idx),
     ground: mesh({ aPos: [[-420,-40, 420,-40, 420,L, -420,L], 2] }, [0,1,2,0,2,3]),
-    quad: mesh({ aPos: [[-1,-1, 1,-1, 1,1, -1,1], 2] }, [0,1,2,0,2,3])
+    quad: mesh({ aPos: [[-1,-1, 1,-1, 1,1, -1,1], 2] }, [0,1,2,0,2,3]),
+    water: mesh({ aPos: [[CANAL[0] - CANAL[1] + 0, -40, 0, -40, 0, L, CANAL[0] - CANAL[1], L].map((v, i) => i % 2 ? v : v + (CANAL[1] - CANAL[0]) / 2), 2] }, [0,1,2,0,2,3])
   };
+  // traffic of the KAGE fleet: drones on the flying lanes, speedboats and a galleon on the canal
+  const F = window.KageFleet, tm = (model, inst) => F.bakeTraffic(model, inst).map(ch => mesh({ aPos: [ch.pos, 3], aNorm: [ch.norm, 3], aCol: [ch.col, 4], aAnim: [ch.anim, 4], aLane: [ch.lane, 4], aDir: [ch.dir, 4] }, ch.idx));
+  this.T = F ? { drones: tm(F.buildDrone({ lod: 'lo', paint: 'nero', accent: 'argento' }), c.DR), boats: tm(F.buildBoat({ lod: 'lo' }), c.BT), galleons: tm(F.buildGalleon({ lod: 'lo' }), c.GA) } : null;
   this.camZ = 0; this.t = 0; this.flash = 0; this.nextFlash = 3; this.modeT = 0; this.modeIdx = 0; this.fade = 1;
   this.stats = { verts: c.B.pos.length / 3, cars: c.C.lane.length / 16 };
 }
@@ -279,6 +304,7 @@ Cybercity.prototype.frame = function (dt) {
     f1('uTime', t % 3600); f1('uL', L); f1('uFar', L); f1('uZOff', 0.08); f1('uCamX', 0); f1('uWrapX', pr === P.car ? 420 : 0); f1('uCamZ', this.camZ); f1('uFogDen', fogDen); f1('uFlash', this.flash);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
+    if (u.uCanal) gl.uniform2f(u.uCanal, CANAL[0], CANAL[1]);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP);
     if (u.uV) gl.uniformMatrix4fv(u.uV, false, V.m);
     if (u.uP) gl.uniformMatrix4fv(u.uP, false, Pm);
@@ -296,6 +322,14 @@ Cybercity.prototype.frame = function (dt) {
   gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
   gl.useProgram(P.building.p); set(P.building); this.draw(P.building, this.M.building);
   gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
+  { const w = P.water; gl.useProgram(w.p); set(w); gl.uniform3f(w.u.uWaterC, (CANAL[0] + CANAL[1]) / 2, -1.2, 0); gl.uniform1f(w.u.uWaterRel, 1); if (w.u.uWake) gl.uniform4f(w.u.uWake, 0, 0, 0, 0); this.draw(w, this.M.water); }
+  if (this.T && o.traffic !== 0) {
+    const v = P.veh, u = v.u; gl.useProgram(v.p); set(v);
+    gl.uniform1f(u.uTraffic, 1); gl.uniform1f(u.uWrapX, 420); gl.uniform3f(u.uTint, -1, 0, 0); if (u.uLit) gl.uniform1f(u.uLit, 1); if (u.uDay) gl.uniform1f(u.uDay, 0);
+    if (u.uFlut) gl.uniform1f(u.uFlut, 0.5); if (u.uSailSide) gl.uniform1f(u.uSailSide, 1);
+    gl.uniform1f(u.uScale, 2.2); gl.uniform1f(u.uBob, 0); gl.uniform1f(u.uBlur, 0.45); for (const m of this.T.drones) this.draw(v, m);
+    gl.uniform1f(u.uScale, 1); gl.uniform1f(u.uBob, 1); gl.uniform1f(u.uBlur, 0); for (const m of this.T.boats) this.draw(v, m); for (const m of this.T.galleons) this.draw(v, m);
+  }
   // additive lights
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.32 * (o.traffic === 0 ? 0 : 1)); if (o.traffic !== 0) this.draw(P.car, this.M.car);

@@ -71,7 +71,9 @@ public final class CarHd {
         this.prog = prog;
         // ".akg" on purpose: the Android build silently un-gzips and renames "*.gz" assets
         byte[] raw = null;
-        for (String name : new String[]{"car_hd.akg", "car_hd.bin", "car_hd.bin.gz"}) {
+        String mq = it.ampy.cybercity.Prefs.get(c).modelQuality();
+        String first = "low".equals(mq) ? "car_hd_low.akg" : "ultra".equals(mq) ? "car_hd_ultra.akg" : "car_hd.akg";
+        for (String name : new String[]{first, "car_hd.akg", "car_hd.bin", "car_hd.bin.gz"}) {
             try (InputStream in = c.getAssets().open(name)) { raw = readAll(in); break; } catch (java.io.IOException ignored) { }
         }
         if (raw == null) throw new java.io.FileNotFoundException("car_hd.akg");

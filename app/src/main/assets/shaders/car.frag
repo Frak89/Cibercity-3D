@@ -2,7 +2,12 @@ varying vec2 vC;
 varying float vAway;
 varying float vDist;
 varying float vSeed;
+varying vec3 vHW;
 void main(){
+    if (vHW.y < 3.0) {
+        if (harborWater(mod(vHW.xz, uL)) > 0.5) discard;
+        if (uCanal.y > uCanal.x && vHW.x > uCanal.x && vHW.x < uCanal.y) discard;
+    }
     float side = exp(-vC.y * vC.y * 3.5);
     float along = mix(0.25, 1.0, vC.x);
     vec3 tailCol = vec3(1.0, 0.12, 0.18);

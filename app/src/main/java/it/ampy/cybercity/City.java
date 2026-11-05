@@ -4,6 +4,10 @@ package it.ampy.cybercity;
 public final class City {
     public static final float L = 420f, CELL = 14f;
     public static final int ROWS = 30, COLS = 13;
+    /** canal along the left of the avenue (the first two building columns are water) */
+    public static final float CANAL0 = -44f, CANAL1 = -16f;
+    /** KAGE fleet traffic: {ox, oy, oz, speed, dx, dz, phase, seed} */
+    public final java.util.List<float[]> drones = new java.util.ArrayList<>(), boats = new java.util.ArrayList<>(), galleons = new java.util.ArrayList<>();
 
     public static final class FL {
         public float[] a = new float[1024]; public int n;
@@ -88,9 +92,14 @@ public final class City {
 
     public City(int seed) {
         Rng R = new Rng(seed);
+        for (int r = 0; r < ROWS; r++) {
+            float cz = r * CELL + CELL / 2;
+            box(CANAL1 + 0.3f, cz, 0.6f, CELL, -3.2f, 0.03f, 0.5f, 3); box(CANAL0 - 0.3f, cz, 0.6f, CELL, -3.2f, 0.03f, 0.5f, 3);
+        }
         for (int side : new int[]{-1, 1}) {
             for (int col = 0; col < COLS; col++) {
                 float cx = side * (16 + CELL / 2 + col * CELL);
+                boolean wet = side < 0 && col < 2;
                 for (int r = 0; r < ROWS; r++) {
                     if (r % 6 == 0) continue;
                     float cz = r * CELL + CELL / 2;
@@ -99,18 +108,19 @@ public final class City {
                     float kind = R.next() < 0.35f ? 1 : 0;
                     float h = (float) (12 + Math.pow(R.next(), 2.4) * 105 * (col < 3 ? 1.5 : 1.0));
                     if (col >= 2 && R.next() < 0.05f) { h = 170 + R.next() * 120; kind = 2; }
-                    box(cx, cz, w, d, 0, h, s, kind);
+                    if (!wet) box(cx, cz, w, d, 0, h, s, kind);
                     if (h > 55 && R.next() < 0.55f) {
                         float h2 = h + h * (0.15f + R.next() * 0.25f);
-                        box(cx, cz, w * 0.68f, d * 0.68f, h, h2, fract(s * 7.7f), kind == 2 ? 2 : 1);
-                        if (R.next() < 0.5f) box(cx, cz, 0.7f, 0.7f, h2, h2 + 10 + R.next() * 25, fract(s * 3.3f), 1);
+                        if (!wet) box(cx, cz, w * 0.68f, d * 0.68f, h, h2, fract(s * 7.7f), kind == 2 ? 2 : 1);
+                        if (R.next() < 0.5f) { float h3 = h2 + 10 + R.next() * 25; if (!wet) box(cx, cz, 0.7f, 0.7f, h2, h3, fract(s * 3.3f), 1); }
                     }
                     if (col == 0 && R.next() < 0.6f) {
                         float bw = 2.5f + R.next() * 3, bh = Math.min(h - 6, 6 + R.next() * 16);
                         if (bh > 4) {
                             float y0 = 5 + R.next() * Math.max(0, h - bh - 8);
                             float lx = -side * (w / 2 + 0.3f);
-                            board(cx, cz, lx, y0, y0 + bh, -bw / 2, bw / 2, R.next(), (float) Math.floor(R.next() * 3), side);
+                            float bs = R.next(), bk = (float) Math.floor(R.next() * 3);
+                            if (!wet) board(cx, cz, lx, y0, y0 + bh, -bw / 2, bw / 2, bs, bk, side);
                         }
                     }
                 }
@@ -120,7 +130,9 @@ public final class City {
         for (float x : xl) for (float y : yl) {
             float dir = x > 0 ? 1 : -1;
             int n = 6 + (int) Math.floor(R.next() * 6);
-            for (int i = 0; i < n; i++) car(x + (R.next() - 0.5f), y + (R.next() - 0.5f) * 3, 0, 22 + R.next() * 25, 0, dir, 4 + R.next() * 6, R.next());
+            float v = 0;
+            for (int i = 0; i < n; i++) { float jx = R.next() - 0.5f, jy = (R.next() - 0.5f) * 3, sp = 22 + R.next() * 25; R.next(); float sd = R.next(); if (i == 0) v = sp;
+                drones.add(new float[]{x + jx, y + jy, 0, v, 0, dir, (i + sd * 0.3f) * L / n, sd}); }
         }
         for (float x : new float[]{-7, -3, 3, 7}) {
             for (int i = 0; i < 10; i++) car(x, 0.7f, 0, 12 + R.next() * 10, 0, x > 0 ? 1 : -1, 2.5f + R.next() * 2, R.next());
@@ -129,13 +141,20 @@ public final class City {
         for (int r = 0; r < ROWS; r += 6) {
             float cz = r * CELL + CELL / 2;
             for (float[] yo : cross) {
-                for (int i = 0; i < 6; i++) car(0, yo[0], cz + yo[1], 14 + R.next() * 18, yo[1] >= 0 ? 1 : -1, 0, 3 + R.next() * 5, R.next());
+                if (yo[0] < 1) { for (int i = 0; i < 6; i++) car(0, yo[0], cz + yo[1], 14 + R.next() * 18, yo[1] >= 0 ? 1 : -1, 0, 3 + R.next() * 5, R.next()); }
+                else { float v = 0; for (int i = 0; i < 6; i++) { float sp = 14 + R.next() * 18; R.next(); float sd = R.next(); if (i == 0) v = sp; drones.add(new float[]{0, yo[0], cz + yo[1], v, yo[1] >= 0 ? 1 : -1, 0, (i + sd * 0.3f) * L / 6, sd}); } }
             }
         }
         for (int i = 0; i < 18; i++) {
             float x = (R.next() < 0.5f ? -1 : 1) * (40 + R.next() * 120), y = 110 + R.next() * 60;
-            for (int k = 0; k < 5; k++) car(x, y, 0, 30 + R.next() * 20, 0, x > 0 ? 1 : -1, 6 + R.next() * 8, R.next());
+            float v = 0;
+            for (int k = 0; k < 5; k++) { float sp = 30 + R.next() * 20; R.next(); float sd = R.next(); if (k == 0) v = sp; drones.add(new float[]{x, y, 0, v, 0, x > 0 ? 1 : -1, (k + sd * 0.3f) * L / 5, sd}); }
         }
+        for (int k = 0; k < 4; k++) {
+            boats.add(new float[]{CANAL1 - 6, -1.2f, 0, 13, 0, 1, k * L / 4 + 17, fract(k * 0.618f + 0.11f)});
+            boats.add(new float[]{CANAL0 + 6, -1.2f, 0, 11, 0, -1, k * L / 4 + 61, fract(k * 0.618f + 0.47f)});
+        }
+        galleons.add(new float[]{(CANAL0 + CANAL1) / 2, -1.2f, 0, 4.5f, 0, 1, 120, 0.37f});
         float[][] cs = {{0, -1}, {0, 1}, {1, 1}, {1, -1}};
         for (int i = 0; i < 2600; i++) {
             int b = rSeed.n / 3;

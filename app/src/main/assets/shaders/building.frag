@@ -9,7 +9,15 @@ void main(){
     vec3 base = vec3(0.016, 0.018, 0.028) + uFog * 0.06;
     vec3 nA = mix(uNeonA, uNeonB, step(0.5, fract(seed * 7.31)));
     vec3 col;
-    if (vN.y > 0.5) {
+    if (kind > 2.5) {
+        // quay wall: dark concrete panels, wet stain at the waterline, neon edge at street level
+        vec3 c = vec3(0.045, 0.048, 0.056) + uFog * 0.05;
+        c *= 0.75 + 0.25 * step(0.08, fract(vUV.x / 6.0));
+        c += uFog * 0.08 * smoothstep(-1.0, -1.6, vWP.y);
+        c += nA * exp(-abs(vWP.y - top) * 7.0) * 1.1;
+        c += nA * exp(-abs(vWP.y + 1.0) * 9.0) * 0.25 * (0.5 + 0.5 * sin(vUV.x * 0.8 + uTime));
+        col = c;
+    } else if (vN.y > 0.5) {
         vec2 g = abs(fract(vUV * 0.2) - 0.5);
         col = base * 0.7 + nA * 0.06 * step(0.46, max(g.x, g.y));
         float blink = step(0.82, fract(uTime * 0.6 + seed * 3.1));

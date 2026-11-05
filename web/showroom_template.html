@@ -37,7 +37,7 @@
   <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
   <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
-  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bExh">SCARICO: SERIE</button><button id="bChrono">MODULO CRONO</button><button id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
+  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bExh">SCARICO: SERIE</button><button id="bChrono">MODULO CRONO</button><button id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bQual">RISOLUZIONE: ALTA</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
 <div id="cust"><b>PERSONALIZZAZIONE</b>
@@ -55,7 +55,7 @@
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
-  const o={palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',power:q.get('power')||'v8',exhaust:q.get('exhaust')||'serie',chrono:q.has('chrono'),preserve:q.has('shot')};
+  const o={quality:q.get('quality')||(()=>{try{return localStorage.getItem('kageQuality')}catch(e){return null}})()||'high',palette:q.get('palette')||'neon',paint:q.get('paint')||'nero',power:q.get('power')||'v8',exhaust:q.get('exhaust')||'serie',chrono:q.has('chrono'),preserve:q.has('shot')};
   const cv=document.getElementById('c'); let sr;
   try{ sr=new Showroom(cv,o); }catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
   window.__sr=sr;
@@ -89,6 +89,8 @@
     $('cRimC').textContent='COLORE CERCHI: '+C.rimcol.toUpperCase(); $('cLiv').textContent='LIVREA: '+['NESSUNA','DOPPIA STRISCIA','LATERALE'][C.livery];
     $('cStr').textContent='COLORE LIVREA: '+C.stripe.toUpperCase(); $('cTxt').textContent='SCRITTA: '+(C.text==='none'?'NESSUNA':C.text==='C'?C.customText:presets[+C.text]);
     $('cBrk').textContent='FRENI: '+KAGE_BRAKES[C.brakes].name; kageSave(C); };
+  { const QN={low:'BASSA',high:'ALTA',ultra:'ALTISSIMA'}, QK=['low','high','ultra'], ql=()=>{ $('bQual').textContent='RISOLUZIONE: '+QN[sr.quality]; };
+    ql(); $('bQual').onclick=()=>{ $('bQual').textContent='…'; setTimeout(()=>{ sr.setQuality(QK[(QK.indexOf(sr.quality)+1)%3]); try{localStorage.setItem('kageQuality',sr.quality);}catch(e){} ql(); },30); }; }
   $('bCustom').onclick=()=>{ $('cust').classList.toggle('open'); tog('bCustom',$('cust').classList.contains('open')); };
   $('cKit').onclick=()=>{ C.kit=(C.kit+1)%3; lbl(); }; $('cRim').onclick=()=>{ C.rim={A:'B',B:'C',C:'A'}[C.rim]; lbl(); };
   $('cRimC').onclick=()=>{ C.rimcol=colK[(colK.indexOf(C.rimcol)+1)%colK.length]; lbl(); }; $('cLiv').onclick=()=>{ C.livery=(C.livery+1)%3; lbl(); };

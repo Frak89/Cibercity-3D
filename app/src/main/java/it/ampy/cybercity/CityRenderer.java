@@ -34,7 +34,9 @@ public class CityRenderer implements GLSurfaceView.Renderer {
     public volatile String currentMode = "avenue";
     public volatile String currentPalette = "neon";
 
-    private Prog sky, building, ground, board, car, rain, post, mist;
+    private Prog sky, building, ground, board, car, rain, post, mist, veh, water;
+    private final java.util.List<Mesh> tDrones = new java.util.ArrayList<>(), tBoats = new java.util.ArrayList<>();
+    private Mesh mWater;
     private float flash = 0, nextFlash = 3;
     private final java.util.Random rnd = new java.util.Random();
     private Mesh mBuilding, mBoard, mCar, mRain, mGround, mQuad;
@@ -106,6 +108,9 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
         return m;
     }
+    private static Mesh vmesh(Fleet.Chunk ch) {
+        return mesh(new String[]{"aPos", "aNorm", "aCol", "aAnim", "aLane", "aDir"}, new float[][]{ch.pos, ch.norm, ch.col, ch.anim, ch.lane, ch.dir}, new int[]{3, 3, 4, 4, 4, 4}, ch.idx);
+    }
     private void draw(Prog p, Mesh m) {
         int[] used = new int[m.names.length]; int nu = 0;
         for (int i = 0; i < m.names.length; i++) {
@@ -130,7 +135,16 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         rain = prog("rain.vert", "rain.frag", common);
         post = prog("post.vert", "post.frag", common);
         mist = prog("post.vert", "mist.frag", common);
+        veh = prog("vehicle.vert", "vehicle.frag", common);
+        water = prog("water.vert", "water.frag", common);
         City c = new City(cfg.seed);
+        // KAGE fleet traffic: drones on the flying lanes, speedboats + a galleon on the canal
+        tDrones.clear(); tBoats.clear();
+        java.util.Map<String, Fleet.MeshData> fm = Fleet.load(ctx);
+        for (Fleet.Chunk ch : Fleet.bake(fm.get("drone"), c.drones)) tDrones.add(vmesh(ch));
+        for (Fleet.Chunk ch : Fleet.bake(fm.get("boat"), c.boats)) tBoats.add(vmesh(ch));
+        for (Fleet.Chunk ch : Fleet.bake(fm.get("galleon"), c.galleons)) tBoats.add(vmesh(ch));
+        { float hw = (City.CANAL1 - City.CANAL0) / 2; mWater = mesh(new String[]{"aPos"}, new float[][]{{-hw, -40, hw, -40, hw, City.L, -hw, City.L}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3}); }
         mBuilding = mesh(new String[]{"aPos", "aCenter", "aNorm", "aUV", "aMisc"},
             new float[][]{c.bPos.arr(), c.bCenter.arr(), c.bNorm.arr(), c.bUV.arr(), c.bMisc.arr()}, new int[]{3, 2, 3, 2, 4}, c.bIdx.arr());
         mBoard = mesh(new String[]{"aPos", "aCenter", "aUV", "aMisc"},
@@ -180,6 +194,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         int l = p.u("uVP"); if (l >= 0) GLES20.glUniformMatrix4fv(l, 1, false, VP, 0);
         l = p.u("uV"); if (l >= 0) GLES20.glUniformMatrix4fv(l, 1, false, V, 0);
         l = p.u("uP"); if (l >= 0) GLES20.glUniformMatrix4fv(l, 1, false, P, 0);
+        l = p.u("uCanal"); if (l >= 0) GLES20.glUniform2f(l, City.CANAL0, City.CANAL1);
     }
     private static void f1(Prog p, String n, float v) { int l = p.u(n); if (l >= 0) GLES20.glUniform1f(l, v); }
     private static void v3(Prog p, String n, float[] v) { int l = p.u(n); if (l >= 0) GLES20.glUniform3f(l, v[0], v[1], v[2]); }
@@ -252,6 +267,15 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         common(ground, pal, eye); draw(ground, mGround);
         common(building, pal, eye); draw(building, mBuilding);
         common(board, pal, eye); draw(board, mBoard);
+        common(water, pal, eye);
+        GLES20.glUniform3f(water.u("uWaterC"), (City.CANAL0 + City.CANAL1) / 2, -1.2f, 0); f1(water, "uWaterRel", 1);
+        draw(water, mWater);
+        if (o.traffic && o.fleet) {
+            common(veh, pal, eye);
+            f1(veh, "uTraffic", 1); f1(veh, "uWrapX", 420f); GLES20.glUniform3f(veh.u("uTint"), -1, 0, 0); f1(veh, "uLit", 1); f1(veh, "uDay", 0); f1(veh, "uFlut", 0.5f); f1(veh, "uSailSide", 1); f1(veh, "uGlowOnly", 0);
+            f1(veh, "uScale", 2.2f); f1(veh, "uBob", 0); f1(veh, "uBlur", 0.45f); for (Mesh m : tDrones) draw(veh, m);
+            f1(veh, "uScale", 1); f1(veh, "uBob", 1); f1(veh, "uBlur", 0); for (Mesh m : tBoats) draw(veh, m);
+        }
 
         // additive lights
         GLES20.glEnable(GLES20.GL_BLEND); GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE); GLES20.glDepthMask(false);

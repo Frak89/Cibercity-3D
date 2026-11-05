@@ -317,7 +317,7 @@ function cabinPt(u, v) {
 /* ---------------------------------------------------------------- build */
 function build(opt) {
   opt = opt || {};
-  const q = opt.quality === 'low' ? 0.5 : 1;
+  const q = opt.quality === 'low' ? 0.5 : opt.quality === 'ultra' ? 1.7 : 1;
   const parts = {};
   const P = (name, pivot) => (parts[name] = parts[name] || Part(name, pivot));
   const body = P('body'), hood = P('hood', RIG.hood.pivot), doorL = P('doorL', RIG.doorL.pivot), doorR = P('doorR', RIG.doorR.pivot);

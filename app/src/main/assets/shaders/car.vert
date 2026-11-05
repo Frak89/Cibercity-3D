@@ -15,10 +15,12 @@ varying vec2 vC;
 varying float vAway;
 varying float vDist;
 varying float vSeed;
+varying vec3 vHW;      // world position of the head (for hiding street traffic over water)
 void main(){
     vec3 d = vec3(aDir.x, 0.0, aDir.y);
     float p = mod(aDir.w * 977.0 + aLane.w * uTime, 2.0 * uL);
     vec3 head = aLane.xyz + d * p;
+    vHW = head;
     head.x = mod(head.x - uCamX + uWrapX * 0.5, uWrapX) - uWrapX * 0.5;
     head.z = mod(head.z - uCamZ + uL * uZOff, uL) - uL * uZOff;
     head.y += sin(uTime * 0.7 + aDir.w * 50.0) * 0.4;

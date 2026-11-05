@@ -231,7 +231,7 @@ function Race(canvas, hud, opts) {
   this.aiMesh = AI_COLS.map(c => { const m = NR.buildCarModel(c, [0, 1, 0.9]); return this.mesh({ aPos: [m.solid.pos, 3], aNorm: [m.solid.norm, 3], aCol: [m.solid.col, 4] }, m.solid.idx); });
   this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' }));
   // rivals: the same HD car (lighter tessellation), each with its own paint, kit and rims, same power unit as yours
-  this.hdAI = new CarRender(gl, this.P.hd, CarHD.build({ quality: 'low' }));
+  this.hdAI = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality === 'ultra' ? 'high' : 'low' }));
   this.rivalSim = new EngineFX.EngineSim(opts.power || 'v8');
   this.car = kageLoad(); if (this.car.text === 'C') this.hd.replaceParts(CarHD.buildText(this.car.customText || 'KAGE GT'));
   this.eng = new EngineFX.EngineSim(opts.power || 'v8'); this.fx = new EngineFX.ExhaustFX(700); this.fxgl = new EngineFX.ExhaustGL(gl, this.P.fx); this.audio = new EngineFX.EngineAudio();

@@ -87,6 +87,15 @@ final class CarPhysics {
                     }
                 }
             }
+            // quay edge of the harbour lagoon: push back onto the street
+            if (y < 1 && GameCity.isWater(px, pz)) {
+                float nx = -((GameCity.isWater(px - 2, pz) ? 1 : 0) - (GameCity.isWater(px + 2, pz) ? 1 : 0)), nz = -((GameCity.isWater(px, pz - 2) ? 1 : 0) - (GameCity.isWater(px, pz + 2) ? 1 : 0));
+                if (nx == 0 && nz == 0) { float v = (float) Math.hypot(vx, vz); if (v < 1e-3f) v = 1; nx = -vx / v; nz = -vz / v; }
+                float l = (float) Math.hypot(nx, nz); nx /= l; nz /= l;
+                x += nx * 0.5f; z += nz * 0.5f;
+                float vn = vx * nx + vz * nz;
+                if (vn < 0) { vx -= 1.4f * vn * nx; vz -= 1.4f * vn * nz; vx *= 0.75f; vz *= 0.75f; shake = Math.min(1, shake + Math.abs(vn) * 0.04f); hit = Math.min(1, Math.abs(vn) * 0.05f); impact = Math.max(impact, Math.abs(vn)); }
+            }
         }
         return impact;
     }

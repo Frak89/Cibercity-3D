@@ -2,6 +2,7 @@ uniform float uCamZ;
 varying vec3 vWP;
 
 void main(){
+    if (uCanal.y > uCanal.x && vWP.x > uCanal.x && vWP.x < uCanal.y) discard;
     float vDist = length(vWP - uEye); // per-pixel: interpolating it across big quads is wrong
     float wz = vWP.z + uCamZ;
     float ax = abs(vWP.x);

@@ -8,6 +8,29 @@ final class GameCity {
     static final float GP = 84, RW = 18;
     static final int GN = 15;
     static final float S = GP * GN;
+    /* harbour district (same as HARBOR / islandOf / isWater in web/game.js and harborWater() in common.glsl) */
+    static final int HB0 = 8, HB1 = 13;
+    static final float HX0 = HB0 * GP + RW / 2, HX1 = (HB1 + 1) * GP - RW / 2, HC = (HX0 + HX1) / 2;
+    /** null = outside, {1} = open water, {0, sW, sE, sS, sN} = island with shrunk sides */
+    static float[] islandOf(int bx, int bz) {
+        if (bx < HB0 || bx > HB1 || bz < HB0 || bz > HB1) return null;
+        boolean ringX = bx == HB0 || bx == HB1, ringZ = bz == HB0 || bz == HB1;
+        boolean cX = bx <= HB0 + 1 || bx >= HB1 - 1, cZ = bz <= HB0 + 1 || bz >= HB1 - 1;
+        if (!(ringX || ringZ || (cX && cZ))) return new float[]{1};
+        return new float[]{0, ringX && bx == HB0 ? 0 : 6, ringX && bx == HB1 ? 0 : 6, ringZ && bz == HB0 ? 0 : 6, ringZ && bz == HB1 ? 0 : 6};
+    }
+    static boolean isWater(float x, float z) {
+        x = ((x % S) + S) % S; z = ((z % S) + S) % S;
+        if (x < HX0 || x > HX1 || z < HX0 || z > HX1) return false;
+        if (Math.hypot(x - HC, z - HC) < 11) return false;
+        int bx = (int) Math.floor(x / GP), bz = (int) Math.floor(z / GP); float[] I = islandOf(bx, bz);
+        if (I == null || I[0] > 0.5f) return true;
+        float lx = x - bx * GP - RW / 2, lz = z - bz * GP - RW / 2, inn = GP - RW;
+        return !(lx >= I[1] && lx <= inn - I[2] && lz >= I[3] && lz <= inn - I[4]);
+    }
+    /** flying KAGE STRIX drones: {ox, oy, oz, speed, dx, dz, phase, seed} */
+    final List<float[]> drones = new ArrayList<>();
+    private void wall(float x0, float z0, float x1, float z1) { box((x0 + x1) / 2, (z0 + z1) / 2, Math.max(0.6f, x1 - x0), Math.max(0.6f, z1 - z0), -3.2f, 0.03f, 0.5f, 3); }
 
     static final class Chunk { final Gl.FL pos = new Gl.FL(), center = new Gl.FL(), norm = new Gl.FL(), uv = new Gl.FL(), misc = new Gl.FL(); final Gl.SL idx = new Gl.SL(); }
     final List<Chunk> chunks = new ArrayList<>();
@@ -77,32 +100,42 @@ final class GameCity {
         newChunk();
         for (int i = 0; i < GN * GN; i++) blocks.add(new ArrayList<>());
         float inner = GP - RW;
+        wall(HX0 - 0.3f, HX0, HX0 + 0.3f, HX1); wall(HX1 - 0.3f, HX0, HX1 + 0.3f, HX1);
+        wall(HX0, HX0 - 0.3f, HX1, HX0 + 0.3f); wall(HX0, HX1 - 0.3f, HX1, HX1 + 0.3f);
         for (int bz = 0; bz < GN; bz++) for (int bx = 0; bx < GN; bx++) {
             List<float[]> rects = blocks.get(bz * GN + bx);
-            float ox = bx * GP + RW / 2, oz = bz * GP + RW / 2;
+            float[] I = islandOf(bx, bz);
+            if (I != null && I[0] > 0.5f) continue;
+            float ox = bx * GP + RW / 2, oz = bz * GP + RW / 2, inX = inner, inZ = inner;
+            if (I != null) {
+                ox += I[1]; oz += I[3]; inX = inner - I[1] - I[2]; inZ = inner - I[3] - I[4];
+                if (I[1] > 0) wall(ox - 0.3f, oz, ox + 0.3f, oz + inZ); if (I[2] > 0) wall(ox + inX - 0.3f, oz, ox + inX + 0.3f, oz + inZ);
+                if (I[3] > 0) wall(ox, oz - 0.3f, ox + inX, oz + 0.3f); if (I[4] > 0) wall(ox, oz + inZ - 0.3f, ox + inX, oz + inZ + 0.3f);
+            }
             float dc = (float) (Math.hypot(bx - GN / 2f + 0.5f, bz - GN / 2f + 0.5f) / (GN / 2f));
             float downtown = Math.max(0, 1 - dc);
             float r = R.next();
             if (r < 0.07f) {
                 float s = R.next();
-                box(ox + inner / 2, oz + inner / 2, 14, 14, 0, 5, s, 1);
-                rects.add(new float[]{ox + inner / 2 - 7, oz + inner / 2 - 7, ox + inner / 2 + 7, oz + inner / 2 + 7});
+                box(ox + inX / 2, oz + inZ / 2, 14, 14, 0, 5, s, 1);
+                rects.add(new float[]{ox + inX / 2 - 7, oz + inZ / 2 - 7, ox + inX / 2 + 7, oz + inZ / 2 + 7, 5});
                 continue;
             }
             int n = R.next() < 0.45f ? 3 : 2;
-            float cell = inner / n;
+            float cellX = inX / n, cellZ = inZ / n;
             for (int j = 0; j < n; j++) for (int i = 0; i < n; i++) {
                 float s = R.next();
                 float mx = 1.2f + R.next() * 2.2f, mz = 1.2f + R.next() * 2.2f;
-                float w = cell - 2 * mx, d = cell - 2 * mz;
-                float cx = ox + cell * (i + 0.5f), cz = oz + cell * (j + 0.5f);
+                float w = cellX - 2 * mx, d = cellZ - 2 * mz;
+                float cx = ox + cellX * (i + 0.5f), cz = oz + cellZ * (j + 0.5f);
                 float kind = R.next() < 0.35f ? 1 : 0;
                 float h = (float) (10 + Math.pow(R.next(), 2) * 55 + downtown * Math.pow(R.next(), 1.3) * 190);
                 if (downtown > 0.55f && R.next() < 0.12f) { h = 200 + R.next() * 120; kind = 2; }
                 box(cx, cz, w, d, 0, h, s, kind);
-                rects.add(new float[]{cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2});
+                rects.add(new float[]{cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, h});
                 if (h > 50 && R.next() < 0.55f) {
                     float h2 = h + h * (0.15f + R.next() * 0.25f);
+                    rects.add(new float[]{cx - w * 0.34f, cz - d * 0.34f, cx + w * 0.34f, cz + d * 0.34f, h2});
                     box(cx, cz, w * 0.68f, d * 0.68f, h, h2, fract(s * 7.7f), kind == 2 ? 2 : 1);
                     if (R.next() < 0.5f) box(cx, cz, 0.7f, 0.7f, h2, h2 + 10 + R.next() * 25, fract(s * 3.3f), 1);
                 }
@@ -121,7 +154,7 @@ final class GameCity {
             }
             float px = ox + 1.2f, pz = oz + 1.2f;
             box(px, pz, 0.35f, 0.35f, 0, 7.5f, R.next(), 1);
-            rects.add(new float[]{px - 0.3f, pz - 0.3f, px + 0.3f, pz + 0.3f});
+            rects.add(new float[]{px - 0.3f, pz - 0.3f, px + 0.3f, pz + 0.3f, 7.5f});
         }
         for (int k = 0; k < GN; k++) {
             float a = k * GP;
@@ -134,8 +167,8 @@ final class GameCity {
             }
             for (float y : new float[]{28, 46, 70}) {
                 for (int i = 0; i < 2; i++) {
-                    car(a + (R.next() - 0.5f) * 6, y + R.next() * 4, 0, 25 + R.next() * 20, 0, R.next() < 0.5f ? 1 : -1, 5 + R.next() * 6, R.next());
-                    car(0, y + R.next() * 4, a + (R.next() - 0.5f) * 6, 25 + R.next() * 20, R.next() < 0.5f ? 1 : -1, 0, 5 + R.next() * 6, R.next());
+                    { float x = a + (R.next() - 0.5f) * 6, yy = y + R.next() * 4, sp = 25 + R.next() * 20, d = R.next() < 0.5f ? 1 : -1; R.next(); float sd = R.next(); drones.add(new float[]{x, yy, 0, sp, 0, d, sd * S, sd}); }
+                    { float yy = y + R.next() * 4, z = a + (R.next() - 0.5f) * 6, sp = 25 + R.next() * 20, d = R.next() < 0.5f ? 1 : -1; R.next(); float sd = R.next(); drones.add(new float[]{0, yy, z, sp, d, 0, sd * S, sd}); }
                 }
             }
         }

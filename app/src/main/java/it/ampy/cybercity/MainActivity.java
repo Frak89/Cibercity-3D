@@ -63,6 +63,8 @@ public class MainActivity extends Activity {
         panel.addView(button(L.t("▶ GIOCA · NEON RUN"), true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.GameActivity.class))));
         panel.addView(button("SHOWROOM · AMPY KAGE GT", false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.ShowroomActivity.class))));
         panel.addView(button(L.t("🏁 KAGE CIRCUIT · PISTA 11 KM"), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class))));
+        for (String[] fv : new String[][]{{"drone", "🚁 DRONE · GARE IN CITTÀ"}, {"boat", "🚤 BARCA · LAGUNA"}, {"galleon", "⛵ GALEONE · REGATA"}})
+            panel.addView(button(L.t(fv[1]), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "game.html").putExtra("vehicle", fv[0]))));
         panel.addView(button(L.t("IMPOSTAZIONI"), false, v -> startActivity(new Intent(this, SettingsActivity.class))));
         panel.addView(button(L.english() ? "🌐 LANGUAGE: ENGLISH · tap for ITALIANO" : "🌐 LINGUA: ITALIANO · tocca per ENGLISH", false, v -> {
             L.set(this, !L.english());

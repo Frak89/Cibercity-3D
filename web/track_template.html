@@ -77,7 +77,8 @@
   const pick=(pane)=>{ pane.querySelectorAll('.row').forEach(r=>{ const k=r.dataset.k; r.querySelectorAll('.opt').forEach(b=>{ if(cfg[k]!==undefined) b.classList.toggle('on', String(cfg[k])===b.dataset.v); b.onclick=()=>{ r.querySelectorAll('.opt').forEach(x=>x.classList.remove('on')); b.classList.add('on'); cfg[k]=isNaN(+b.dataset.v)||b.dataset.v===''?b.dataset.v:+b.dataset.v; if(k==='mode'||k==='weather'||k==='tyre'||k==='power') cfg[k]=b.dataset.v; }; }); }); };
   pick($('menu')); cfg.pfuel=0.5; cfg.ptyre=''; pick($('pit'));
   let race;
-  const opts=()=>({mode:cfg.mode,laps:+cfg.laps,weather:cfg.weather,night:cfg.night==='1'||cfg.night===1,tyre:cfg.tyre,fuel:+cfg.fuel,ai:+cfg.ai,power:cfg.power,paint:cfg.paint,exhaust:cfg.exhaust,roof:cfg.roof,preserve:q.has('shot')});
+  const MQ=q.get('quality')||(()=>{try{return localStorage.getItem('kageQuality')}catch(e){return null}})()||'high';
+  const opts=()=>({quality:MQ,mode:cfg.mode,laps:+cfg.laps,weather:cfg.weather,night:cfg.night==='1'||cfg.night===1,tyre:cfg.tyre,fuel:+cfg.fuel,ai:+cfg.ai,power:cfg.power,paint:cfg.paint,exhaust:cfg.exhaust,roof:cfg.roof,preserve:q.has('shot')});
   try{ race=new KageTrack.Race(cv,hud,opts()); }catch(e){ const er=$('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
   window.__race=race;
   const hist=()=>{ const r=KageTrack.loadTrack(); $('resume').style.display=r.save?'block':'none';

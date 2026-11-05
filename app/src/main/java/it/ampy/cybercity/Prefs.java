@@ -18,11 +18,16 @@ public final class Prefs {
     public int speedPct() { return sp.getInt("speed", 100); }          // 30..250
     public int rainPct() { return sp.getInt("rain", 55); }             // 0..100
     public boolean autoScenes() { return sp.getBoolean("autoScenes", true); }
+    public boolean fleet() { return sp.getBoolean("fleet", true); }
     public boolean traffic() { return sp.getBoolean("traffic", true); }
     public boolean scanlines() { return sp.getBoolean("scanlines", false); }
     public boolean clock() { return sp.getBoolean("clock", true); }
     public boolean dim() { return sp.getBoolean("dim", false); }
     public int quality() { return sp.getInt("quality", 85); }
+    /** model resolution of the KAGE GT and the KAGE fleet: low / high / ultra */
+    public String modelQuality() { return sp.getString("modelQuality", "high"); }
+    public static final String[] MODEL_Q = {"low", "high", "ultra"};
+    public static final String[] MODEL_Q_NAMES = {L.t("BASSA (veloce)"), L.t("ALTA"), L.t("ALTISSIMA")};
     public int fps() { return sp.getInt("fps", 45); }
     public int cycleSec() { return sp.getInt("cycle", 45); }           // 20..120
     public int fov() { return sp.getInt("fov", 62); }                  // 45..90
@@ -73,19 +78,19 @@ public final class Prefs {
     public static final class Snapshot {
         public final String palette, mode;
         public final float speed, rain;
-        public final boolean traffic, scanlines;
+        public final boolean traffic, scanlines, fleet;
         public final int fps, cycle, fov, seed;
         public String weather;   // effective weather preset key ("off" = none)
         public Snapshot weather(String w) { Snapshot s = new Snapshot(this, palette, mode); s.weather = w; return s; }
         private Snapshot(Snapshot o, String palette, String mode) {
-            this.palette = palette; this.mode = mode; speed = o.speed; rain = o.rain; traffic = o.traffic; scanlines = o.scanlines;
+            this.palette = palette; this.mode = mode; speed = o.speed; rain = o.rain; traffic = o.traffic; scanlines = o.scanlines; fleet = o.fleet;
             fps = o.fps; cycle = o.cycle; fov = o.fov; seed = o.seed; weather = o.weather;
         }
         /** Same settings with a time slot's atmosphere / camera. */
         public Snapshot with(String palette, String mode) { return new Snapshot(this, palette, mode); }
         public Snapshot(Prefs p) {
             palette = p.palette(); mode = p.mode(); speed = p.speedPct() / 100f; rain = p.rainPct() / 100f;
-            traffic = p.traffic(); scanlines = p.scanlines(); fps = p.fps(); cycle = p.cycleSec(); fov = p.fov(); seed = p.seed();
+            traffic = p.traffic(); scanlines = p.scanlines(); fleet = p.fleet(); fps = p.fps(); cycle = p.cycleSec(); fov = p.fov(); seed = p.seed();
             weather = Weather.effective(p);
         }
     }

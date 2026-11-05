@@ -1,13 +1,12 @@
 uniform float uCamX;
 uniform float uCamZ;
-uniform float uPitch;   // block pitch (road every uPitch metres)
-uniform float uRoad;    // road width
 varying vec3 vWP;
 
 /* Game ground: a grid of wet neon streets with lanes, crossings and sidewalks. */
 void main(){
     float vDist = length(vWP - uEye);
     vec2 w = vWP.xz + vec2(uCamX, uCamZ);                 // world position on the torus
+    if (harborWater(mod(w, uL)) > 0.5) discard;           // the lagoon is drawn by water.frag below
     vec2 q = mod(w + uPitch * 0.5, uPitch) - uPitch * 0.5; // distance to the nearest road axis (signed)
     vec2 a = abs(q);
     float hr = uRoad * 0.5;

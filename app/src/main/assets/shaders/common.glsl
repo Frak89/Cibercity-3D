@@ -63,3 +63,25 @@ vec3 headLight(vec3 wp){
     float pool = exp(-dot(d - f * 2.2, d - f * 2.2) * 0.35) * 0.35;           // spill right in front of the bumper
     return vec3(1.0, 0.95, 0.86) * (cone * fall * 1.25 + pool) * uHLOn;
 }
+
+/* harbour district of the game city (lagoon with islands + lighthouse). uHarbor = lagoon x0, z0, x1, z1 (world); x1 <= x0 → none */
+uniform vec4 uHarbor;
+uniform vec2 uCanal;    // screensaver canal: x range of the water (y <= x → none)
+uniform float uPitch;   // block pitch (road every uPitch metres)
+uniform float uRoad;    // road width
+float harborWater(vec2 w){
+    if (uHarbor.z <= uHarbor.x) return 0.0;
+    if (w.x < uHarbor.x || w.x > uHarbor.z || w.y < uHarbor.y || w.y > uHarbor.w) return 0.0;
+    vec2 c = (uHarbor.xy + uHarbor.zw) * 0.5;
+    if (length(w - c) < 11.0) return 0.0;                          // lighthouse islet
+    vec2 b0 = floor(uHarbor.xy / uPitch), b1 = floor(uHarbor.zw / uPitch);
+    vec2 b = floor(w / uPitch), l = w - b * uPitch - uRoad * 0.5, in_ = vec2(uPitch - uRoad);
+    bool ringX = b.x < b0.x + 0.5 || b.x > b1.x - 0.5, ringZ = b.y < b0.y + 0.5 || b.y > b1.y - 0.5;
+    bool cornerX = b.x < b0.x + 1.5 || b.x > b1.x - 1.5, cornerZ = b.y < b0.y + 1.5 || b.y > b1.y - 1.5;
+    bool island = ringX || ringZ || (cornerX && cornerZ);
+    if (!island) return 1.0;
+    float sW = (ringX && b.x < b0.x + 0.5) ? 0.0 : 6.0, sE = (ringX && b.x > b1.x - 0.5) ? 0.0 : 6.0;
+    float sS = (ringZ && b.y < b0.y + 0.5) ? 0.0 : 6.0, sN = (ringZ && b.y > b1.y - 0.5) ? 0.0 : 6.0;
+    if (l.x >= sW && l.x <= in_.x - sE && l.y >= sS && l.y <= in_.y - sN) return 0.0;
+    return 1.0;
+}

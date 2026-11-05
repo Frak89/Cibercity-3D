@@ -54,7 +54,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
     public volatile float hudKmh, hudBoost, hudDrift, hudSteer, hudH, hudX, hudZ, hudDist; public volatile int hudScore, hudBest; public volatile boolean hudBoosting, hudCockpit;
 
     private GameCity city;
-    private Gl.Prog sky, building, ground, board, traffic, rain, post, mist, solid, glow, hdProg;
+    private Gl.Prog sky, building, ground, board, traffic, rain, post, mist, solid, glow, hdProg, vehP, waterP;
+    private final List<Gl.Mesh> tDrones = new ArrayList<>(); private Gl.Mesh mWater, mLight;
     private CarHd hd;
     private final CarHd.State hdState = new CarHd.State();
     private final List<Gl.Mesh> chunks = new ArrayList<>();
@@ -82,11 +83,19 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         float road = Math.round(cross / GameCity.GP) * GameCity.GP;
         // next intersection ahead along the travel axis
         float ni = sgn > 0 ? (float) Math.ceil((along + 0.5f) / GameCity.GP) * GameCity.GP : (float) Math.floor((along - 0.5f) / GameCity.GP) * GameCity.GP;
-        if (Float.isNaN(apNextInt) || Math.abs(ni - apNextInt) > 1) { apNextInt = ni; float r = rnd.nextFloat(); apTurn = r < 0.25f ? -1 : r < 0.5f ? 1 : 0; apCruise = 22 + rnd.nextFloat() * 18; }
+        if (Float.isNaN(apNextInt) || Math.abs(ni - apNextInt) > 1) {
+            apNextInt = ni; apCruise = 22 + rnd.nextFloat() * 18;
+            float ix = apDir % 2 == 0 ? road : ni, iz = apDir % 2 == 0 ? ni : road;
+            int[] ok = new int[3]; int nok = 0;
+            for (int tr = -1; tr <= 1; tr++) { int nd = (apDir + tr + 4) % 4; double hh = nd * Math.PI / 2; if (!GameCity.isWater(ix + (float) Math.sin(hh) * 22, iz + (float) Math.cos(hh) * 22)) ok[nok++] = tr; }
+            float r = rnd.nextFloat(); int want = r < 0.25f ? -1 : r < 0.5f ? 1 : 0; boolean has = false;
+            for (int i = 0; i < nok; i++) if (ok[i] == want) has = true;
+            apTurn = nok == 0 ? 2 : has ? want : ok[rnd.nextInt(nok)];
+        }
         float toInt = (apNextInt - along) * sgn;
         if (apTurn != 0) {
             int nd = (apDir + apTurn + 4) % 4;
-            float newLane = laneCoord(nd, apNextInt);             // where the new lane line crosses our axis
+            float newLane = apTurn == 2 ? along + sgn * 3 : laneCoord(nd, apNextInt);   // where the new lane line crosses our axis
             if ((newLane - along) * sgn < 6.5f) { apDir = nd; apTurn = 0; apNextInt = Float.NaN; return; }
         }
         float lc = laneCoord(apDir, road);
@@ -136,6 +145,8 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         natureP = Gl.prog(ctx, "nature.vert", "nature.frag", common);
         meadowP = Gl.prog(ctx, "ground.vert", "ground_meadow.frag", common);
         warpP = Gl.prog(ctx, "post.vert", "warp.frag", common);
+        vehP = Gl.prog(ctx, "vehicle.vert", "vehicle.frag", common);
+        waterP = Gl.prog(ctx, "water.vert", "water.frag", common);
         if (meadow == null) meadow = new Meadow(2077 + 1885);
         nature.clear();
         for (Meadow.Chunk c : meadow.chunks)
@@ -148,6 +159,13 @@ public class GameRenderer implements GLSurfaceView.Renderer {
                 new float[][]{c.pos.arr(), c.center.arr(), c.norm.arr(), c.uv.arr(), c.misc.arr()}, new int[]{3, 2, 3, 2, 4}, c.idx.arr()));
         mBoard = Gl.mesh(new String[]{"aPos", "aCenter", "aUV", "aMisc"}, new float[][]{city.gPos.arr(), city.gCenter.arr(), city.gUV.arr(), city.gMisc.arr()}, new int[]{3, 2, 2, 4}, city.gIdx.arr());
         mTraffic = Gl.mesh(new String[]{"aLane", "aDir", "aCorner"}, new float[][]{city.cLane.arr(), city.cDir.arr(), city.cCorner.arr()}, new int[]{4, 4, 2}, city.cIdx.arr());
+        tDrones.clear();
+        java.util.Map<String, it.ampy.cybercity.Fleet.MeshData> fm = it.ampy.cybercity.Fleet.load(ctx);
+        for (it.ampy.cybercity.Fleet.Chunk ch : it.ampy.cybercity.Fleet.bake(fm.get("drone"), city.drones))
+            tDrones.add(Gl.mesh(new String[]{"aPos", "aNorm", "aCol", "aAnim", "aLane", "aDir"}, new float[][]{ch.pos, ch.norm, ch.col, ch.anim, ch.lane, ch.dir}, new int[]{3, 3, 4, 4, 4, 4}, ch.idx));
+        { it.ampy.cybercity.Fleet.MeshData lh = fm.get("lighthouse");
+          mLight = lh == null ? null : Gl.mesh(new String[]{"aPos", "aNorm", "aCol", "aAnim"}, new float[][]{lh.pos, lh.norm, lh.col, lh.anim}, new int[]{3, 3, 4, 4}, lh.idx); }
+        { float hw = (GameCity.HX1 - GameCity.HX0) / 2 + 1; mWater = Gl.mesh(new String[]{"aPos"}, new float[][]{{-hw, -hw, hw, -hw, hw, hw, -hw, hw}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3}); }
         mRain = Gl.mesh(new String[]{"aSeed", "aCorner"}, new float[][]{city.rSeed.arr(), city.rCorner.arr()}, new int[]{3, 2}, city.rIdx.arr());
         float h = S / 2;
         mGround = Gl.mesh(new String[]{"aPos"}, new float[][]{{-h, -h, h, -h, h, h, -h, h}}, new int[]{2}, new short[]{0, 1, 2, 0, 2, 3});
@@ -203,6 +221,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         p.v3("uFog", curFog != null ? curFog : pal.fog); p.v3("uSkyTop", curTop != null ? curTop : pal.top); p.v3("uWinA", pal.winA); p.v3("uWinB", pal.winB); p.v3("uWinC", pal.winC);
         p.v3("uNeonA", pal.neonA); p.v3("uNeonB", pal.neonB); p.v3("uEye", eye);
         p.m4("uVP", VP); p.m4("uV", V); p.m4("uP", P);
+        { int hl = p.u("uHarbor"); if (hl >= 0) GLES20.glUniform4f(hl, GameCity.HX0, GameCity.HX0, GameCity.HX1, GameCity.HX1); }
         { float fx = (float) Math.sin(car.h), fz = (float) Math.cos(car.h); int l = p.u("uHL"); if (l >= 0) { GLES20.glUniform4f(l, -e[0] + fx * 2.3f, -e[2] + fz * 2.3f, fx, fz); p.f1("uHLOn", past ? 0.35f : 1); } }
     }
 
@@ -286,6 +305,18 @@ public class GameRenderer implements GLSurfaceView.Renderer {
             common(ground, pal, fogDen, camX, camZ, eye); Gl.draw(ground, mGround);
             common(building, pal, fogDen, camX, camZ, eye); for (Gl.Mesh m : chunks) Gl.draw(building, m);
             common(board, pal, fogDen, camX, camZ, eye); Gl.draw(board, mBoard);
+            common(waterP, pal, fogDen, camX, camZ, eye);
+            GLES20.glUniform3f(waterP.u("uWaterC"), GameCity.HC, -1.2f, GameCity.HC); waterP.f1("uWaterRel", 0); Gl.draw(waterP, mWater);
+            common(vehP, pal, fogDen, camX, camZ, eye);
+            vehP.f1("uTraffic", 1); GLES20.glUniform3f(vehP.u("uTint"), -1, 0, 0); vehP.f1("uLit", 1); vehP.f1("uDay", 0); vehP.f1("uFlut", 0.4f); vehP.f1("uSailSide", 1); vehP.f1("uGlowOnly", 0);
+            vehP.f1("uScale", 2.2f); vehP.f1("uBob", 0); vehP.f1("uBlur", 0.45f);
+            for (Gl.Mesh m : tDrones) Gl.draw(vehP, m);
+            if (mLight != null) {
+                vehP.f1("uTraffic", 0); vehP.f1("uScale", 1); vehP.f1("uBlur", 0);
+                float lx = GameCity.HC - camX, lz = GameCity.HC - camZ; lx -= Math.round(lx / S) * S; lz -= Math.round(lz / S) * S;
+                float[] Ml = new float[16]; Matrix.setIdentityM(Ml, 0); Matrix.translateM(Ml, 0, lx, 0, lz); vehP.m4("uModel", Ml);
+                Gl.draw(vehP, mLight);
+            }
         }
         // body: heading + gyroscopic bank into the turn (stronger in flight) + pitch with throttle / brake
         float vabs = car.speed();

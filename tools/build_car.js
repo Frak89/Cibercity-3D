@@ -6,7 +6,8 @@
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const root = path.resolve(__dirname, '..');
 const CarHD = require(path.join(root, 'web/car_hd.js'));
-const m = CarHD.build({ quality: 'high' });
+const Q = process.argv[2] || 'high', SUF = Q === 'high' ? '' : '_' + Q;
+const m = CarHD.build({ quality: Q });
 
 /* ---------- binary asset ---------- */
 const chunks = [];
@@ -22,9 +23,10 @@ for (const p of m.parts) {
 }
 const bin = Buffer.concat(chunks);
 const gz = zlib.gzipSync(bin, { level: 9 });
-fs.writeFileSync(path.join(root, 'app/src/main/assets/car_hd.akg'), gz);
-console.log('car_hd.akg', bin.length, 'bytes →', gz.length, 'gz ·', JSON.stringify(m.stats));
+fs.writeFileSync(path.join(root, 'app/src/main/assets/car_hd' + SUF + '.akg'), gz);
+console.log('car_hd' + SUF + '.akg', bin.length, 'bytes →', gz.length, 'gz ·', JSON.stringify(m.stats));
 
+if (Q !== 'high') process.exit(0);
 /* ---------- OBJ / MTL ---------- */
 // texture tiling per material: uv multiplier so that one texture tile = TILE periods of the shader pattern
 const TILE = { carbon: 60 / 8, leather: 1, tyre: 1, brake_disc: 1, grille: 60 / 10, screen: 1, carpet: 4 };
