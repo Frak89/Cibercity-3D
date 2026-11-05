@@ -463,22 +463,28 @@ FleetGame.prototype.pilotCfg = function () {
   const now = Date.now(); if (!this._pc || now - this._pcT > 1500) { this._pc = window.KagePilot ? KagePilot.load() : null; this._pcT = now; }
   return this._pc;
 };
-FleetGame.prototype.pilotMesh = function (pose) {
-  const c = this.pilotCfg(); if (!c || c.inVehicle === false) return null;
-  const key = 'pilot' + pose + this.quality + JSON.stringify(c);
-  if (!this.models[key]) this.models[key] = this.g.vmesh(KagePilot.build(c, pose, LOD[this.quality] === 'lo' ? 'lo' : LOD[this.quality]));
+FleetGame.prototype.pilotMesh = function (any) {
+  const c = this.pilotCfg(); if (!c || (c.inVehicle === false && !any)) return null;
+  const cc = Object.assign({}, c, { pose: undefined, inVehicle: undefined }), key = 'pilot' + this.quality + JSON.stringify(cc);
+  if (!this.models[key]) { const m = KagePilot.build(cc, LOD[this.quality]); this.models[key] = this.g.vmesh(m); this.models[key].S = m.S; }
   return this.models[key];
+};
+/** skinned draw: pose name + options, model matrix Mv (camera relative) */
+FleetGame.prototype.drawPilotPose = function (set, Mv, pname, opt, mesh, tt) {
+  const pm = mesh || this.pilotMesh(true); if (!pm) return;
+  const gl = this.gl, P = this.g.P.pil, u = P.u;
+  gl.useProgram(P.p); set(P);
+  gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uBlur, 0);
+  if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
+  gl.uniformMatrix4fv(u.uModel, false, Mv);
+  gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, KagePilot.pose(pname, tt === undefined ? this.g.t : tt, opt, pm.S));
+  this.g.draw(P, pm);
 };
 /** draw the pilot in vehicle `kind` whose model matrix is Mv (camera-relative) */
 FleetGame.prototype.drawPilot = function (set, Mv, kind) {
   const S = window.KagePilot && KagePilot.SEATS[kind]; if (!S) return;
-  const pm = this.pilotMesh(S[4]); if (!pm) return;
-  const gl = this.gl, P = this.g.P.veh, u = P.u;
-  gl.useProgram(P.p); set(P);
-  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uGlowOnly, 0);
-  gl.uniform1f(u.uSail, 0); gl.uniform1f(u.uBlur, 0); if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uLocks) gl.uniform1f(u.uLocks, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
-  gl.uniformMatrix4fv(u.uModel, false, U.mul(Mv, U.mul(U.T(S[0], S[1], S[2]), U.RY(S[3]))));
-  this.g.draw(P, pm);
+  const pm = this.pilotMesh(); if (!pm) return;
+  this.drawPilotPose(set, U.mul(Mv, U.mul(U.T(S[0], S[1], S[2]), U.RY(S[3]))), S[4], { seat: S[5], steer: kind === 'car' ? (this.g.c.steer || 0) * 0.4 : kind === 'galleon' ? -(this.g.c.steer || 0) * 0.3 : (this.g.c.steer || 0) * 0.4 }, pm);
 };
 FleetGame.prototype.drawWorld = function (ctx) {
   const gl = this.gl, P = this.g.P.veh, u = P.u, pal = ctx.pal;

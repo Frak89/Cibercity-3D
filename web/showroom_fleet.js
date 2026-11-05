@@ -42,8 +42,8 @@ SR.prototype.initFleet = function () {
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); } return { p, u }; };
   const buf = (a, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(a) : new Float32Array(a), gl.STATIC_DRAW); return b; };
-  this.F = { kind: null, veh: prog('vehicle.vert', 'vehicle.frag'), water: prog('water.vert', 'water.frag'), cache: {},
-    vmesh: m => ({ a: { aPos: [buf(m.pos), 3], aNorm: [buf(m.norm), 3], aCol: [buf(m.col), 4], aAnim: [buf(m.anim), 4] }, i: buf(m.idx, true), n: m.idx.length, bounds: m.bounds }),
+  this.F = { kind: null, veh: prog('vehicle.vert', 'vehicle.frag'), pil: prog('pilot.vert', 'vehicle.frag'), water: prog('water.vert', 'water.frag'), cache: {},
+    vmesh: m => { const a = { aPos: [buf(m.pos), 3], aNorm: [buf(m.norm), 3], aCol: [buf(m.col), 4], aAnim: [buf(m.anim), 4] }; if (m.skin) a.aSkin = [buf(m.skin), 4]; return { a, i: buf(m.idx, true), n: m.idx.length, bounds: m.bounds, S: m.S, skin: !!m.skin }; },
     basin: { a: { aPos: [buf([-160, -160, 160, -160, 160, 160, -160, 160]), 2] }, i: buf([0, 1, 2, 0, 2, 3], true), n: 6 } };
 };
 SR.prototype.drawMesh = function (pr, m) {
@@ -64,16 +64,26 @@ SR.prototype.setVehicle = function (kind, cfg) {
 };
 SR.prototype.rebuildFleet = function () {
   const F = this.F, key = F.kind + this.quality + JSON.stringify(F.cfg);
-  if (!F.cache[key]) F.cache[key] = F.vmesh(F.kind === 'pilot' ? KagePilot.build(F.cfg, F.cfg.pose, LOD[this.quality]) : KF.KINDS[F.kind].build(Object.assign({}, F.cfg, { lod: LOD[this.quality] || 'hi' })));
-  F.mesh = F.cache[key];
+  const pc = F.kind === 'pilot' ? Object.assign({}, F.cfg, { pose: undefined }) : F.cfg, key2 = F.kind + this.quality + JSON.stringify(pc);
+  if (!F.cache[key2]) F.cache[key2] = F.vmesh(F.kind === 'pilot' ? KagePilot.build(pc, LOD[this.quality]) : KF.KINDS[F.kind].build(Object.assign({}, F.cfg, { lod: LOD[this.quality] || 'hi' })));
+  F.mesh = F.cache[key2]; void key;
 };
 /** the pilot (seated pose) for the vehicle being shown */
 SR.prototype.pilotSeat = function (kind) {
   if (!window.KagePilot) return null; const c = KagePilot.load(); if (c.inVehicle === false) return null;
   this.initFleet(); const S = KagePilot.SEATS[kind]; if (!S) return null;
-  const key = 'seat' + kind + this.quality + JSON.stringify(c);
-  if (!this.F.cache[key]) this.F.cache[key] = this.F.vmesh(KagePilot.build(c, S[4], LOD[this.quality]));
+  const cc = Object.assign({}, c, { pose: undefined }), key = 'pilot' + this.quality + JSON.stringify(cc);
+  if (!this.F.cache[key]) this.F.cache[key] = this.F.vmesh(KagePilot.build(cc, LOD[this.quality]));
   return { mesh: this.F.cache[key], S };
+};
+/** draw a skinned pilot mesh with pose `pname` (bones from KagePilot.pose) under model matrix Mv */
+SR.prototype.drawPilotMesh = function (set, mesh, Mv, pname, opt) {
+  const gl = this.gl, pp = this.F.pil, u = pp.u;
+  set(pp); gl.uniform1f(u.uLit, 1.2); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uBlur, 0);
+  if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
+  gl.uniformMatrix4fv(u.uModel, false, Mv);
+  gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, KagePilot.pose(pname, this.t, opt, mesh.S));
+  this.drawMesh(pp, mesh);
 };
 const setQ0 = SR.prototype.setQuality;
 SR.prototype.setQuality = function (q) {
@@ -85,12 +95,7 @@ const frame0 = SR.prototype.frame;
 SR.prototype.afterOpaque = function (set, carM, eye, mode) {
   if (mode === 'cockpit') return;
   const ps = this.pilotSeat('car'); if (!ps) return;
-  const gl = this.gl, vp = this.F.veh, vu = vp.u;
-  set(vp); gl.uniform1f(vu.uTraffic, 0); gl.uniform1f(vu.uScale, 1); gl.uniform3f(vu.uTint, -1, 0, 0); gl.uniform1f(vu.uLit, 1.15); gl.uniform1f(vu.uDay, 0); gl.uniform1f(vu.uGlowOnly, 0);
-  gl.uniform1f(vu.uSail, 0); gl.uniform1f(vu.uBlur, 0); if (vu.uShadow) gl.uniform1f(vu.uShadow, 0); if (vu.uLocks) gl.uniform1f(vu.uLocks, 0); if (vu.uPortal) gl.uniform1f(vu.uPortal, 0);
-  if (vu.uCamX) { gl.uniform1f(vu.uCamX, 0); gl.uniform1f(vu.uCamZ, 0); gl.uniform1f(vu.uWrapX, 0); }
-  gl.uniformMatrix4fv(vu.uModel, false, U.mul(carM, U.T(ps.S[0], ps.S[1], ps.S[2])));
-  this.drawMesh(vp, ps.mesh);
+  this.drawPilotMesh(set, ps.mesh, U.mul(carM, U.T(ps.S[0], ps.S[1], ps.S[2])), ps.S[4], { seat: ps.S[5], steer: (this.st && this.st.steerWheel ? this.st.steerWheel / 2.6 * 0.5 : 0) });
 };
 SR.prototype.frame = function (dt) {
   if (!this.F || !this.F.kind) return frame0.call(this, dt);
@@ -103,6 +108,7 @@ SR.prototype.frame = function (dt) {
   // pose on the turntable / in the basin
   const b = m.bounds, hover = k === 'drone' ? 0.32 + 0.55 + Math.sin(t * 1.4) * 0.06 : 0;
   if (k === 'pilot' && cam.mode === 'cockpit') cam.mode = 'orbit';
+  if (k === 'pilot' && (F.cfg.pose === 'cammina' || F.cfg.pose === 'corre')) { /* walking on the spot */ }
   const bob = water ? Math.sin(t * 1.1) * (k === 'galleon' ? 0.12 : 0.05) : 0;
   const still = k === 'pilot';
   const pitch = still ? 0 : water ? Math.sin(t * 0.8) * (k === 'galleon' ? 0.012 : 0.02) : -0.03 + Math.sin(t * 0.9) * 0.015;
@@ -150,14 +156,15 @@ SR.prototype.frame = function (dt) {
     gl.uniform4f(w.u.uWake, 0, 0, 0, 0); this.drawMesh(w, F.basin);
     vehUniforms(); gl.uniformMatrix4fv(vu.uModel, false, Mv); this.drawMesh(vp, m);
     const ps = cam.mode !== 'cockpit' && this.pilotSeat(k);
-    if (ps) { gl.uniform1f(vu.uSail, 0); gl.uniformMatrix4fv(vu.uModel, false, U.mul(Mv, U.mul(U.T(ps.S[0], ps.S[1], ps.S[2]), U.RY(ps.S[3])))); this.drawMesh(vp, ps.mesh); }
+    if (ps) this.drawPilotMesh(set, ps.mesh, U.mul(Mv, U.mul(U.T(ps.S[0], ps.S[1], ps.S[2]), U.RY(ps.S[3]))), ps.S[4], { seat: ps.S[5], steer: Math.sin(t * 0.5) * 0.15 });
   } else {
     // mirrored drone in the glossy floor, then the floor, then the drone
-    vehUniforms(); gl.uniformMatrix4fv(vu.uModel, false, U.mul(new Float32Array([1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1]), Mv)); this.drawMesh(vp, m);
+    const draw1 = M2 => { if (k === 'pilot') this.drawPilotMesh(set, m, M2, F.cfg.pose || 'in piedi', {}); else { vehUniforms(); gl.uniformMatrix4fv(vu.uModel, false, M2); this.drawMesh(vp, m); } };
+    draw1(U.mul(new Float32Array([1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1]), Mv));
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     set(P.floor); gl.uniform1f(P.floor.u.uAlpha, 0.86); this.drawQuad(P.floor, this.ground);
     gl.disable(gl.BLEND);
-    vehUniforms(); gl.uniformMatrix4fv(vu.uModel, false, Mv); this.drawMesh(vp, m);
+    draw1(Mv);
   }
   gl.depthMask(true); gl.disable(gl.BLEND);
 };

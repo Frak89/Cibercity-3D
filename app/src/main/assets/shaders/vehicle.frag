@@ -38,7 +38,8 @@ void main(){
     if (dot(N, V) < 0.0) N = -N;
     vec3 base = vCol.rgb;
     if (uTint.x >= 0.0 && slot > 2.5 && slot < 3.5) base = uTint;
-    float gloss = slot < 0.5 ? 0.25 : slot < 1.5 ? 0.75 : slot < 2.5 ? 0.55 : slot < 3.5 ? 0.3 : 1.0;
+    bool skinS = slot > 5.5 && slot < 6.5, hairS = slot > 6.5;
+    float gloss = slot < 0.5 ? 0.25 : slot < 1.5 ? 0.75 : slot < 2.5 ? 0.55 : slot < 3.5 ? 0.3 : skinS ? 0.12 : hairS ? 0.18 : 1.0;
     vec3 L = normalize(vec3(0.35, 0.75, -0.45));
     vec3 keyC = mix(vec3(0.42, 0.46, 0.62), vec3(1.25, 1.15, 1.0), uDay);
     float dif = max(dot(N, L), 0.0);
@@ -51,8 +52,23 @@ void main(){
     env = mix(env, vec3(0.6, 0.72, 0.9) * (0.5 + 0.5 * R.y), uDay);
     float fres = 0.04 + 0.96 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
     float spec = pow(max(dot(R, L), 0.0), slot > 3.5 ? 120.0 : 50.0);
-    vec3 col = base * (dif * keyC * 0.85 + amb) * (slot > 3.5 ? 0.3 : 1.0);
-    col += env * fres * gloss * (slot > 3.5 ? 1.6 : 1.0) + keyC * spec * gloss * 0.7;
+    bool glassS = slot > 3.5 && slot < 4.5;
+    vec3 col;
+    if (skinS) {
+        // skin: wrapped diffuse, warm light bleeding through in the shadows, soft wide highlight
+        float wrapD = max((dot(N, L) + 0.45) / 1.45, 0.0);
+        vec3 ambS = mix(amb, vec3(dot(amb, vec3(0.333))) + 0.02, 0.65);
+        col = base * (wrapD * mix(keyC, vec3(1.0, 0.95, 0.9) * length(keyC) * 0.6, 0.5) * 1.05 + ambS * 1.25) + base * vec3(0.32, 0.1, 0.06) * (1.0 - dif) * 0.35;
+        col += keyC * pow(max(dot(R, L), 0.0), 18.0) * 0.05 + env * fres * 0.08 + uNeonA * pow(1.0 - max(dot(N, V), 0.0), 3.0) * 0.06;
+    } else if (hairS) {
+        // hair: darker diffuse with a soft sheen across the strands
+        vec3 Hh = normalize(L + V);
+        float sheen = pow(1.0 - abs(dot(N, Hh)), 6.0);
+        col = base * (dif * keyC * 0.7 + amb) + base * keyC * sheen * 0.45 + keyC * pow(max(dot(N, Hh), 0.0), 40.0) * 0.06;
+    } else {
+        col = base * (dif * keyC * 0.85 + amb) * (glassS ? 0.3 : 1.0);
+        col += env * fres * gloss * (glassS ? 1.6 : 1.0) + keyC * spec * gloss * 0.7;
+    }
     col *= max(uLit, 1.0);
     col += base * vCol.a * 1.7;
     if (uShadow > 0.5) col = vec3(0.004) + env * fres * 0.15 + vec3(1.0, 0.04, 0.12) * vCol.a * 1.4;

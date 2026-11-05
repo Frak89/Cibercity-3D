@@ -1,6 +1,11 @@
 # Italian → English for every user-visible text of Cybercity 3D (screensaver, NEON RUN, showroom, KAGE CIRCUIT).
 # Whole phrases first; the translator replaces the longest matches first, on word boundaries.
 PAIRS = [
+("A PIEDI · W/S cammina · A/D gira · Q/E laterale · SHIFT corri · SPAZIO salta · INVIO vicino all'auto per salire", "ON FOOT · W/S walk · A/D turn · Q/E sidestep · SHIFT run · SPACE jump · ENTER near the car to get in"),
+("INVIO · sali in auto", "ENTER · get in the car"),
+("INVIO · scendi dall'auto", "ENTER · get out of the car"),
+("SALUTO", "WAVE"), ("INDICA", "POINT"), ("POLLICE", "THUMBS UP"), ("ESULTA", "CHEER"), ("PENSIEROSO", "THOUGHTFUL"), ("CAMMINA", "WALK"), ("CORRE", "RUN"),
+
 ("A BORDO DEI VEICOLI", "ON BOARD THE VEHICLES"),
 ("PILOTA KAGE", "KAGE PILOT"), ("🧑‍🚀 PILOTA", "🧑‍🚀 PILOT"),
 ("Pilota collaudatore KAGE · auto, drone, mare", "KAGE test pilot · cars, drones, sea"),

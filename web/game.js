@@ -499,7 +499,7 @@ function Game(canvas, hud, opts) {
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
     post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
   if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); this.hdQ = opts.quality || 'high'; }
-  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag');
+  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag'); this.P.pil = prog('pilot.vert', 'vehicle.frag');
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
@@ -512,7 +512,7 @@ function Game(canvas, hud, opts) {
     quad: this.mesh({ aPos: [[-1, -1, 1, -1, 1, 1, -1, 1], 2] }, [0, 1, 2, 0, 2, 3])
   };
   { const hw = (HARBOR.x1 - HARBOR.x0) / 2 + 1; this.M.water = this.mesh({ aPos: [[-hw, -hw, hw, -hw, hw, hw, -hw, hw], 2] }, [0, 1, 2, 0, 2, 3]); }
-  this.vmesh = m => this.mesh({ aPos: [m.pos, 3], aNorm: [m.norm, 3], aCol: [m.col, 4], aAnim: [m.anim, 4] }, m.idx);
+  this.vmesh = m => this.mesh(Object.assign({ aPos: [m.pos, 3], aNorm: [m.norm, 3], aCol: [m.col, 4], aAnim: [m.anim, 4] }, m.skin ? { aSkin: [m.skin, 4] } : {}), m.idx);
   if (window.KageFleet) this.T = { drones: KageFleet.bakeTraffic(KageFleet.buildDrone({ lod: 'lo' }), city.DR).map(ch => this.mesh({ aPos: [ch.pos, 3], aNorm: [ch.norm, 3], aCol: [ch.col, 4], aAnim: [ch.anim, 4], aLane: [ch.lane, 4], aDir: [ch.dir, 4] }, ch.idx)) };
   if (window.EngineFX) {
     const F = window.EngineFX;
@@ -534,6 +534,7 @@ function Game(canvas, hud, opts) {
   this.fleet = window.FleetGame ? new FleetGame(this) : null;   // drone / boat / galleon (web/fleet_game.js)
   this.veh = null;
   this.nexus = window.KageNexus ? new KageNexus(this) : null;   // portal to ECO (web/nexus.js)
+  this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
 }
 /** model resolution for the KAGE GT: low / high / ultra */
 Game.prototype.setQuality = function (q) {
@@ -580,12 +581,13 @@ Game.prototype.frame = function (dt, inp) {
   this.fly = (this.fly || 0) + Math.max(-dt * 0.8, Math.min(dt * 0.8, flyT - (this.fly || 0)));
   const fsm = this.fly * this.fly * (3 - 2 * this.fly);
   this.c.y = fsm * CarHD.RIG.fly.alt + (o.power === 'mag' ? 0.015 * Math.sin(this.t * 2.1) * (1 + fsm * 4) : 0);
-  const VEH = this.veh && this.fleet;
-  const phys = VEH ? this.fleet.update(dt, inp) : stepCar(this.c, inp, dt, this.city);
+  const VEH = this.veh && this.fleet, FOOT = !VEH && this.foot && this.foot.active;
+  if (FOOT) this.foot.update(dt, inp);
+  const phys = VEH ? this.fleet.update(dt, inp) : stepCar(this.c, FOOT ? { gas: false, brake: false, steer: 0, hand: true, boost: false } : inp, dt, this.city);
   this.phys = phys;
   if (this.nexus) this.nexus.update(dt);
   const c = this.c;
-  const cv = VEH ? this.fleet.camera(this.view, dt, t) : cameraFor(this.view, c, this.cam, dt, t);
+  const cv = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
   this.cv = cv;
   if (this.eng && VEH) { this.audio.on = false; this.audio.feed(this.eng); this.fxO = null; }
   if (this.eng && !VEH) {
@@ -665,6 +667,7 @@ Game.prototype.frame = function (dt, inp) {
       gl.uniform1f(u.uScale, 2.2); gl.uniform1f(u.uBob, 0); gl.uniform1f(u.uBlur, 0.45); gl.uniform1f(u.uFlut, 0.4); gl.uniform1f(u.uSailSide, 1); for (const m of this.T.drones) this.draw(v, m); }
     if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.nexus) this.nexus.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -682,7 +685,7 @@ Game.prototype.frame = function (dt, inp) {
     { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
     gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
-    if (this.fleet && this.view !== 3) { this.fleet.drawPilot(set, carM, 'car'); gl.useProgram(P.hd.p); set(P.hd); }
+    if (this.fleet && this.view !== 3 && !FOOT) { this.fleet.drawPilot(set, carM, 'car'); gl.useProgram(P.hd.p); set(P.hd); }
   } else if (cv.drawCar && !this.hd) {
     gl.useProgram(P.solid.p); set(P.solid);
     gl.uniformMatrix4fv(P.solid.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
@@ -733,7 +736,8 @@ Game.prototype.frame = function (dt, inp) {
   gl.depthMask(true); gl.disable(gl.BLEND);
   if (this.nexus) this.nexus.drawOverlay(W, H, set);
   gl.depthMask(true); gl.disable(gl.BLEND);
-  if (VEH) this.fleet.drawHud(this.hud); else this.drawHud(inp);
+  if (VEH) this.fleet.drawHud(this.hud); else if (FOOT) this.hud.getContext('2d').clearRect(0, 0, this.hud.width, this.hud.height); else this.drawHud(inp);
+  if (this.foot && !VEH) this.foot.drawHud(this.hud);
   if (this.nexus) this.nexus.drawHud(this.hud);
 };
 

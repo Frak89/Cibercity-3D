@@ -14,6 +14,7 @@
   body.touch.veh-drone #tdn{display:flex}
   #tdn{display:none!important} body.touch.veh-drone #tdn{display:flex!important}
   #tnx{display:none!important} body.touch.nx #tnx{display:flex!important}
+  #tex{display:none!important} body.touch.ex #tex{display:flex!important}
   #fbtn{position:fixed;right:2vmin;top:2vmin;border:1px solid rgba(0,255,226,.6);background:rgba(7,11,19,.55);color:#ecfcff;font:bold 12px monospace;padding:7px 10px;border-radius:8px;cursor:pointer;z-index:5}
   #fleet{position:fixed;right:2vmin;top:7vmin;max-width:min(560px,94vw);max-height:84vh;overflow:auto;background:rgba(7,11,19,.86);border:1px solid rgba(0,255,226,.6);border-radius:10px;padding:10px 12px;font:12px monospace;display:none;z-index:6}
   #fleet.open{display:block}
@@ -37,6 +38,7 @@
 <div class="tb" id="tn" style="right:3vmin;bottom:44vmin">N₂O</div>
 <div class="tb" id="tv" style="right:39vmin;bottom:24vmin">VISTA</div>
 <div class="tb" id="tdn" style="right:39vmin;bottom:44vmin">GIÙ</div>
+<div class="tb" id="tex" style="left:21vmin;bottom:24vmin;border-color:rgba(255,210,80,.7)">AUTO</div>
 <div class="tb" id="tnx" style="left:3vmin;bottom:24vmin;border-color:rgba(255,80,200,.7)">NEXUS</div>
 <button id="fbtn">🚁⛵ FLOTTA</button>
 <div id="fleet"></div>
@@ -49,6 +51,7 @@
 <script>/*GAME*/</script>
 <script>/*FLEET*/</script>
 <script>/*NEXUS*/</script>
+<script>/*ONFOOT*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -62,6 +65,7 @@
   try{ game=new NeonRun.Game(cv,hud,Object.assign(o,{preserve:q.has('shot')})); }
   catch(e){ const er=document.getElementById('err'); er.style.display='flex'; er.textContent='Errore: '+e.message; console.error(e); return; }
   window.__game=game; if(q.has('world')) game.world=q.get('world');
+  if(q.has('foot')&&game.foot){ setTimeout(()=>{},0); }
   if(q.has('pos')){ const v=q.get('pos').split(',').map(parseFloat); game.c.x=v[0]; game.c.z=v[1]; game.c.h=v[2]||0; game.cam.h=game.c.h; }
   if(q.has('nexus')&&game.nexus){ game.nexus.active=Nexus0(); game.nexus.st='open'; game.nexus.portal=1; game.nexus.locks=8; }
   function Nexus0(){ return KageNexus.RINGS[0]; }
@@ -87,6 +91,8 @@
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
+    if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
+    if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
     if(e.code==='KeyB'&&game.audio) game.audio.toggle();
     if(e.code==='KeyL') setLang(LANG==='it'?'en':'it');
     if(game.veh){
@@ -119,16 +125,17 @@
     el.addEventListener('touchstart',e=>{e.preventDefault(); tb[id]=true; if(id==='tv') game.view=(game.view+1)%(game.veh?5:NeonRun.VIEWS.length);});
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
+  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.foot) game.foot.toggle(); });
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk;
     inp.steer=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0);
     inp.hand=keys.Space||tb.th; inp.boost=keys.ShiftLeft||keys.ShiftRight||tb.tn;
-    if(game.veh){
-      const k=game.veh.kind, b=v=>v?1:0;
+    if(game.veh||(game.foot&&game.foot.active)){
+      const k=game.veh?game.veh.kind:'foot', b=v=>v?1:0;
       inp.fwd=b(keys.KeyW||keys.ArrowUp||tb.tg)-b(keys.KeyS||keys.ArrowDown||tb.tbk);
       inp.yaw=b(keys.KeyA||keys.ArrowLeft||tb.tl)-b(keys.KeyD||keys.ArrowRight||tb.tr);
       inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
-      inp.lift=k==='drone'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
+      inp.lift=k==='drone'||k==='foot'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
       inp.fire=k==='galleon'&&(keys.Space||tb.th); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
       // gamepad (standard mapping; drone in mode 2: left stick = altitude/yaw, right stick = pitch/roll)
       const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null;
@@ -137,7 +144,8 @@
         else { inp.yaw+= -ax(0); inp.fwd+= (gp.buttons[7]?gp.buttons[7].value:0)-(gp.buttons[6]?gp.buttons[6].value:0)-ax(1)*0; }
         if(bt(5)) inp.boost=true; if(bt(2)) inp.fire=true;
         if(bt(3)&&!readInput.y) game.view=(game.view+1)%5; readInput.y=bt(3);
-        if(bt(9)&&!readInput.st){ if(F.race&&F.race.state!=='finished') F.stopRace(); else F.startRace(F.race?F.race.course.id:undefined); } readInput.st=bt(9);
+        if(bt(9)&&!readInput.st&&game.veh){ if(F.race&&F.race.state!=='finished') F.stopRace(); else F.startRace(F.race?F.race.course.id:undefined); } readInput.st=bt(9);
+        if(k==='foot'){ if(bt(0)) inp.lift=1; inp.fwd=Math.max(-1,Math.min(1,b(keys.KeyW||keys.ArrowUp||tb.tg)-b(keys.KeyS||keys.ArrowDown||tb.tbk)-ax(1))); }
         inp.fwd=Math.max(-1,Math.min(1,inp.fwd)); inp.yaw=Math.max(-1,Math.min(1,inp.yaw)); inp.lift=Math.max(-1,Math.min(1,inp.lift)); inp.strafe=Math.max(-1,Math.min(1,inp.strafe)); }
     }
   }
@@ -155,6 +163,9 @@
   // test mode: scripted driving then a single frame
   if(ap&&q.has('shot')){ const T=parseFloat(q.get('t')||'3'); let s; for(let i=0;i<T*30;i++){ s=ap.step(game.c,1/30,null); NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
     game.view=parseInt(q.get('view')||'0'); game.frame(1/30,s); window.__ap={x:game.c.x,z:game.c.z,h:game.c.h,v:Math.hypot(game.c.vx,game.c.vz),dir:ap.dir}; window.__done=true; return; }
+  if(q.has('shot')&&q.has('foot')&&game.foot){ const T=parseFloat(q.get('t')||'2'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); game.foot.toggle();
+    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
+    window.__fleet={x:game.foot.x,z:game.foot.z,anim:game.foot.anim}; window.__done=true; return; }
   if(q.has('shot')&&game.veh){   // test: simulate the vehicle with a fixed input, then render one frame
     const T=parseFloat(q.get('t')||'3'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); F.autoMe=!!vi.ai;
     for(let i=0;i<T*30;i++){ const ii=Object.assign({gas:false,brake:false,steer:0},vi); F.update(1/30,ii); game.t+=1/30; }
@@ -168,6 +179,7 @@
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
+    if(game.foot){ const ex=!game.veh&&(game.foot.active?game.foot.nearCar():game.foot.canExit()); if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } }
     { const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null; const b1=gp&&gp.buttons[1]&&gp.buttons[1].pressed; if(b1&&!loop.b1&&game.nexus) game.nexus.dial(); loop.b1=b1; } if(ap) Object.assign(inp,ap.step(game.c,dt,game)); else readInput(); game.frame(dt,inp); requestAnimationFrame(loop); }
 
   requestAnimationFrame(loop);

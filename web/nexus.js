@@ -49,7 +49,7 @@ Nexus.prototype.unlock = function (quiet) {
   if (!quiet) { this.msg = { text: 'INDIRIZZO PERDUTO RICOMPOSTO · PALETTE ECO SBLOCCATA (P)', t: 0, d: 8 }; this.burst = 0.8; this.whoosh(true); }
 };
 Nexus.RINGS = RINGS; Nexus.ECO_PAL = ECO_PAL;
-Nexus.prototype.player = function () { const g = this.g; if (g.veh && g.fleet) { const s = g.fleet.st; return { x: s.x, y: s.y + 0.5, z: s.z, kind: s.kind }; } return { x: g.c.x, y: (g.c.y || 0) + 0.7, z: g.c.z, kind: 'car' }; };
+Nexus.prototype.player = function () { const g = this.g; if (g.foot && g.foot.active && !g.veh) return { x: g.foot.x, y: g.foot.y + 1, z: g.foot.z, kind: 'car' }; if (g.veh && g.fleet) { const s = g.fleet.st; return { x: s.x, y: s.y + 0.5, z: s.z, kind: s.kind }; } return { x: g.c.x, y: (g.c.y || 0) + 0.7, z: g.c.z, kind: 'car' }; };
 Nexus.prototype.dial = function () {
   if (this.st !== 'idle' || !this.near) return;
   this.st = 'dial'; this.t = 0; this.locks = 0; this.active = this.near; this.startAudio();
