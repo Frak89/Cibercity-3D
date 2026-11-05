@@ -75,14 +75,28 @@
     inp.steer=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0);
     inp.hand=keys.Space||tb.th; inp.boost=keys.ShiftLeft||keys.ShiftRight||tb.tn;
   }
+  // ?auto=1 → screensaver city run: autopilot, cinematic cameras, no HUD and no engine sound
+  let ap=null;
+  if(q.has('auto')){
+    ap=new NeonRun.Autopilot(); ap.start(game.c); game.view=0;
+    if(game.audio){ game.audio.start=()=>{}; game.audio.on=false; }
+    hud.style.display='none'; document.body.classList.remove('touch');
+    for(const el of document.querySelectorAll('.tb')) el.style.display='none';
+    const pick=a=>a[Math.random()*a.length|0];
+    o.paint=pick(Object.keys(NeonRun.PAINTS)); o.power=pick(['v8','wankel','mag']); o.exhaust=Math.random()<0.5?'race':'serie'; o.chrono=false; o.fly=false; o.help=false;
+    if(q.has('palette')) o.palette=q.get('palette'); if(q.has('weather')) o.weather=q.get('weather');
+  }
   // test mode: scripted driving then a single frame
+  if(ap&&q.has('shot')){ const T=parseFloat(q.get('t')||'3'); let s; for(let i=0;i<T*30;i++){ s=ap.step(game.c,1/30,null); NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
+    game.view=parseInt(q.get('view')||'0'); game.frame(1/30,s); window.__ap={x:game.c.x,z:game.c.z,h:game.c.h,v:Math.hypot(game.c.vx,game.c.vz),dir:ap.dir}; window.__done=true; return; }
   if(q.has('shot')){
     const T=parseFloat(q.get('t')||'3'), steer=parseFloat(q.get('steer')||'0');
     for(let i=0;i<T*30;i++){ const s={gas:true,brake:false,steer:steer,hand:q.has('drift')&&i>T*15,boost:q.has('boost')}; NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
     game.frame(1/30,{gas:true,brake:q.has('brake'),steer:steer,hand:false,boost:false}); window.__done=true; return;
   }
   let prev=performance.now();
-  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; readInput(); game.frame(dt,inp); requestAnimationFrame(loop); }
+  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; if(ap) Object.assign(inp,ap.step(game.c,dt,game)); else readInput(); game.frame(dt,inp); requestAnimationFrame(loop); }
+
   requestAnimationFrame(loop);
 })();
 </script>

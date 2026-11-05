@@ -22,11 +22,15 @@
     font-size:20px;cursor:pointer;opacity:0;transition:opacity .4s}
   body.active #gear{opacity:1}
   body.idle{cursor:none}
+  #scene{position:fixed;inset:0;width:100%;height:100%;border:0;display:none;background:#000;pointer-events:none}
+  #veil{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .7s}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;color:#ff6177}
 </style>
 </head>
 <body style="--a:#00ffe2">
 <canvas id="c"></canvas>
+<iframe id="scene" title="KAGE GT" allow="autoplay 'none'"></iframe>
+<div id="veil"></div>
 <div id="hud"><div id="clock"></div><div id="date"></div></div>
 <div id="tag">CYBERCITY 3D<br><span id="modeName"></span></div>
 <button id="gear" title="Impostazioni">⚙</button>
@@ -37,6 +41,7 @@
   <label>Velocità <input id="speed" type="range" min="0.3" max="2.5" step="0.1"></label>
   <label>Meteo <select id="weather"></select></label>
   <label>Pioggia (senza meteo) <input id="rain" type="range" min="0" max="1" step="0.05"></label>
+  <label>Scene KAGE GT nel ciclo AUTO <input id="autoScenes" type="checkbox"></label>
   <label>Traffico volante <input id="traffic" type="checkbox"></label>
   <label>Scanlines CRT <input id="scanlines" type="checkbox"></label>
   <label>Orologio glitch <input id="clockOn" type="checkbox"></label>
@@ -48,7 +53,7 @@
 <script>/*ENGINE*/</script>
 <script>
 (function(){
-  const DEF={weather:'',palette:'neon',mode:'auto',speed:1,rain:0.55,traffic:true,scanlines:false,clockOn:true,quality:'0.85',seed:2077,cycle:45};
+  const DEF={weather:'',palette:'neon',mode:'auto',speed:1,rain:0.55,traffic:true,scanlines:false,clockOn:true,quality:'0.85',seed:2077,cycle:45,autoScenes:true};
   let o=Object.assign({},DEF);
   try{Object.assign(o,JSON.parse(localStorage.getItem('cybercity')||'{}'));}catch(e){}
   const q=new URLSearchParams(location.search);
@@ -69,10 +74,12 @@
     for(const k in CYBER_WEATHER){ const w=document.createElement('option'); w.value=k; w.textContent=CYBER_WEATHER[k].name; $('weather').appendChild(w); } }
   const am=document.createElement('option'); am.value='auto'; am.textContent='AUTO (ciclo)'; $('mode').appendChild(am);
   for(const m of CYBER_MODES){ const op=document.createElement('option'); op.value=m; op.textContent=CYBER_MODE_NAMES[m]; $('mode').appendChild(op); }
+  const SCENE_NAMES={kage:"KAGE GT · GIRO DELL'AUTO CASUALE",race:'KAGE GT · CORSA IN CITTÀ (SENZA SUONO)'};
+  for(const m in SCENE_NAMES){ const op=document.createElement('option'); op.value=m; op.textContent=SCENE_NAMES[m]; $('mode').appendChild(op); }
   const bind=(id,prop,kind)=>{ const el=$(id); if(kind==='check') el.checked=!!o[prop]; else el.value=o[prop];
     el.addEventListener('input',()=>{ o[prop]=kind==='check'?el.checked:kind==='num'?parseFloat(el.value):el.value; save(); if(prop==='quality')resize(); applyAccent(); }); };
   bind('palette','palette'); bind('weather','weather'); bind('mode','mode'); bind('speed','speed','num'); bind('rain','rain','num'); bind('traffic','traffic','check');
-  bind('scanlines','scanlines','check'); bind('clockOn','clockOn','check'); bind('quality','quality');
+  bind('scanlines','scanlines','check'); bind('autoScenes','autoScenes','check'); bind('clockOn','clockOn','check'); bind('quality','quality');
   function applyAccent(){ const p=CYBER_PALETTES[o.palette]||CYBER_PALETTES.neon; const c=p.neonA.map(v=>Math.round(v*255)); document.body.style.setProperty('--a','rgb('+c+')');
     $('hud').style.display=o.clockOn?'block':'none'; }
   applyAccent();
@@ -84,7 +91,7 @@
   addEventListener('dblclick',()=>{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); });
   addEventListener('keydown',e=>{
     if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
-    if(e.key===' '){ const all=['auto',...CYBER_MODES]; o.mode=all[(all.indexOf(o.mode)+1)%all.length]; $('mode').value=o.mode; city.fade=1; save(); }
+    if(e.key===' '){ const all=['auto',...CYBER_MODES,'kage','race']; o.mode=all[(all.indexOf(o.mode)+1)%all.length]; $('mode').value=o.mode; city.fade=1; save(); }
     if(e.key==='p'||e.key==='P'){ const ks=Object.keys(CYBER_PALETTES); o.palette=ks[(ks.indexOf(o.palette)+1)%ks.length]; $('palette').value=o.palette; applyAccent(); save(); }
   });
   // glitch clock
@@ -104,11 +111,30 @@
       '<span style="color:#ecfcff;'+(g?'clip-path:inset('+(Math.random()*60|0)+'% 0 '+(Math.random()*30|0)+'% 0);transform:translateX('+((Math.random()-.5)*14)+'px)':'')+'">'+shown+'</span>';
     dt.textContent=days[d.getDay()]+' · '+String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
   }
+  // KAGE GT scenes: the showroom turnaround and the silent autopilot run, loaded in a frame next to this file
+  const rel=/Cybercity3D\.html$/i.test(location.pathname), PAGES={kage:(rel?'Showroom.html':'showroom.html')+'?demo=1',race:(rel?'NeonRun.html':'game.html')+'?auto=1'};
+  let scene='city', sceneT=0, autoStep=0, sceneLoaded='';
+  function sceneFor(dt){
+    if(o.mode==='kage'||o.mode==='race') return o.mode;
+    if(o.mode!=='auto'||!o.autoScenes) return 'city';
+    sceneT+=dt; const cl=Math.max(80,o.cycle*4), len=[cl,75,cl,120];
+    if(sceneT>len[autoStep%4]){ sceneT=0; autoStep++; }
+    return ['city','kage','city','race'][autoStep%4];
+  }
+  function setScene(sc){
+    scene=sc; const v=$('veil'), f=$('scene'); v.style.opacity=1;
+    setTimeout(()=>{ if(scene!==sc) return;
+      if(sc==='city'){ f.style.display='none'; f.src='about:blank'; sceneLoaded=''; }
+      else { const url=PAGES[sc]+'&palette='+o.palette+'&lang='+(window.LANG||'en')+'&weather='+(o.weather||''); if(sceneLoaded!==url){ f.src=url; sceneLoaded=url; } f.style.display='block'; }
+      setTimeout(()=>{ v.style.opacity=0; },sc==='city'?50:900);
+    },750);
+  }
   let prev=performance.now(), shot=q.has('shot');
   function loop(now){
     const step=Math.min(0.05,(now-prev)/1000); prev=now;
-    city.frame(shot?1/30:step);
-    $('modeName').textContent=(CYBER_PALETTES[o.palette]||{}).name+' · '+CYBER_MODE_NAMES[city.curMode];
+    const want=sceneFor(step); if(want!==scene) setScene(want);
+    if(scene==='city'||$('scene').style.display==='none') city.frame(shot?1/30:step);
+    $('modeName').textContent=scene==='kage'?'KAGE GT · SHOWROOM':scene==='race'?'KAGE GT · CORSA IN CITTÀ':(CYBER_PALETTES[o.palette]||{}).name+' · '+CYBER_MODE_NAMES[city.curMode];
     if(o.clockOn) clockFrame(now);
     requestAnimationFrame(loop);
   }

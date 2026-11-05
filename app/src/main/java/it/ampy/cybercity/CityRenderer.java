@@ -24,6 +24,9 @@ public class CityRenderer implements GLSurfaceView.Renderer {
     static final String TAG = "Cybercity";
     public static final String[] MODES = {"avenue", "glide", "drone", "skyline"};
     public static final String[] MODE_NAMES = {L.t("VOLO SUL VIALE"), L.t("PLANATA"), L.t("DRONE A BASSA QUOTA"), L.t("SOPRA I TETTI")};
+    /** screensaver scenes: city cameras + the KAGE GT turnaround and the silent autopilot run (handled by CyberDreamService) */
+    public static final String[] ALL = {"avenue", "glide", "drone", "skyline", "kage", "race"};
+    public static final String[] ALL_NAMES = {MODE_NAMES[0], MODE_NAMES[1], MODE_NAMES[2], MODE_NAMES[3], L.t("KAGE GT · GIRO DELL'AUTO CASUALE"), L.t("KAGE GT · CORSA IN CITTÀ (SENZA SUONO)")};
 
     private final Context ctx;
     private volatile Prefs.Snapshot cfg;
@@ -203,6 +206,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
         fogMul = wx != null ? wx.fog : 1;
         currentPalette = pal.name;
         String mode = o.mode;
+        if ("kage".equals(mode) || "race".equals(mode)) mode = "auto";   // those scenes are not drawn by the city renderer
         if ("auto".equals(mode)) {
             modeT += dt;
             float period = Math.max(10, o.cycle) * (demo ? 0.6f : 1f);
@@ -275,7 +279,7 @@ public class CityRenderer implements GLSurfaceView.Renderer {
     }
 
     public static String modeName(String key) {
-        for (int i = 0; i < MODES.length; i++) if (MODES[i].equals(key)) return MODE_NAMES[i];
+        for (int i = 0; i < ALL.length; i++) if (ALL[i].equals(key)) return ALL_NAMES[i];
         return "AUTO";
     }
 }

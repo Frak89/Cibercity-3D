@@ -412,12 +412,12 @@ public class SettingsActivity extends Activity {
         String[] pl = new String[Palette.NAMES.length + 1]; pl[0] = L.t("GLOBALE"); System.arraycopy(Palette.NAMES, 0, pl, 1, Palette.NAMES.length);
         pal.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("ATMOSFERA"))
             .setSingleChoiceItems(pl, s.palette.isEmpty() ? 0 : Palette.index(s.palette) + 1, (d, i) -> { s.palette = i == 0 ? "" : Palette.KEYS[i - 1]; paint.run(); d.dismiss(); }).show());
-        String[] ml = new String[CityRenderer.MODES.length + 2]; ml[0] = L.t("GLOBALE"); ml[1] = L.t("AUTO (ciclo)");
-        System.arraycopy(CityRenderer.MODE_NAMES, 0, ml, 2, CityRenderer.MODES.length);
+        String[] ml = new String[CityRenderer.ALL.length + 2]; ml[0] = L.t("GLOBALE"); ml[1] = L.t("AUTO (ciclo)");
+        System.arraycopy(CityRenderer.ALL_NAMES, 0, ml, 2, CityRenderer.ALL.length);
         mode.setOnClickListener(v -> {
-            int sel = 0; if ("auto".equals(s.mode)) sel = 1; for (int i = 0; i < CityRenderer.MODES.length; i++) if (CityRenderer.MODES[i].equals(s.mode)) sel = i + 2;
+            int sel = 0; if ("auto".equals(s.mode)) sel = 1; for (int i = 0; i < CityRenderer.ALL.length; i++) if (CityRenderer.ALL[i].equals(s.mode)) sel = i + 2;
             new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("TELECAMERA"))
-                .setSingleChoiceItems(ml, sel, (d, i) -> { s.mode = i == 0 ? "" : i == 1 ? "auto" : CityRenderer.MODES[i - 2]; paint.run(); d.dismiss(); }).show();
+                .setSingleChoiceItems(ml, sel, (d, i) -> { s.mode = i == 0 ? "" : i == 1 ? "auto" : CityRenderer.ALL[i - 2]; paint.run(); d.dismiss(); }).show();
         });
         br.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("LUMINOSITÀ"))
             .setSingleChoiceItems(new String[]{L.t("GLOBALE"), L.t("COME IL SISTEMA"), L.t("PERSONALIZZATA (usa la barra)")},
@@ -454,12 +454,13 @@ public class SettingsActivity extends Activity {
         buildSchedule();
 
         choice(L.t("ATMOSFERA"), Palette.NAMES, Palette.index(p.palette()), i -> p.putString("palette", Palette.KEYS[i]));
-        String[] modeLabels = new String[CityRenderer.MODES.length + 1];
+        String[] modeLabels = new String[CityRenderer.ALL.length + 1];
         modeLabels[0] = L.t("AUTO (ciclo di tutte le telecamere)");
-        System.arraycopy(CityRenderer.MODE_NAMES, 0, modeLabels, 1, CityRenderer.MODES.length);
+        System.arraycopy(CityRenderer.ALL_NAMES, 0, modeLabels, 1, CityRenderer.ALL.length);
         int ms = 0;
-        for (int i = 0; i < CityRenderer.MODES.length; i++) if (CityRenderer.MODES[i].equals(p.mode())) ms = i + 1;
-        choice(L.t("TELECAMERA"), modeLabels, ms, i -> p.putString("mode", i == 0 ? "auto" : CityRenderer.MODES[i - 1]));
+        for (int i = 0; i < CityRenderer.ALL.length; i++) if (CityRenderer.ALL[i].equals(p.mode())) ms = i + 1;
+        choice(L.t("TELECAMERA"), modeLabels, ms, i -> p.putString("mode", i == 0 ? "auto" : CityRenderer.ALL[i - 1]));
+        toggle(L.t("Scene KAGE GT nel ciclo AUTO"), L.t("Ogni tanto: giro dell'auto con configurazioni casuali e corsa in città col pilota automatico (senza suono)"), p.autoScenes(), v -> p.putBool("autoScenes", v));
         slider(L.t("DURATA DI OGNI INQUADRATURA (AUTO)"), 20, 120, p.cycleSec(), " s", v -> p.putInt("cycle", v));
         slider(L.t("VELOCITÀ DI VOLO"), 30, 250, p.speedPct(), " %", v -> p.putInt("speed", v));
         slider(L.t("PIOGGIA"), 0, 100, p.rainPct(), " %", v -> p.putInt("rain", v));

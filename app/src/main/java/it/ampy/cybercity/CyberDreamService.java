@@ -42,13 +42,84 @@ public class CyberDreamService extends DreamService implements SensorEventListen
     private boolean faceDown = false;
     private long faceDownSince = 0, faceUpSince = 0;
 
+    /* scenes: the city, the KAGE GT turnaround (random configurations) and the silent autopilot run */
+    private static final int SC_CITY = 0, SC_KAGE = 1, SC_RACE = 2;
+    private FrameLayout root;
+    private android.opengl.GLSurfaceView active, extra;   // active = view on screen (city or extra)
+    private int scene = SC_CITY, autoStep = 0;
+    private float sceneT = 0;
+    private String effMode = "auto";
+
     private final Runnable label = new Runnable() {
         @Override public void run() {
             if (city == null) return;
-            clock.setLabel(shown == Schedule.SHOW_CITY ? city.renderer.currentPalette + " · " + CityRenderer.modeName(city.renderer.currentMode) : "");
+            String lb = "";
+            if (shown == Schedule.SHOW_CITY) lb = scene == SC_KAGE ? L.t("KAGE GT · SHOWROOM") : scene == SC_RACE ? L.t("KAGE GT · CORSA IN CITTÀ")
+                : city.renderer.currentPalette + " · " + CityRenderer.modeName(city.renderer.currentMode);
+            clock.setLabel(lb);
             clock.postDelayed(this, 1000);
         }
     };
+
+    /** once a second: which scene should be on screen */
+    private final Runnable sceneTick = new Runnable() {
+        @Override public void run() {
+            if (!started) return;
+            sceneT += 1;
+            int want = SC_CITY;
+            if ("kage".equals(effMode)) want = SC_KAGE;
+            else if ("race".equals(effMode)) want = SC_RACE;
+            else if ("auto".equals(effMode) && prefs.autoScenes()) {
+                // city (4 camera shots) → turnaround → city → autopilot run → …
+                float cityLen = Math.max(80, prefs.cycleSec() * 4);
+                float[] len = {cityLen, 75, cityLen, 120};
+                if (sceneT > len[autoStep % 4]) { sceneT = 0; autoStep++; }
+                int st = autoStep % 4;
+                want = st == 1 ? SC_KAGE : st == 3 ? SC_RACE : SC_CITY;
+            }
+            if (want != scene && shown == Schedule.SHOW_CITY) setScene(want);
+            h.postDelayed(this, 1000);
+        }
+    };
+
+    private android.opengl.GLSurfaceView glView(android.opengl.GLSurfaceView.Renderer r) {
+        android.opengl.GLSurfaceView v = new android.opengl.GLSurfaceView(this);
+        v.setEGLContextClientVersion(2);
+        v.setEGLConfigChooser(new CityView.Chooser());
+        v.setRenderer(r);
+        return v;
+    }
+
+    /** fade to black, swap the GL view, fade back in. No EngineSound is ever created here: the scenes are silent. */
+    private void setScene(int sc) {
+        scene = sc;
+        black.animate().cancel();
+        black.animate().alpha(1f).setDuration(700).withEndAction(() -> {
+            if (!started) return;
+            if (extra != null) { extra.onPause(); root.removeView(extra); extra = null; }
+            if (scene == SC_CITY) {
+                active = city; city.setVisibility(View.VISIBLE);
+                if (cityRunning) { city.onResume(); }
+            } else {
+                if (cityRunning) city.onPause();
+                city.setVisibility(View.GONE);   // two SurfaceViews have no reliable z-order: only one is ever visible
+                String pal = curPalette.isEmpty() ? prefs.palette() : curPalette;
+                if (scene == SC_KAGE) {
+                    it.ampy.cybercity.game.ShowroomRenderer r = new it.ampy.cybercity.game.ShowroomRenderer(this);
+                    r.demo = true; r.palette = pal;
+                    extra = glView(r);
+                } else {
+                    it.ampy.cybercity.game.GameRenderer r = new it.ampy.cybercity.game.GameRenderer(this);
+                    r.palette = pal; r.weather = Weather.effective(prefs);
+                    r.startAutopilot();
+                    extra = glView(r);
+                }
+                root.addView(extra, 1, new FrameLayout.LayoutParams(-1, -1));
+                active = extra;
+            }
+            if (shown == Schedule.SHOW_CITY) black.animate().alpha(0f).setDuration(1200).start();
+        }).start();
+    }
 
     private final Runnable tick = new Runnable() {
         @Override public void run() {
@@ -64,6 +135,7 @@ public class CyberDreamService extends DreamService implements SensorEventListen
             Weather.refreshIfStale(CyberDreamService.this, prefs, null);
             if (!s.palette.equals(curPalette) || !s.mode.equals(curMode) || !wNow.equals(curWeather)) {
                 curPalette = s.palette; curMode = s.mode; curWeather = wNow;
+                effMode = s.mode.isEmpty() ? prefs.mode() : s.mode;
                 clock.setWeatherLine(prefs.weatherLine() ? Weather.line(prefs) : "");
                 city.renderer.setConfig(prefs.snapshot().with(s.palette, s.mode));
                 clock.setPalette(Palette.of(s.palette));
@@ -86,7 +158,7 @@ public class CyberDreamService extends DreamService implements SensorEventListen
         setInteractive(false);
         setFullscreen(true);
         setScreenBright(true);
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackgroundColor(0xff000000);
         city = new CityView(this, prefs);
         clock = new ClockOverlay(this);
@@ -135,6 +207,8 @@ public class CyberDreamService extends DreamService implements SensorEventListen
         curPalette = ""; curMode = ""; curWeather = "";
         clock.post(label);
         h.post(tick);
+        scene = SC_CITY; sceneT = 0; autoStep = 0; active = city;
+        h.postDelayed(sceneTick, 1000);
         faceDown = false;
         if (prefs.faceDown() != 2) {
             sm = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -168,11 +242,11 @@ public class CyberDreamService extends DreamService implements SensorEventListen
         clock.setShowClock(prefs.clock());
         clock.setVisibility(clockOn ? View.VISIBLE : View.INVISIBLE);
         if (what == Schedule.SHOW_CITY) {
-            if (!cityRunning) { city.onResume(); cityRunning = true; }
+            if (!cityRunning) { cityRunning = true; if (active != null) active.onResume(); }
             black.animate().alpha(0f).setDuration(1500).start();
         } else {
             black.animate().alpha(1f).setDuration(first ? 0 : 1500).withEndAction(() -> {
-                if (shown != Schedule.SHOW_CITY && cityRunning) { city.onPause(); cityRunning = false; }
+                if (shown != Schedule.SHOW_CITY && cityRunning) { if (active != null) active.onPause(); cityRunning = false; }
             }).start();
         }
     }
@@ -185,7 +259,9 @@ public class CyberDreamService extends DreamService implements SensorEventListen
         NotifListener.setWatcher(null);
         if (city != null) {
             clock.removeCallbacks(label);
-            if (cityRunning) { city.onPause(); cityRunning = false; }
+            if (cityRunning) { if (active != null) active.onPause(); cityRunning = false; }
+            if (extra != null) { root.removeView(extra); extra = null; }
+            active = city; scene = SC_CITY; city.setVisibility(View.VISIBLE);
         }
         super.onDreamingStopped();
     }

@@ -108,6 +108,29 @@
   addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat) rev(true); });
   addEventListener('keyup',e=>{ if(e.code==='Space') rev(false); });
   setInterval(()=>{ $('rpm').textContent=sr.tg.engine?(Math.round(sr.eng.rpm/50)*50)+' RPM':''; },80);
+  // ?demo=1 → screensaver turnaround: random configuration + camera every 9-14 s, no UI, no sound
+  if(q.has('demo')){
+    sr.audio.start=()=>{}; document.body.classList.add('demo');
+    for(const id of ['bar','title','specs','rpm','cust']) { const el=$(id); if(el) el.style.display='none'; }
+    const st=document.createElement('style'); st.textContent='.demo #langPill,.demo .lang-pill{display:none!important}'; document.head.appendChild(st);
+    const pick=a=>a[Math.random()*a.length|0], cams=['orbit','orbit','orbit','orbit','orbit','orbit','interior','cockpit','engine'];
+    let spin=0.25, tDist=7.2, tPitch=0.18, dt0=0;
+    const shuffle=()=>{
+      o.paint=pick(Object.keys(CarRenderUtil.PAINTS)); o.power=pick(PW); o.exhaust=Math.random()<0.5?'race':'serie'; o.chrono=Math.random()<0.3;
+      sr.carCfg={kit:Math.random()*3|0,rim:pick(['A','B','C']),livery:Math.random()*3|0,text:Math.random()<0.4?'none':String(Math.random()*4|0),customText:'KAGE GT',
+        stripe:pick(colK),rimcol:pick(colK),brakes:Math.random()*KAGE_BRAKES.length|0};
+      sr.tg.roof=Math.random()<0.3?1:0; sr.tg.fly=o.power==='mag'&&Math.random()<0.4?1:0; sr.tg.lights=Math.random()<0.8?1:0;
+      const r=Math.random(); sr.tg.hood=r<0.15?1:0; sr.tg.doors=r>0.15&&r<0.32?1:0; sr.tg.steerDemo=Math.random()<0.3;
+      sr.cam.mode=pick(cams); if(sr.cam.mode==='engine') sr.tg.hood=1; sr.cam.auto=false; sr.cam.look=0; sr.cam.lookP=0;
+      spin=(Math.random()<0.5?-1:1)*(0.12+Math.random()*0.3); tDist=4.6+Math.random()*5; tPitch=0.02+Math.random()*0.5; sr.cam.yaw=0.7; sr.turn=Math.random()*6.283;
+      if(sr.eng.type!==o.power) sr.eng.setType(o.power);
+      setTimeout(shuffle,9000+Math.random()*5000);
+    };
+    shuffle();
+    const f0=sr.frame.bind(sr);
+    sr.frame=dt=>{ dt0+=dt; sr.turn+=dt*spin; sr.cam.dist+=(tDist-sr.cam.dist)*Math.min(1,dt*0.8); sr.cam.pitch+=(tPitch-sr.cam.pitch)*Math.min(1,dt*0.8);
+      if(sr.cam.mode==='cockpit') sr.cam.look=0.5*Math.sin(dt0*0.35); sr.tg.rev=dt0%5>4.2?0.7:0; f0(dt); };
+  }
   // orbit / look around with drag, zoom with wheel / pinch
   let drag=null;
   cv.addEventListener('pointerdown',e=>{ drag=[e.clientX,e.clientY]; });

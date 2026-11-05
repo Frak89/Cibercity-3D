@@ -44,6 +44,39 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
 
     public ShowroomRenderer(Context c) { ctx = c.getApplicationContext(); }
 
+    /* screensaver turnaround: a new random configuration and camera every few seconds */
+    public volatile boolean demo = false;
+    private float demoT = 0, demoYaw = 0, demoDist = 7.2f, demoPitch = 0.18f, demoSpin = 0.25f, demoNext = 0;
+    private final java.util.Random dr = new java.util.Random();
+    private void demoStep(float dt) {
+        demoT += dt;
+        if (demoT >= demoNext) {
+            demoT = 0; demoNext = 9 + dr.nextFloat() * 5;
+            paint = CarHd.PAINT_KEYS[dr.nextInt(CarHd.PAINT_KEYS.length)];
+            power = dr.nextInt(3); kit = dr.nextInt(3); rim = dr.nextInt(3); livery = dr.nextInt(3);
+            rimC = dr.nextInt(CarHd.COLORS.length); stripeC = dr.nextInt(CarHd.COLORS.length);
+            text = dr.nextFloat() < 0.4f ? -1 : dr.nextInt(CarHd.TEXT_PRESETS.length); brakes = dr.nextInt(CarHd.BRAKE_NAMES.length);
+            race = dr.nextBoolean(); chrono = dr.nextFloat() < 0.3f; tRoof = dr.nextFloat() < 0.3f ? 1 : 0;
+            fly = power == 2 && dr.nextFloat() < 0.4f;
+            lights = dr.nextFloat() < 0.8f ? 1 : 0;
+            float r = dr.nextFloat();
+            tHood = r < 0.15f ? 1 : 0; tDoors = r > 0.15f && r < 0.32f ? 1 : 0;
+            steerDemo = dr.nextFloat() < 0.3f;
+            float c = dr.nextFloat();
+            camMode = c < 0.72f ? CAM_ORBIT : c < 0.84f ? CAM_INTERIOR : c < 0.92f ? CAM_COCKPIT : CAM_ENGINE;
+            if (camMode == CAM_ENGINE) tHood = 1;
+            demoDist = 4.6f + dr.nextFloat() * 5; demoPitch = 0.02f + dr.nextFloat() * 0.5f;
+            demoSpin = (dr.nextBoolean() ? 1 : -1) * (0.12f + dr.nextFloat() * 0.3f);
+            demoYaw = dr.nextFloat() * 6.283f; turn = demoYaw; look = 0; lookP = 0;
+            engineOn = true; rev = 0;
+        }
+        auto = false;
+        turn += dt * demoSpin;
+        dist += (demoDist - dist) * Math.min(1, dt * 0.8f); pitch += (demoPitch - pitch) * Math.min(1, dt * 0.8f);
+        if (camMode == CAM_COCKPIT) look = 0.5f * (float) Math.sin(demoT * 0.35f);
+        rev = demoT % 5 > 4.2f ? 0.7f : 0;   // a blip every few seconds (silent: no sound in the screensaver)
+    }
+
     @Override public void onSurfaceCreated(GL10 gl, EGLConfig cfg) {
         String common = Gl.asset(ctx, "common.glsl");
         sky = Gl.prog(ctx, "sky.vert", "sky.frag", common);
@@ -77,6 +110,7 @@ public class ShowroomRenderer implements GLSurfaceView.Renderer {
         long now = SystemClock.uptimeMillis();
         float dt = last == 0 ? 1 / 60f : Math.min(0.05f, (now - last) / 1000f);
         last = now; t += dt;
+        if (demo) demoStep(dt);
         st.kit = kit; st.rim = rim; st.livery = livery; st.text = text;
         eng.setType(power); st.power = power; st.time = t; st.race = race; st.chrono = chrono; eng.race = race;
         flyK += Math.max(-dt * 0.7f, Math.min(dt * 0.7f, (power == 2 && fly ? 1 : 0) - flyK)); st.fly = flyK * flyK * (3 - 2 * flyK);

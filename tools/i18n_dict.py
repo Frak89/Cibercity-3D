@@ -1,6 +1,14 @@
 # Italian → English for every user-visible text of Cybercity 3D (screensaver, NEON RUN, showroom, KAGE CIRCUIT).
 # Whole phrases first; the translator replaces the longest matches first, on word boundaries.
 PAIRS = [
+("KAGE GT · GIRO DELL'AUTO CASUALE", "KAGE GT · RANDOM TURNAROUND"),
+("KAGE GT · CORSA IN CITTÀ (SENZA SUONO)", "KAGE GT · CITY RUN (NO SOUND)"),
+("KAGE GT · CORSA IN CITTÀ", "KAGE GT · CITY RUN"),
+("Scene KAGE GT nel ciclo AUTO", "KAGE GT scenes in the AUTO cycle"),
+("Ogni tanto: giro dell'auto con configurazioni casuali e corsa in città col pilota automatico (senza suono)", "Now and then: a turnaround of the car in random configurations and an autopilot run through the city (no sound)"),
+("GIRO AUTO", "TURNAROUND"),
+("CORSA IN CITTÀ", "CITY RUN"),
+
 # ---------- long sentences (settings / screensaver)
 ("Anteprima dal vivo · tocca per nascondere", "Live preview · tap to hide"),
 ("Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", "Source: Open-Meteo (free, no account). Updates every 30 minutes."),

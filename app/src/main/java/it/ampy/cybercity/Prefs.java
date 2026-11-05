@@ -17,6 +17,7 @@ public final class Prefs {
     public String mode() { return sp.getString("mode", "auto"); }
     public int speedPct() { return sp.getInt("speed", 100); }          // 30..250
     public int rainPct() { return sp.getInt("rain", 55); }             // 0..100
+    public boolean autoScenes() { return sp.getBoolean("autoScenes", true); }
     public boolean traffic() { return sp.getBoolean("traffic", true); }
     public boolean scanlines() { return sp.getBoolean("scanlines", false); }
     public boolean clock() { return sp.getBoolean("clock", true); }

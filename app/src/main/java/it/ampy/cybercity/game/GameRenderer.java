@@ -68,6 +68,57 @@ public class GameRenderer implements GLSurfaceView.Renderer {
 
     public GameRenderer(Context c) { ctx = c.getApplicationContext(); }
 
+    /* ---------------- screensaver: autopilot run through the city (silent, no HUD) ---------------- */
+    public volatile boolean autopilot = false;
+    private int apDir = 0, apTurn = 0;         // cardinal heading 0 +z, 1 +x, 2 -z, 3 -x; pending turn -1 / 0 / +1
+    private float apNextInt = Float.NaN, apCruise = 30, apStuck = 0, apView = 0, apViewNext = 10, apBoostT = 0;
+    private static final float LANE = 4.5f;
+    private static float wrapA(float a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
+    /** lane line of direction d through the road whose centre is c (x for d even, z for d odd): returns the fixed coordinate */
+    private static float laneCoord(int d, float c) { float h = d * (float) Math.PI / 2; return d % 2 == 0 ? c + (float) Math.cos(h) * LANE : c - (float) Math.sin(h) * LANE; }
+    private void autopilot(float dt) {
+        float along = apDir % 2 == 0 ? car.z : car.x, sgn = apDir == 0 || apDir == 1 ? 1 : -1;
+        float cross = apDir % 2 == 0 ? car.x : car.z;
+        float road = Math.round(cross / GameCity.GP) * GameCity.GP;
+        // next intersection ahead along the travel axis
+        float ni = sgn > 0 ? (float) Math.ceil((along + 0.5f) / GameCity.GP) * GameCity.GP : (float) Math.floor((along - 0.5f) / GameCity.GP) * GameCity.GP;
+        if (Float.isNaN(apNextInt) || Math.abs(ni - apNextInt) > 1) { apNextInt = ni; float r = rnd.nextFloat(); apTurn = r < 0.25f ? -1 : r < 0.5f ? 1 : 0; apCruise = 22 + rnd.nextFloat() * 18; }
+        float toInt = (apNextInt - along) * sgn;
+        if (apTurn != 0) {
+            int nd = (apDir + apTurn + 4) % 4;
+            float newLane = laneCoord(nd, apNextInt);             // where the new lane line crosses our axis
+            if ((newLane - along) * sgn < 6.5f) { apDir = nd; apTurn = 0; apNextInt = Float.NaN; return; }
+        }
+        float lc = laneCoord(apDir, road);
+        float look = 7 + car.speed() * 0.35f;
+        float tx, tz;
+        if (apDir % 2 == 0) { tx = lc; tz = car.z + sgn * look; } else { tz = lc; tx = car.x + sgn * look; }
+        float want = (float) Math.atan2(tx - car.x, tz - car.z);
+        float err = wrapA(want - car.h);
+        input.steer = Math.max(-1, Math.min(1, err * 2.2f));
+        float vt = apTurn != 0 && toInt < 45 ? 11 : Math.abs(err) > 0.4f ? 14 : apCruise;
+        float v = car.speed();
+        input.gas = v < vt; input.brake = v > vt + 4; input.hand = false;
+        apBoostT -= dt; if (apBoostT < -12 && apTurn == 0 && toInt > 60 && rnd.nextFloat() < 0.01f) apBoostT = 2.5f;
+        input.boost = apBoostT > 0 && apTurn == 0;
+        // stuck against a wall → back onto the lane
+        if (v < 1.5f) apStuck += dt; else apStuck = 0;
+        if (apStuck > 2.5f) {
+            apStuck = 0; car.vx = car.vz = 0;
+            if (apDir % 2 == 0) car.x = laneCoord(apDir, road); else car.z = laneCoord(apDir, road);
+            car.h = apDir * (float) Math.PI / 2;
+        }
+        // cinematic camera rotation (no cockpit HUD)
+        apView += dt;
+        if (apView > apViewNext) { apView = 0; apViewNext = 9 + rnd.nextFloat() * 8; int[] vs = {0, 1, 5, 2, 4, 0, 6, 3}; view = vs[rnd.nextInt(vs.length)]; }
+    }
+    /** start the run on a lane (called once when autopilot is switched on) */
+    public void startAutopilot() {
+        autopilot = true; car.reset(); car.x = laneCoord(0, 0); car.z = 42; car.h = 0; apDir = 0; apNextInt = Float.NaN; view = 0;
+        String[] pk = CarHd.PAINT_KEYS; paint = pk[rnd.nextInt(pk.length)]; kit = rnd.nextInt(3); rim = rnd.nextInt(3); livery = rnd.nextInt(3);
+        rimC = rnd.nextInt(CarHd.COLORS.length); stripeC = rnd.nextInt(CarHd.COLORS.length); power = rnd.nextInt(3); race = rnd.nextBoolean();
+    }
+
     @Override public void onSurfaceCreated(GL10 gl, EGLConfig cfg) {
         String common = Gl.asset(ctx, "common.glsl");
         sky = Gl.prog(ctx, "sky.vert", "sky.frag", common);
@@ -170,6 +221,7 @@ public class GameRenderer implements GLSurfaceView.Renderer {
         car.meadow = past ? meadow : null;
         if (!paused) {
             t += dt;
+            if (autopilot && !past) autopilot(dt);
             float imp = car.step(input, dt, city);
             if (imp > 3) lastImpact = imp;
             eng.race = race;

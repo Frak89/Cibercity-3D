@@ -763,5 +763,37 @@ function cockpit(g, W, H, c, A, B) {
   g.restore();
 }
 
-window.NeonRun = { Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar, cameraFor, lookAt, perspective, mul, model };
+
+/* ===================================================================== autopilot (screensaver city run) */
+// keeps the right-hand lane of the grid, picks a random turn at each intersection, slows for corners. Mirrors GameRenderer.autopilot() on Android.
+function Autopilot() { this.dir = 0; this.turn = 0; this.next = NaN; this.cruise = 30; this.stuck = 0; this.view = 0; this.viewNext = 10; this.boostT = 0; }
+Autopilot.LANE = 4.5;
+Autopilot.lane = (d, c) => { const h = d * Math.PI / 2; return d % 2 === 0 ? c + Math.cos(h) * Autopilot.LANE : c - Math.sin(h) * Autopilot.LANE; };
+Autopilot.prototype.start = function (c) { Object.assign(c, newCar()); c.x = Autopilot.lane(0, 0); c.z = 42; c.h = 0; this.dir = 0; this.next = NaN; };
+Autopilot.prototype.step = function (c, dt, game) {
+  const inp = { gas: false, brake: false, steer: 0, hand: false, boost: false };
+  const along = this.dir % 2 === 0 ? c.z : c.x, sgn = this.dir === 0 || this.dir === 1 ? 1 : -1;
+  const cross = this.dir % 2 === 0 ? c.x : c.z, road = Math.round(cross / GP) * GP;
+  const ni = sgn > 0 ? Math.ceil((along + 0.5) / GP) * GP : Math.floor((along - 0.5) / GP) * GP;
+  if (isNaN(this.next) || Math.abs(ni - this.next) > 1) { this.next = ni; const r = Math.random(); this.turn = r < 0.25 ? -1 : r < 0.5 ? 1 : 0; this.cruise = 22 + Math.random() * 18; }
+  const toInt = (this.next - along) * sgn;
+  if (this.turn !== 0) {
+    const nd = (this.dir + this.turn + 4) % 4, nl = Autopilot.lane(nd, this.next);
+    if ((nl - along) * sgn < 6.5) { this.dir = nd; this.turn = 0; this.next = NaN; return this.step(c, dt, game); }
+  }
+  const lc = Autopilot.lane(this.dir, road), v = Math.hypot(c.vx, c.vz), look = 7 + v * 0.35;
+  let tx, tz; if (this.dir % 2 === 0) { tx = lc; tz = c.z + sgn * look; } else { tz = lc; tx = c.x + sgn * look; }
+  let err = Math.atan2(tx - c.x, tz - c.z) - c.h; while (err > Math.PI) err -= 2 * Math.PI; while (err < -Math.PI) err += 2 * Math.PI;
+  inp.steer = Math.max(-1, Math.min(1, err * 2.2));
+  const vt = this.turn !== 0 && toInt < 45 ? 11 : Math.abs(err) > 0.4 ? 14 : this.cruise;
+  inp.gas = v < vt; inp.brake = v > vt + 4;
+  this.boostT -= dt; if (this.boostT < -12 && this.turn === 0 && toInt > 60 && Math.random() < 0.01) this.boostT = 2.5;
+  inp.boost = this.boostT > 0 && this.turn === 0;
+  if (v < 1.5) this.stuck += dt; else this.stuck = 0;
+  if (this.stuck > 2.5) { this.stuck = 0; c.vx = c.vz = 0; if (this.dir % 2 === 0) c.x = lc; else c.z = lc; c.h = this.dir * Math.PI / 2; }
+  this.view += dt;
+  if (game && this.view > this.viewNext) { this.view = 0; this.viewNext = 9 + Math.random() * 8; const vs = [0, 1, 5, 2, 4, 0, 6, 3]; game.view = vs[Math.random() * vs.length | 0]; }
+  return inp;
+};
+window.NeonRun = { Autopilot, Game, VIEWS, PAINTS, S, GP, RW, buildGameCity, buildMeadow, buildCarModel, stepCar, newCar, cameraFor, lookAt, perspective, mul, model };
 })();
