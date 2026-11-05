@@ -3,6 +3,8 @@ varying vec3 vWP;
 varying vec4 vCol;
 varying vec2 vMode;
 varying float vFade;
+varying vec3 vLoc;
+uniform float uPortal;   // KAGE NEXUS membrane: 0 closed → 1 fully open
 uniform float uBlur;     // rotor speed → blades blur into the disc
 uniform float uLit;      // 1 normal, >1 brighter (garage)
 uniform float uDay;      // 0 night city, 1 daylight
@@ -14,6 +16,19 @@ void main(){
     if (mode > 5.5 && mode < 6.5) { if (dz > uBlur * 0.32) discard; }
     else if (mode > 0.5 && mode < 2.5) { if (dz < uBlur * 0.75) discard; }
     vec3 N = normalize(vN), V = normalize(uEye - vWP);
+    if (slot > 4.5 && slot < 5.5) {           // the living membrane of the portal
+        float r = length(vLoc.xy - vec2(0.0, 7.0)) / 6.55;
+        if (r > uPortal) discard;
+        vec2 q = vLoc.xy * 0.35; float tt = uTime;
+        float ring = sin(r * 22.0 - tt * 3.2) * 0.5 + 0.5;
+        float nn = fbm(q * 2.0 + vec2(tt * 0.3, -tt * 0.21) + vec2(sin(r * 6.0 - tt), cos(r * 5.0 + tt)) * 0.4);
+        vec2 cell = floor(vLoc.xy * 2.5);
+        float gl = step(0.94, h21(cell + floor(tt * 9.0))) * (0.4 + 0.6 * step(0.5, h21(cell * 1.7 + floor(tt * 23.0))));
+        vec3 c = mix(uNeonA * 0.18, uNeonA * 1.25 + vec3(0.25), clamp(nn * nn * 1.4 + ring * 0.22, 0.0, 1.0));
+        c += vec3(0.75, 1.0, 0.9) * gl * 0.7 + uNeonB * pow(nn, 6.0) * 0.8;
+        c += vec3(1.0) * smoothstep(uPortal - 0.1, uPortal, r) * 1.3 + uNeonA * (1.0 - smoothstep(0.0, 0.25, r)) * 0.6;
+        gl_FragColor = vec4(applyFog(c, length(vWP - uEye) * 0.6, vWP.y), 1.0); return;
+    }
     if (uGlowOnly > 0.5) {
         float face = abs(dot(N, V));
         vec3 g = vCol.rgb * vCol.a * (0.25 + 0.75 * face) * (1.0 - fogAmount(length(vWP - uEye)) * 0.9);

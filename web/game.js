@@ -499,7 +499,7 @@ function Game(canvas, hud, opts) {
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
     post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
   if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); this.hdQ = opts.quality || 'high'; }
-  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag');
+  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag');
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
@@ -533,6 +533,7 @@ function Game(canvas, hud, opts) {
   this.stats = { verts: city.chunks.reduce((a, B) => a + B.pos.length / 3, 0), chunks: city.chunks.length };
   this.fleet = window.FleetGame ? new FleetGame(this) : null;   // drone / boat / galleon (web/fleet_game.js)
   this.veh = null;
+  this.nexus = window.KageNexus ? new KageNexus(this) : null;   // portal to ECO (web/nexus.js)
 }
 /** model resolution for the KAGE GT: low / high / ultra */
 Game.prototype.setQuality = function (q) {
@@ -566,7 +567,8 @@ Game.prototype.frame = function (dt, inp) {
   if (this.paletteBuilt !== o.palette + o.paint) this.buildCar();
   const cityPal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   const past = this.world === 'meadow';
-  const pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : cityPal;
+  const eco = this.world === 'eco';
+  const pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : eco ? Object.assign({}, cityPal, KageNexus.ECO_PAL) : cityPal;
   const wx = past ? null : (CYBER_WEATHER[o.weather] || null);
   this.t += dt; const t = this.t;
   this.flash = Math.max(0, this.flash - dt * 3.5);
@@ -581,6 +583,7 @@ Game.prototype.frame = function (dt, inp) {
   const VEH = this.veh && this.fleet;
   const phys = VEH ? this.fleet.update(dt, inp) : stepCar(this.c, inp, dt, this.city);
   this.phys = phys;
+  if (this.nexus) this.nexus.update(dt);
   const c = this.c;
   const cv = VEH ? this.fleet.camera(this.view, dt, t) : cameraFor(this.view, c, this.cam, dt, t);
   this.cv = cv;
@@ -622,7 +625,8 @@ Game.prototype.frame = function (dt, inp) {
   const carRel = [-cv.e[0], 0, -cv.e[2]];
   const W = this.canvas.width, H = this.canvas.height;
   gl.viewport(0, 0, W, H);
-  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], [0, 1, 0]);
+  const er = eco ? 0.035 * Math.sin(t * 0.37) + 0.015 * Math.sin(t * 1.9) : 0;   // ECO: the horizon is never quite level
+  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], [Math.sin(er), Math.cos(er), 0]);
   const fov = cv.fov * Math.PI / 180, far = 700;
   const Pm = perspective(fov, W / H, 0.12, far);
   const VP = mul(Pm, V.m);
@@ -630,7 +634,7 @@ Game.prototype.frame = function (dt, inp) {
   const set = (pr) => {
     const u = pr.u, v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); }, f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
     f1('uTime', t % 3600); f1('uL', S); f1('uFar', 620); f1('uZOff', 0.5); f1('uCamX', camX); f1('uWrapX', S); f1('uCamZ', camZ);
-    f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW);
+    f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW); f1('uGlitch', eco ? 1 : 0);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
     if (u.uHL) { const fx = Math.sin(c.h), fz = Math.cos(c.h); gl.uniform4f(u.uHL, carRel[0] + fx * 2.3, carRel[2] + fz * 2.3, fx, fz); f1('uHLOn', VEH ? 0 : past ? 0.35 : 1); }
@@ -659,6 +663,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.T) { const v = P.veh, u = v.u; gl.useProgram(v.p); set(v); gl.uniform1f(u.uTraffic, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0);
       gl.uniform1f(u.uScale, 2.2); gl.uniform1f(u.uBob, 0); gl.uniform1f(u.uBlur, 0.45); gl.uniform1f(u.uFlut, 0.4); gl.uniform1f(u.uSailSide, 1); for (const m of this.T.drones) this.draw(v, m); }
     if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.nexus) this.nexus.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -723,7 +728,10 @@ Game.prototype.frame = function (dt, inp) {
     this.draw(wp, this.M.quad);
   }
   gl.depthMask(true); gl.disable(gl.BLEND);
+  if (this.nexus) this.nexus.drawOverlay(W, H, set);
+  gl.depthMask(true); gl.disable(gl.BLEND);
   if (VEH) this.fleet.drawHud(this.hud); else this.drawHud(inp);
+  if (this.nexus) this.nexus.drawHud(this.hud);
 };
 
 /* ===================================================================== HUD (2D canvas) */

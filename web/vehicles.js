@@ -495,6 +495,90 @@ function buildGate(kind) {
   return mb.finish();
 }
 
+/* ---------------- KAGE NEXUS portal ring, its dial console, and the eerie inhabitants of ECO ---------------- */
+// glyph: a few emissive strokes on a 3 x 4 grid chosen from the seed (invented symbols)
+function glyph(mb, cx, cy, z, size, seed, matE, flip) {
+  let h = seed * 9301 + 49297; const rnd = () => { h = (h * 9301 + 49297) % 233280; return h / 233280; };
+  const pts = [[0, 0], [1, 0], [2, 0], [0, 1.5], [1, 1.5], [2, 1.5], [0, 3], [1, 3], [2, 3]], n = 3 + Math.floor(rnd() * 3), u = size / 3;
+  let cur = pts[Math.floor(rnd() * 9)];
+  for (let k = 0; k < n; k++) {
+    const nx = pts[Math.floor(rnd() * 9)]; if (nx === cur) continue;
+    const x0 = cx + (cur[0] - 1) * u, y0 = cy + (cur[1] - 1.5) * u, x1 = cx + (nx[0] - 1) * u, y1 = cy + (nx[1] - 1.5) * u, L = Math.hypot(x1 - x0, y1 - y0);
+    mb.push(M(T((x0 + x1) / 2, (y0 + y1) / 2, z), RZ(Math.atan2(y1 - y0, x1 - x0)))); mb.box(0, 0, flip ? -0.02 : 0.02, L + u * 0.18, u * 0.18, 0.04, matE); mb.pop();
+    cur = nx;
+  }
+  if (rnd() < 0.5) { mb.push(T(cx, cy + (rnd() - 0.5) * size * 0.6, z)); mb.box(0, 0, 0, u * 0.42, u * 0.42, 0.05, matE); mb.pop(); }
+}
+const NEXUS = { R: 7.6, cy: 7.0, inner: 6.55 };
+function buildNexus() {
+  const mb = new MB(), dark = mat([0.05, 0.055, 0.065]), metal = mat([0.16, 0.17, 0.19]), led = mat([0, 1, 0.9], 0.9, 3);
+  const R = NEXUS.R, cy = NEXUS.cy, segs = 42;
+  // outer ring: faceted segments with a groove, LED lining on the inner edge
+  for (let k = 0; k < segs; k++) {
+    const a = (k + 0.5) / segs * TAU;
+    mb.push(M(T(Math.cos(a) * (R - 0.3), cy + Math.sin(a) * (R - 0.3), 0), RZ(a)));
+    mb.box(0, 0, 0, 1.05, TAU * R / segs * 0.96, 1.3, k % 2 ? dark : metal);
+    mb.box(-0.56, 0, 0, 0.06, TAU * R / segs * 0.9, 0.5, led);
+    mb.pop();
+  }
+  // inner glyph ring (rotates about z while dialing: mode 3 pivot (0, cy))
+  const rot = c => mat(c[0], c[1] || 0, c[2] || 0, 3, [0, cy, 0]);
+  for (let k = 0; k < 21; k++) {
+    const a = k / 21 * TAU;
+    mb.push(M(T(Math.cos(a) * (R - 1.25), cy + Math.sin(a) * (R - 1.25), 0), RZ(a - PI / 2)));
+    mb.box(0, 0, 0, TAU * (R - 1.25) / 21 * 0.92, 0.8, 0.7, rot([[0.08, 0.085, 0.1]]));
+    glyph(mb, 0, 0, 0.36, 0.62, k * 7 + 3, rot([[0.2, 1, 0.75], 0.55, 3])); glyph(mb, 0, 0, -0.36, 0.62, k * 7 + 3, rot([[0.2, 1, 0.75], 0.55, 3]), true);
+    mb.pop();
+  }
+  // seven lock clamps: their lights carry the lock index in aAnim.a (lit when uLocks >= index)
+  for (let k = 0; k < 7; k++) {
+    const a = PI / 2 - k / 7 * TAU, x = Math.cos(a) * R, y = cy + Math.sin(a) * R, lk = { c: [1, 0.3, 0.8], e: 0.85, slot: 3, mode: 0, a: [k + 1, 0, 0] };
+    mb.push(M(T(x, y, 0), RZ(a - PI / 2)));
+    mb.box(0, 0.2, 0, 1.6, 0.9, 1.6, metal, [0.7, 1]); mb.box(0, -0.35, 0, 0.5, 0.9, 1.7, dark);
+    mb.box(0, 0.05, 0.82, 0.9, 0.35, 0.05, lk); mb.box(0, 0.05, -0.82, 0.9, 0.35, 0.05, lk); mb.box(0, -0.55, 0, 0.35, 0.35, 1.75, lk);
+    mb.pop();
+  }
+  // footing: two buttress blocks sunk into the street
+  for (const sx of [-1, 1]) { mb.box(sx * 7.4, 0.2, 0, 2.2, 1.6, 2.6, dark, [0.8, 1]); mb.box(sx * 7.4, 1.02, 0, 1.8, 0.05, 2.2, led); }
+  // the surface (event membrane): slot 5 is shaded procedurally in vehicle.frag (uPortal opens it from the rim inwards)
+  const memb = { c: [0.2, 1, 0.8], e: 1, slot: 5, mode: 0, a: [0, 0, 0] }, n = 48, ri = NEXUS.inner;
+  const c0 = mb.v([0, cy, 0], memb), o = []; for (let k = 0; k <= n; k++) { const a = k / n * TAU; o.push(mb.v([Math.cos(a) * ri, cy + Math.sin(a) * ri, 0], memb)); }
+  for (let k = 0; k < n; k++) mb.tri(c0, o[k], o[k + 1]);
+  return mb.finish();
+}
+function buildConsole() {
+  const mb = new MB(), dark = mat([0.05, 0.05, 0.06]), metal = mat([0.2, 0.21, 0.24]), led = mat([0, 1, 0.9], 0.8, 3);
+  mb.cyl(0, 0.35, 1.2, 1.15, 6, dark); mb.cyl(0.35, 0.95, 0.75, 0.6, 6, metal); mb.cyl(0.95, 1.05, 0.62, 1.15, 6, dark);
+  // sloped hexagonal face with 7 key plates (index in aAnim.a → lit while dialing) and a central dome
+  mb.push(M(T(0, 1.12, 0), RX(-0.28)));
+  mb.cyl(-0.04, 0.04, 1.18, 1.18, 6, metal);
+  for (let k = 0; k < 7; k++) {
+    const a = k / 7 * TAU, x = Math.sin(a) * 0.78, z = Math.cos(a) * 0.78, lk = { c: [1, 0.3, 0.8], e: 0.85, slot: 3, mode: 0, a: [k + 1, 0, 0] };
+    mb.box(x, 0.06, z, 0.34, 0.05, 0.34, mat([0.07, 0.08, 0.1])); mb.box(x, 0.095, z, 0.26, 0.02, 0.26, lk);
+  }
+  mb.ellipsoid(0, 0.05, 0, 0.32, 0.22, 0.32, 14, 7, { c: [0.2, 1, 0.75], e: 1.3, slot: 3, mode: 0, a: [8, 0, 0] });
+  mb.pop();
+  mb.push(T(0, 0.36, 0)); mb.cyl(-0.02, 0.02, 0.78, 0.78, 6, led, false); mb.pop();
+  return mb.finish();
+}
+function buildWatcher() {
+  const mb = new MB(), sk = mat([0.012, 0.014, 0.016]), eye = mat([1, 0.1, 0.12], 2.2);
+  mb.rod([-0.35, 0, 0], [-0.3, 6.5, 0], 0.22, 6, sk, 0.3); mb.rod([0.35, 0, 0], [0.3, 6.5, 0], 0.22, 6, sk, 0.3);
+  mb.ellipsoid(0, 8.4, 0, 0.85, 2.4, 0.45, 10, 8, sk);
+  mb.rod([-0.8, 10.2, 0], [-1.25, 3.2, 0.25], 0.14, 5, sk, 0.08); mb.rod([0.8, 10.2, 0], [1.25, 3.2, 0.25], 0.14, 5, sk, 0.08);
+  mb.ellipsoid(0, 11.6, 0.05, 0.55, 0.8, 0.5, 10, 8, sk);
+  for (const sx of [-1, 1]) mb.box(sx * 0.2, 11.75, 0.5, 0.12, 0.05, 0.05, eye);
+  return mb.finish();
+}
+function buildMonolith() {
+  const mb = new MB(), sk = mat([0.01, 0.012, 0.012]), led = mat([0.2, 1, 0.5], 1.2, 3);
+  mb.box(0, 0, 0, 4, 18, 1.2, sk);
+  for (let k = 0; k < 6; k++) glyph(mb, 0, 6 - k * 2.4, 0.62, 1.7, k * 13 + 5, led);
+  for (let k = 0; k < 6; k++) glyph(mb, 0, 6 - k * 2.4, -0.62, 1.7, k * 17 + 2, led, true);
+  return mb.finish();
+}
+const TAU = Math.PI * 2, PI = Math.PI;
+
 const KINDS = { drone: { build: buildDrone, opts: DRONE_OPTS, names: DRONE_NAMES, def: DRONE_DEF, rig: DRONE_RIG, title: 'KAGE STRIX' },
   boat: { build: buildBoat, opts: BOAT_OPTS, names: BOAT_NAMES, def: BOAT_DEF, rig: BOAT_RIG, title: 'KAGE RIPTIDE' },
   galleon: { build: buildGalleon, opts: GALLEON_OPTS, names: GALLEON_NAMES, def: GALLEON_DEF, rig: GALLEON_RIG, title: 'KAGE LEVIATHAN' } };
@@ -529,5 +613,5 @@ function bakeTraffic(m, inst, maxV) {
   }
   return out;
 }
-root.KageFleet = { bakeTraffic, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
+root.KageFleet = { bakeTraffic, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
 })(typeof window !== 'undefined' ? window : globalThis);

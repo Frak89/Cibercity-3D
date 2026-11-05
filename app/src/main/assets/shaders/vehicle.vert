@@ -24,12 +24,14 @@ uniform float uL;
 uniform float uZOff;
 uniform vec3 uNeonA;
 uniform vec3 uNeonB;
+uniform float uLocks;    // KAGE NEXUS: lock lights with index <= uLocks are lit
 uniform vec3 uPaint;     // player: unused (colours baked); traffic: ignored too (per-instance palette)
 varying vec3 vN;
 varying vec3 vWP;
 varying vec4 vCol;
 varying vec2 vMode;      // mode, slot
 varying float vFade;
+varying vec3 vLoc;
 
 vec2 rot2(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
 vec3 paintOf(float s){
@@ -63,6 +65,7 @@ void main(){
     }
     vec3 c = aCol.rgb; float e = aCol.a;
     if (mode > 6.5) e *= step(0.9, fract(uTime * 1.1 + aAnim.y));
+    if (mode < 0.5 && aAnim.y > 0.5) e *= 0.05 + 0.95 * step(aAnim.y, uLocks + 0.5);
     vec4 wp;
     if (uTraffic > 0.5) {
         if (slot > 0.5 && slot < 1.5) c = paintOf(seed);
@@ -88,6 +91,7 @@ void main(){
         n = (uModel * vec4(n, 0.0)).xyz;
         vFade = 1.0;
     }
+    vLoc = aPos;
     vN = n; vWP = wp.xyz; vCol = vec4(c, e); vMode = vec2(mode, slot);
     gl_Position = uVP * wp;
 }

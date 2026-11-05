@@ -1,6 +1,16 @@
 # Italian → English for every user-visible text of Cybercity 3D (screensaver, NEON RUN, showroom, KAGE CIRCUIT).
 # Whole phrases first; the translator replaces the longest matches first, on word boundaries.
 PAIRS = [
+("🌀 KAGE NEXUS · PORTALE PER ECO", "🌀 KAGE NEXUS · PORTAL TO ECO"),
+
+("PORTALE APERTO · attraversalo per tornare a casa", "PORTAL OPEN · cross it to go home"),
+("PORTALE APERTO · attraversalo per entrare in ECO", "PORTAL OPEN · cross it to enter ECO"),
+("KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"),
+("COMPOSIZIONE INDIRIZZO · BLOCCO", "DIALLING ADDRESS · LOCK"),
+("ECO · UNIVERSO PARALLELO", "ECO · PARALLEL UNIVERSE"),
+("🌀 VAI AL PORTALE (N = componi)", "🌀 GO TO THE PORTAL (N = dial)"),
+("⟲ TORNA SUBITO IN CITTÀ", "⟲ BACK TO THE CITY NOW"),
+
 ("RISOLUZIONE MODELLI (KAGE GT, DRONE, BARCA, GALEONE)", "MODEL RESOLUTION (KAGE GT, DRONE, BOAT, GALLEON)"),
 ("RISOLUZIONE", "RESOLUTION"),
 
