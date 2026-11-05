@@ -577,6 +577,33 @@ function buildMonolith() {
   for (let k = 0; k < 6; k++) glyph(mb, 0, 6 - k * 2.4, -0.62, 1.7, k * 17 + 2, led, true);
   return mb.finish();
 }
+/** the eye in ECO's sky: flattened sclera, glowing iris, black pupil, heavy lids (facing +z) */
+function buildEye() {
+  const mb = new MB();
+  mb.ellipsoid(0, 0, 0, 1, 0.62, 0.35, 28, 16, mat([0.55, 0.62, 0.5], 0.35));
+  mb.push(T(0, 0, 0.3)); mb.push(RX(Math.PI / 2));
+  mb.cyl(0, 0.04, 0.42, 0.42, 32, mat([0.15, 1, 0.45], 1.1, 3)); mb.cyl(0.04, 0.08, 0.18, 0.18, 24, mat([0, 0, 0], 0));
+  mb.cyl(0.02, 0.05, 0.47, 0.44, 32, mat([1, 0.1, 0.5], 0.9), false);
+  mb.pop(); mb.pop();
+  for (const sy of [-1, 1]) { mb.push(T(0, sy * 0.5, 0.05)); mb.ellipsoid(0, 0, 0, 1.1, 0.25, 0.42, 20, 8, mat([0.02, 0.03, 0.025])); mb.pop(); }
+  return mb.finish();
+}
+function buildShard() {
+  const mb = new MB(), m = mat([1, 0.25, 0.8], 1.3, 3), r = 0.9, h = 1.6;
+  const P = [[0, h, 0], [r, 0, 0], [0, 0, r], [-r, 0, 0], [0, 0, -r], [0, -h, 0]];
+  for (const f of [[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [5, 1, 2], [5, 2, 3], [5, 3, 4], [5, 4, 1]]) mb.poly(f.map(i => P[i]), m);
+  mb.push(T(0, 0, 0)); mb.torus(1.5, 0.05, 24, 4, mat([0.2, 1, 0.6], 1.2, 3)); mb.pop();
+  return mb.finish();
+}
+/** one segment of the thing in the black lagoon: a ridged hump with spines (along +z) */
+function buildSerpentSeg() {
+  const mb = new MB(), skin = mat([0.02, 0.025, 0.022]), glow = mat([0.2, 1, 0.5], 0.7, 3);
+  mb.ellipsoid(0, 0, 0, 2.4, 1.6, 4.2, 16, 10, skin);
+  for (let k = -2; k <= 2; k++) { mb.push(M(T(0, 1.3, k * 1.4), RX(-0.35))); mb.cyl(0, 2.2 - Math.abs(k) * 0.4, 0.35, 0.02, 6, skin); mb.pop();
+    mb.box(0, 0.9, k * 1.4, 0.15, 0.3, 0.6, glow); }
+  for (const sx of [-1, 1]) for (let k = -1; k <= 1; k++) mb.box(sx * 2.25, 0.2, k * 1.6, 0.05, 0.25, 0.25, glow);
+  return mb.finish();
+}
 const TAU = Math.PI * 2, PI = Math.PI;
 
 const KINDS = { drone: { build: buildDrone, opts: DRONE_OPTS, names: DRONE_NAMES, def: DRONE_DEF, rig: DRONE_RIG, title: 'KAGE STRIX' },
@@ -613,5 +640,5 @@ function bakeTraffic(m, inst, maxV) {
   }
   return out;
 }
-root.KageFleet = { bakeTraffic, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
+root.KageFleet = { bakeTraffic, buildEye, buildShard, buildSerpentSeg, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
 })(typeof window !== 'undefined' ? window : globalThis);

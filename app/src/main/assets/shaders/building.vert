@@ -15,6 +15,7 @@ varying vec2 vUV;
 varying vec4 vMisc;
 varying vec3 vWP;
 uniform float uGlitch;   // ECO world: floors shear and slip
+uniform float uMirror;   // > 0: the city hangs upside down from this height (ECO sky)
 uniform float uTime;
 void main(){
     float z = mod(aCenter.y - uCamZ + uL * uZOff, uL) - uL * uZOff;
@@ -26,6 +27,8 @@ void main(){
         if (hs > 0.9) { wp.x += (hs - 0.95) * 40.0 * uGlitch; wp.z += (fract(hs * 7.13) - 0.5) * 8.0 * uGlitch; }
         wp.y *= 1.0 + uGlitch * 0.05 * sin(uTime * 0.6 + aCenter.x * 0.07 + aCenter.y * 0.05);
     }
-    vN = aNorm; vUV = aUV; vMisc = aMisc; vWP = wp;
+    vec3 nn = aNorm;
+    if (uMirror > 0.0) { wp.y = uMirror - wp.y; nn.y = -nn.y; }
+    vN = nn; vUV = aUV; vMisc = aMisc; vWP = wp;
     gl_Position = uVP * vec4(wp, 1.0);
 }

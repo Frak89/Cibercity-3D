@@ -657,6 +657,7 @@ Game.prototype.frame = function (dt, inp) {
   } else {
     gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
     gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
+    if (eco) { const bu = P.building.u; gl.uniform1f(bu.uMirror, 470); gl.uniform1f(bu.uFogDen, 0.0019); gl.uniform1f(bu.uFar, 1500); for (const m of this.M.chunks) this.draw(P.building, m); gl.uniform1f(bu.uMirror, 0); set(P.building); }   // ECO: the city hangs from the sky
     gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
     { const w = P.water; gl.useProgram(w.p); set(w); gl.uniform3f(w.u.uWaterC, HARBOR.cx, -1.2, HARBOR.cz); gl.uniform1f(w.u.uWaterRel, 0);
       const wk = this.fleet ? this.fleet.wake(camX, camZ) : [0, 0, 0, 0]; gl.uniform4f(w.u.uWake, wk[0], wk[1], wk[2], wk[3]); this.draw(w, this.M.water); }
@@ -681,6 +682,7 @@ Game.prototype.frame = function (dt, inp) {
     { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
     gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
+    if (this.fleet && this.view !== 3) { this.fleet.drawPilot(set, carM, 'car'); gl.useProgram(P.hd.p); set(P.hd); }
   } else if (cv.drawCar && !this.hd) {
     gl.useProgram(P.solid.p); set(P.solid);
     gl.uniformMatrix4fv(P.solid.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
@@ -710,10 +712,11 @@ Game.prototype.frame = function (dt, inp) {
   gl.uniform1f(P.glow.u.uGlow, inp.brake ? 1.8 : 0.7); this.draw(P.glow, this.CM.tail);
   }
   if (this.fleet) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
-  const rainAmt = wx ? wx.rain : past ? 0 : (o.rain || 0);
+  if (this.nexus) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  const rainAmt = eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
-    gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, 28);
+    gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, eco ? -14 : 28);   // in ECO the rain falls upwards
     if (P.rain.u.uSnow) gl.uniform1f(P.rain.u.uSnow, wx ? wx.snow : 0); if (P.rain.u.uWind) gl.uniform1f(P.rain.u.uWind, wx ? wx.wind : 0);
     this.draw(P.rain, this.M.rain);
   }

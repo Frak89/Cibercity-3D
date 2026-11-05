@@ -26,18 +26,25 @@
   #cust input{flex:1;background:#070b13;color:#ecfcff;border:1px solid var(--a);padding:1vmin;font:bold 1.6vmin monospace;text-transform:uppercase}
   #cInfo{width:100%;font-size:1.4vmin;opacity:.75}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#ff6177}
+  #vsel{position:fixed;left:50%;top:2.5vmin;transform:translateX(-50%);display:flex;gap:1vmin}
+  #fcust{position:fixed;left:3vmin;top:14vmin;width:min(52vmin,440px);display:none;flex-wrap:wrap;gap:1vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);padding:1.6vmin}
+  #fcust.open{display:flex}
+  #fcust b{width:100%;color:var(--a);letter-spacing:.2em;font-size:1.5vmin}
+  body.fleet .caronly{display:none}
 </style>
 </head>
 <body style="--a:#00ffe2">
 <canvas id="c"></canvas>
 <div id="title"><h1>AMPY KAGE GT</h1><div>SHOWROOM · CYBERCITY 3D</div></div>
 <div id="specs"></div>
+<div id="vsel"><button data-v="car" class="on">KAGE GT</button><button data-v="drone">🚁 STRIX</button><button data-v="boat">🚤 RIPTIDE</button><button data-v="galleon">⛵ LEVIATHAN</button><button data-v="pilot">🧑‍🚀 PILOTA</button></div>
+<div id="fcust"></div>
 <div id="bar">
-  <button id="bTurn" class="on">⟳ RUOTA</button><button id="bHood">COFANO</button><button id="bDoors">PORTIERE</button>
-  <button id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button id="bEng">MOTORE</button>
-  <button id="bSteer">STERZO</button><button id="bLights" class="on">LUCI</button><button id="bPaint">COLORE</button>
+  <button id="bTurn" class="on">⟳ RUOTA</button><button class="caronly" id="bHood">COFANO</button><button class="caronly" id="bDoors">PORTIERE</button>
+  <button class="caronly" id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button class="caronly" id="bEng">MOTORE</button>
+  <button class="caronly" id="bSteer">STERZO</button><button class="caronly on" id="bLights">LUCI</button><button class="caronly" id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
-  <button id="bRoof">CAPOTE: CHIUSA</button><button id="bPower">V8 BITURBO IBRIDO</button><button id="bExh">SCARICO: SERIE</button><button id="bChrono">MODULO CRONO</button><button id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bQual">RISOLUZIONE: ALTA</button><button id="bMotor" class="on">MOTORE ON</button><button id="bRev" class="rev">🔥 SU DI GIRI</button>
+  <button class="caronly" id="bRoof">CAPOTE: CHIUSA</button><button class="caronly" id="bPower">V8 BITURBO IBRIDO</button><button class="caronly" id="bExh">SCARICO: SERIE</button><button class="caronly" id="bChrono">MODULO CRONO</button><button class="caronly" id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bQual">RISOLUZIONE: ALTA</button><button class="caronly on" id="bMotor">MOTORE ON</button><button class="caronly rev" id="bRev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
 <div id="cust"><b>PERSONALIZZAZIONE</b>
@@ -52,6 +59,7 @@
 <script>/*CARRENDER*/</script>
 <script>/*ENGINEFX*/</script>
 <script>/*SHOWROOM*/</script>
+<script>/*SFLEET*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -63,7 +71,8 @@
   const $=id=>document.getElementById(id);
   let S=CarHD.SPECS_BY[o.power]||CarHD.SPECS; const specs=()=>{ S=CarHD.SPECS_BY[o.power]; const rows=[['MOTORE',S.engine],['POTENZA',S.power],['COPPIA',S.torque],['REGIME MAX',S.redline],['TRASMISSIONE',S.gearbox],['ACCELERAZIONE',S.accel],
     ['VELOCITÀ MAX',S.vmax],['FRENATA',S.braking],['PESO',S.weight],['AERODINAMICA',S.aero],['DIMENSIONI',S.dims],['PNEUMATICI',S.tyres],['BATTERIA',S.battery]];
-  $('specs').innerHTML='<div style="font-size:2.4vmin;letter-spacing:.2em">'+S.name+'</div>'+rows.map(r=>'<b>'+r[0]+'</b>'+r[1]).join(''); $('title').querySelector('h1').textContent=S.name; }; specs();
+  if(sr.F&&sr.F.kind){ const K=sr.F.kind==='pilot'?{title:'PILOTA KAGE'}:KageFleet.KINDS[sr.F.kind]; $('specs').innerHTML='<div style="font-size:2.4vmin;letter-spacing:.2em">'+K.title+'</div>'+Showroom.FLEET_SPECS[sr.F.kind](sr.F.cfg).map(r=>'<b>'+r[0]+'</b>'+r[1]).join(''); $('title').querySelector('h1').textContent=K.title; return; }
+    $('specs').innerHTML='<div style="font-size:2.4vmin;letter-spacing:.2em">'+S.name+'</div>'+rows.map(r=>'<b>'+r[0]+'</b>'+r[1]).join(''); $('title').querySelector('h1').textContent=S.name; }; specs();
   const accent=()=>{ const p=CYBER_PALETTES[o.palette]; document.body.style.setProperty('--a','rgb('+p.neonA.map(v=>v*255|0)+')'); }; accent();
   const tog=(id,on)=>$(id).classList.toggle('on',on);
   const mode=m=>{ sr.cam.mode=sr.cam.mode===m?'orbit':m; tog('bInt',sr.cam.mode==='interior'); tog('bCock',sr.cam.mode==='cockpit'); tog('bEng',sr.cam.mode==='engine');
@@ -91,7 +100,23 @@
     $('cBrk').textContent='FRENI: '+KAGE_BRAKES[C.brakes].name; kageSave(C); };
   { const QN={low:'BASSA',high:'ALTA',ultra:'ALTISSIMA'}, QK=['low','high','ultra'], ql=()=>{ $('bQual').textContent='RISOLUZIONE: '+QN[sr.quality]; };
     ql(); $('bQual').onclick=()=>{ $('bQual').textContent='…'; setTimeout(()=>{ sr.setQuality(QK[(QK.indexOf(sr.quality)+1)%3]); try{localStorage.setItem('kageQuality',sr.quality);}catch(e){} ql(); },30); }; }
-  $('bCustom').onclick=()=>{ $('cust').classList.toggle('open'); tog('bCustom',$('cust').classList.contains('open')); };
+  // the whole KAGE line-up: vehicle selector + fleet customisation panel
+  const fcust=$('fcust');
+  const fpanel=()=>{ if(!sr.F||!sr.F.kind) return; const k=sr.F.kind, PIL=k==='pilot', K=PIL?{title:'PILOTA KAGE',opts:KagePilot.OPTS}:KageFleet.KINDS[k]; let h='<b>'+K.title+' · PERSONALIZZA</b>';
+    for(const key in K.opts) h+='<button data-o="'+key+'">'+(PIL?KagePilot.TITLES[key]:KageFleet.OPT_TITLES[key])+': '+(PIL?KagePilot.label(key,sr.F.cfg[key]):KageFleet.optLabel(k,key,sr.F.cfg[key]))+'</button>';
+    if(PIL) h+='<button data-inv="1">A BORDO DEI VEICOLI: '+(sr.F.cfg.inVehicle===false?'NO':'SÌ')+'</button>';
+    h+='<button data-rnd="1">🎲 CASUALE</button>'; fcust.innerHTML=h;
+    fcust.querySelectorAll('button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const d=b.dataset;
+      if(d.o){ const O=K.opts[d.o], i=O.indexOf(sr.F.cfg[d.o]); sr.F.cfg[d.o]=O[(i+1)%O.length]; }
+      if(d.inv) sr.F.cfg.inVehicle=sr.F.cfg.inVehicle===false;
+      if(d.rnd){ if(PIL){ const r={}; for(const key in KagePilot.OPTS){ const O=KagePilot.OPTS[key]; r[key]=O[Math.random()*O.length|0]; } r.inVehicle=sr.F.cfg.inVehicle; sr.F.cfg=r; } else sr.F.cfg=KageFleet.randomCfg(k); }
+      if(PIL) KagePilot.save(sr.F.cfg); else KageFleet.saveCfg(k,sr.F.cfg); sr.rebuildFleet(); fpanel(); specs(); }); };
+  const pickV=v=>{ document.querySelectorAll('#vsel button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+    sr.setVehicle(v); document.body.classList.toggle('fleet',v!=='car');
+    if(v!=='car'){ sr.tg.engine=false; sr.audio.on=false; $('cust').classList.remove('open'); if(sr.cam.mode!=='orbit'&&sr.cam.mode!=='cockpit') sr.cam.mode='orbit'; } else { fcust.classList.remove('open'); }
+    tog('bCock',sr.cam.mode==='cockpit'); fpanel(); specs(); };
+  document.querySelectorAll('#vsel button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); pickV(b.dataset.v); });
+  $('bCustom').onclick=()=>{ const p=sr.F&&sr.F.kind?fcust:$('cust'); p.classList.toggle('open'); tog('bCustom',p.classList.contains('open')); };
   $('cKit').onclick=()=>{ C.kit=(C.kit+1)%3; lbl(); }; $('cRim').onclick=()=>{ C.rim={A:'B',B:'C',C:'A'}[C.rim]; lbl(); };
   $('cRimC').onclick=()=>{ C.rimcol=colK[(colK.indexOf(C.rimcol)+1)%colK.length]; lbl(); }; $('cLiv').onclick=()=>{ C.livery=(C.livery+1)%3; lbl(); };
   $('cStr').onclick=()=>{ C.stripe=colK[(colK.indexOf(C.stripe)+1)%colK.length]; lbl(); };
@@ -118,6 +143,11 @@
     const pick=a=>a[Math.random()*a.length|0], cams=['orbit','orbit','orbit','orbit','orbit','orbit','interior','cockpit','engine'];
     let spin=0.25, tDist=7.2, tPitch=0.18, dt0=0;
     const shuffle=()=>{
+      // a fleet vehicle now and then
+      if(Math.random()<0.4){ const k=pick(['drone','boat','galleon']); sr.setVehicle(k,KageFleet.randomCfg(k)); sr.cam.auto=false; sr.cam.mode=Math.random()<0.85?'orbit':'cockpit'; sr.cam.look=0; sr.cam.lookP=0;
+        const base={drone:4.6,boat:13,galleon:52}[k]; spin=(Math.random()<0.5?-1:1)*(0.1+Math.random()*0.22); tDist=base*(0.75+Math.random()*0.6); tPitch=0.04+Math.random()*0.42; sr.cam.yaw=0.7; sr.turn=Math.random()*6.283; sr.cam.dist=tDist;
+        setTimeout(shuffle,9000+Math.random()*5000); return; }
+      sr.setVehicle('car');
       o.paint=pick(Object.keys(CarRenderUtil.PAINTS)); o.power=pick(PW); o.exhaust=Math.random()<0.5?'race':'serie'; o.chrono=Math.random()<0.3;
       sr.carCfg={kit:Math.random()*3|0,rim:pick(['A','B','C']),livery:Math.random()*3|0,text:Math.random()<0.4?'none':String(Math.random()*4|0),customText:'KAGE GT',
         stripe:pick(colK),rimcol:pick(colK),brakes:Math.random()*KAGE_BRAKES.length|0};
@@ -140,7 +170,8 @@
   addEventListener('pointermove',e=>{ if(!drag) return; const dx=(e.clientX-drag[0])/innerWidth, dy=(e.clientY-drag[1])/innerHeight; drag=[e.clientX,e.clientY];
     if(sr.cam.mode==='cockpit'){ sr.cam.look-=dx*3; sr.cam.lookP=Math.max(-0.8,Math.min(0.8,sr.cam.lookP-dy*2)); }
     else { sr.turn+=dx*4; sr.cam.pitch=Math.max(0.02,Math.min(1.2,sr.cam.pitch+dy*2)); } });
-  cv.addEventListener('wheel',e=>{ sr.cam.dist=Math.max(4,Math.min(14,sr.cam.dist*(1+e.deltaY*0.001))); });
+  cv.addEventListener('wheel',e=>{ const base=sr.F&&sr.F.kind?{drone:4.6,boat:13,galleon:52,pilot:3.4}[sr.F.kind]:7.2; sr.cam.dist=Math.max(base*0.55,Math.min(base*2,sr.cam.dist*(1+e.deltaY*0.001))); });
+  if(q.has('vehicle')) pickV(q.get('vehicle'));
   if(q.has('shot')){
     for(const k of ['hood','doors']) if(q.has(k)) { sr.tg[k]=1; sr.st[k==='doors'?'doorL':'hood']=1; if(k==='doors') sr.st.doorR=1; }
     if(q.has('mode')) sr.cam.mode=q.get('mode');

@@ -127,6 +127,7 @@ Showroom.prototype.frame = function (dt) {
   gl.disable(gl.BLEND);
   set(cp);
   this.car.draw(carM, st, 'opaque');
+  if (this.afterOpaque) { this.afterOpaque(set, carM, eye, cam.mode); gl.useProgram(cp.p); set(cp); }
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
   this.car.draw(carM, st, 'glass');
   const tp = EngineFX.tipsFrom(carM, st.exhaust === 'race');

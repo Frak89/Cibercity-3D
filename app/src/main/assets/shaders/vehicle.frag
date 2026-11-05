@@ -10,6 +10,7 @@ uniform float uLit;      // 1 normal, >1 brighter (garage)
 uniform float uDay;      // 0 night city, 1 daylight
 uniform vec3 uTint;      // race gates: tint for slot 3 (x < 0 → keep)
 uniform float uGlowOnly; // light beams / bolts: emissive only, soft edges
+uniform float uShadow;   // ECO doppelgänger: black body, red glow
 void main(){
     float mode = vMode.x, slot = vMode.y;
     float dz = h21(gl_FragCoord.xy * 0.731 + fract(uTime) * 13.0);
@@ -54,6 +55,7 @@ void main(){
     col += env * fres * gloss * (slot > 3.5 ? 1.6 : 1.0) + keyC * spec * gloss * 0.7;
     col *= max(uLit, 1.0);
     col += base * vCol.a * 1.7;
+    if (uShadow > 0.5) col = vec3(0.004) + env * fres * 0.15 + vec3(1.0, 0.04, 0.12) * vCol.a * 1.4;
     float vDist = length(vWP - uEye);
     col = applyFog(col, vDist, vWP.y);
     gl_FragColor = vec4(col, 1.0);
