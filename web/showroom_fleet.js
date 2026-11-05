@@ -57,13 +57,13 @@ SR.prototype.initFleet = function () {
     const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); } return { p, u }; };
   const buf = (a, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(a) : new Float32Array(a), gl.STATIC_DRAW); return b; };
   this.F = { kind: null, veh: prog('vehicle.vert', 'vehicle.frag'), pil: prog('pilot.vert', 'vehicle.frag'), water: prog('water.vert', 'water.frag'), cache: {},
-    vmesh: m => { const a = { aPos: [buf(m.pos), 3], aNorm: [buf(m.norm), 3], aCol: [buf(m.col), 4], aAnim: [buf(m.anim), 4] }; if (m.skin) a.aSkin = [buf(m.skin), 4]; return { a, i: buf(m.idx, true), n: m.idx.length, bounds: m.bounds, S: m.S, skin: !!m.skin }; },
+    vmesh: m => { const a = { aPos: [buf(m.pos), 3], aNorm: [buf(m.norm), 3], aCol: [buf(m.col), 4], aAnim: [buf(m.anim), 4] }; if (m.skin) a.aSkin = [buf(m.skin), 4]; const u32 = m.verts > 65535 && gl.getExtension('OES_element_index_uint'); return { a, u32: !!u32, i: u32 ? (() => { const b = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(m.idx), gl.STATIC_DRAW); return b; })() : buf(m.idx, true), n: m.idx.length, bounds: m.bounds, S: m.S, skin: !!m.skin }; },
     basin: { a: { aPos: [buf([-160, -160, 160, -160, 160, 160, -160, 160]), 2] }, i: buf([0, 1, 2, 0, 2, 3], true), n: 6 } };
 };
 SR.prototype.drawMesh = function (pr, m) {
   const gl = this.gl, used = [];
   for (const k in m.a) { const loc = gl.getAttribLocation(pr.p, k); if (loc < 0) continue; gl.bindBuffer(gl.ARRAY_BUFFER, m.a[k][0]); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, m.a[k][1], gl.FLOAT, false, 0, 0); used.push(loc); }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.i); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.i); gl.drawElements(gl.TRIANGLES, m.n, m.u32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
   for (const l of used) gl.disableVertexAttribArray(l);
 };
 /** kind: null / 'car' = KAGE GT, else drone / boat / galleon */

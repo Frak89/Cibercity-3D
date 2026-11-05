@@ -508,7 +508,11 @@ function Game(canvas, hud, opts) {
   if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); this.hdQ = opts.quality || 'high'; }
   this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag'); this.P.pil = prog('pilot.vert', 'vehicle.frag'); this.P.seabed = prog('water.vert', 'seabed.frag');
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
-  this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
+  const ext32 = gl.getExtension('OES_element_index_uint');
+  this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] };
+    let big = false; for (let i = 0; i < idx.length; i++) if (idx[i] > 65535) { big = true; break; }
+    if (big && ext32) { const b = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(idx), gl.STATIC_DRAW); m.i = b; m.u32 = true; }
+    else m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
   this.M = {
     chunks: city.chunks.map(B => this.mesh({ aPos: [B.pos, 3], aCenter: [B.center, 2], aNorm: [B.norm, 3], aUV: [B.uv, 2], aMisc: [B.misc, 4] }, B.idx)),
@@ -568,7 +572,7 @@ Game.prototype.draw = function (pr, m) {
   const gl = this.gl; gl.useProgram(pr.p);
   const used = [];
   for (const k in m.a) { const loc = gl.getAttribLocation(pr.p, k); if (loc < 0) continue; gl.bindBuffer(gl.ARRAY_BUFFER, m.a[k].b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, m.a[k].s, gl.FLOAT, false, 0, 0); used.push(loc); }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.i); gl.drawElements(gl.TRIANGLES, m.n, gl.UNSIGNED_SHORT, 0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, m.i); gl.drawElements(gl.TRIANGLES, m.n, m.u32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
   for (const l of used) gl.disableVertexAttribArray(l);
 };
 

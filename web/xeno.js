@@ -6,7 +6,7 @@
 const KF = root.KageFleet, MB = KF.MB, T = KF.T, RX = KF.RX, RY = KF.RY, RZ = KF.RZ, M = KF.M, PI = Math.PI, TAU = PI * 2;
 const mat = (c, e, slot, mode, a) => ({ c, e: e || 0, slot: slot || 0, mode: mode || 0, a: a || [0, 0, 0] });
 const lerp = (a, b, t) => a + (b - a) * t;
-const Q = lod => lod === 'lo' ? 0.5 : lod === 'ultra' ? 2 : 1;
+const Q = lod => lod === 'lo' ? 0.5 : lod === 'ultra' ? 3 : 1.4;
 
 /** surface of revolution about local y: prof = [[r, y], ...] bottom → top; colf(j, k, seg) → material; inward = normals point to the axis */
 function lathe(mb, prof, seg, colf, inward, a0, a1, skip) {

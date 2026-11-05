@@ -77,7 +77,7 @@ function build(cfg, lod) {
   if (o.species === 'nordico') Object.assign(o, { suit: 'tunica', skin: 'pallida', hair: 'lunghi', hairColor: 'platino', eyes: 'azzurri', beard: 'nessuna', brows: 'sottili', glasses: 'nessuno', helmet: false,
     face: 'allungato', nose: 'medio', build: 'atletico', height: Math.max(o.height, 1.96) });
   const mb = tagged();
-  const Q = lod === 'lo' ? 0.45 : lod === 'ultra' ? 1.7 : 1;
+  const Q = lod === 'lo' ? 0.45 : lod === 'ultra' ? 2.6 : 1.3;
   const N = k => Math.max(6, Math.round(k * Q));
   const S = o.height / 1.78, W = { snello: 0.9, atletico: 1, muscoloso: 1.06, robusto: 1.17 }[o.build] || 1;
   const MU = o.build === 'muscoloso', TUN = o.suit === 'tunica', CAS = o.suit === 'casual' || TUN;
@@ -268,7 +268,7 @@ function build(cfg, lod) {
     for (let j = 0; j <= sv; j++) { const th = j / sv * PI, row = [], okr = [];
       for (let k = 0; k <= su; k++) { const ph = k / su * PI * 2, x = Math.sin(th) * Math.sin(ph), y = Math.cos(th), z = Math.sin(th) * Math.cos(ph);
         const m = mask(x, y, z), [p] = headPt(x, y, z), out = nrm(sub(p, HC)), tk = thick(x, y, z) * m;
-        okr.push(m > 0.02); row.push(mb.v(add(p, scl(out, (m > 0.02 ? 0.0012 : -0.003) + tk)), colf(x, y, z, m))); }
+        okr.push(m > 0.02); row.push(mb.v(add(p, scl(out, -0.003 + 0.0042 * sstep(0.0, 0.45, m) + tk)), colf(x, y, z, m))); }   // edges taper into the skin (no stair-steps)
       g.push(row); ok.push(okr); }
     for (let j = 0; j < sv; j++) for (let k = 0; k < su; k++) if (ok[j][k] || ok[j + 1][k] || ok[j + 1][k + 1] || ok[j][k + 1]) {
       mb.tri(g[j][k], g[j + 1][k], g[j + 1][k + 1]); mb.tri(g[j][k], g[j + 1][k + 1], g[j][k + 1]); }
@@ -348,7 +348,7 @@ const ALIEN = {
   verde: { h: 1.38, skin: [0.32, 0.62, 0.28], head: [0.155, 0.17, 0.16], limb: 0.7, eye: [0.01, 0.012, 0.01], eyeE: 0, glow: 0 },
   scuro: { h: 2.08, skin: [0.035, 0.035, 0.045], head: [0.085, 0.135, 0.13], limb: 0.6, eye: [1, 0.35, 0.08], eyeE: 1.6, glow: 1 } };
 function buildAlien(o, lod) {
-  const A = ALIEN[o.species], mb = tagged(), Q = lod === 'lo' ? 0.45 : lod === 'ultra' ? 1.7 : 1, N = k => Math.max(6, Math.round(k * Q));
+  const A = ALIEN[o.species], mb = tagged(), Q = lod === 'lo' ? 0.45 : lod === 'ultra' ? 2.6 : 1.3, N = k => Math.max(6, Math.round(k * Q));
   const S = A.h / 1.78, J = BIND.map(p => scl(p, S)), th = A.limb, sk = mat(A.skin, 0, 6), skD = mat(A.skin.map(v => v * 0.82), 0, 6);
   const glossy = o.species === 'scuro' ? mat(A.skin, 0.02, 6) : sk;
   // torso: narrow chest, small waist (dark one: a long ribbed carapace)

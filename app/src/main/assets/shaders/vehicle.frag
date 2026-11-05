@@ -68,6 +68,12 @@ void main(){
     } else {
         col = base * (dif * keyC * 0.85 + amb) * (glassS ? 0.3 : 1.0);
         col += env * fres * gloss * (glassS ? 1.6 : 1.0) + keyC * spec * gloss * 0.7;
+        // definition: a tight clear-coat glint on paint and accents, a cool rim that outlines the silhouette, darker creases facing down
+        float spec2 = pow(max(dot(R, L), 0.0), 220.0);
+        col += keyC * spec2 * (slot > 0.5 && slot < 2.5 ? 0.9 : 0.25);
+        float rimK = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+        col += mix(uNeonA * 0.5 + vec3(0.08), vec3(0.55, 0.62, 0.75), uDay) * rimK * 0.16 * (0.4 + 0.6 * max(N.y + 0.3, 0.0));
+        col *= 0.82 + 0.18 * smoothstep(-0.9, 0.2, N.y);
     }
     col *= max(uLit, 1.0);
     col += base * vCol.a * 1.7;

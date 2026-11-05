@@ -143,7 +143,7 @@ const DRONE_RIG = { armR: 0.95, propY: 0.15, fpv: [0, 0.06, 0.62] };
 
 function buildDrone(o) {
   o = Object.assign({}, DRONE_DEF, o || {});
-  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 3 : 1, mb = new MB();
+  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 5 : 2, mb = new MB();
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), carbon = mat([0.035, 0.035, 0.04]), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const led = mat(col(o.led, LEDS), 1, 3), metal = mat([0.5, 0.52, 0.56]);
   const shell = o.shell;
@@ -243,7 +243,7 @@ const BOAT_RIG = { len: 10, beam: 2.7, draft: 0.55, eye: [0, 1.75, -0.6] };
 
 function buildBoat(o) {
   o = Object.assign({}, BOAT_DEF, o || {});
-  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 3 : 1, mb = new MB();
+  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 5 : 2, mb = new MB();
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const led = mat(col(o.led, LEDS), 1, 3), bottom = mat([0.05, 0.05, 0.06]);
   const Lh = 10, z0 = -5, nst = lo ? 7 : 22 * U;
@@ -365,7 +365,7 @@ const GALLEON_RIG = { len: 34, beam: 9, deckY: 2.6, masts: [[9, 24], [0.5, 28], 
 
 function buildGalleon(o) {
   o = Object.assign({}, GALLEON_DEF, o || {});
-  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 3 : 1, mb = new MB();
+  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 5 : 2, mb = new MB();
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.025, 0.02]), rope = mat([0.09, 0.08, 0.07]);
   const led = mat(col(o.led, LEDS), 1, 3), wood = mat([0.16, 0.09, 0.05]), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const Lh = 34, z0 = -17, nst = lo ? 9 : 26 * U;
@@ -521,7 +521,7 @@ const MOTO_DEF = { fairing: 'sport', wheels: 'hubless', paint: 'nero', accent: '
 const MOTO_RIG = { wheelR: 0.33, wb: 1.42, seat: [0, 0.82, -0.18] };
 function buildMoto(o) {
   o = Object.assign({}, MOTO_DEF, o || {});
-  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 3 : 1, mb = new MB();
+  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 5 : 2, mb = new MB();
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), metal = mat([0.5, 0.52, 0.56]), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const R = MOTO_RIG.wheelR, zf = MOTO_RIG.wb / 2, zr = -MOTO_RIG.wb / 2;
   // wheels (rotate as propellers about x: built in the yz plane, mode 3 uses x/y pivot → we spin them with a z-axis rotated frame instead)
@@ -588,7 +588,7 @@ const HOVER_NAMES = { fans: { 2: '2 ELICHE', 1: '1 ELICA GRANDE' }, cabin: { chi
 const HOVER_DEF = { skirt: 'nero', fans: 2, cabin: 'chiusa', paint: 'bianco', accent: 'nero', led: 'ciano' };
 function buildHover(o) {
   o = Object.assign({}, HOVER_DEF, o || {});
-  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 3 : 1, mb = new MB();
+  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 5 : 2, mb = new MB();
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const skirt = mat(col(o.skirt).map(v => v * 0.7), 0, 0);
   // inflatable skirt: a rounded rectangle tube (superellipse) around the hull
@@ -641,7 +641,7 @@ const SUB_DEF = { hull: 'siluro', arms: true, paint: 'giallo', accent: 'nero', l
 COLORS.giallo = [0.9, 0.7, 0.05]; COLOR_NAMES.giallo = 'GIALLO';
 function buildSub(o) {
   o = Object.assign({}, SUB_DEF, o || {});
-  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 3 : 1, mb = new MB();
+  const lo = o.lod === 'lo', U = o.lod === 'ultra' ? 5 : 2, mb = new MB();
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), glass = mat([0.03, 0.06, 0.08], 0, 4);
   const L = o.hull === 'batiscafo' ? 4.2 : 6.5, ns = lo ? 10 : 22 * U, st = lo ? 8 : 18 * U;
   const rows = [];
