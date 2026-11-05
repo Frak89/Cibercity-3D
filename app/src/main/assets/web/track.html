@@ -2267,11 +2267,12 @@ function bones(spec, S) {
     Rw[b] = Rb; Pw[c] = r.t;
     // end bone keeps the forearm / shin orientation (plus its own local rotation)
     const rl = rot[BN[c]]; Rw[c] = rl ? mm(Rb, eul(rl[0], rl[1], rl[2])) : Rb;
+    if (tgt.world !== undefined) Rw[c] = mm(RotY(spec.yaw || 0), RotX(-tgt.world));   // foot pitch in character space (flat on the ground)
   };
   if (ik.handL) chain(B.armL, B.foreL, B.handL, ik.handL.t, ik.handL.pole || [0.6, -0.6, -0.4]);
   if (ik.handR) chain(B.armR, B.foreR, B.handR, ik.handR.t, ik.handR.pole || [-0.6, -0.6, -0.4]);
-  if (ik.footL) chain(B.thighL, B.shinL, B.footL, ik.footL.t, ik.footL.pole || [0, 0.2, 1]);
-  if (ik.footR) chain(B.thighR, B.shinR, B.footR, ik.footR.t, ik.footR.pole || [0, 0.2, 1]);
+  if (ik.footL) chain(B.thighL, B.shinL, B.footL, Object.assign(ik.footL.t.slice(), { world: ik.footL.world }), ik.footL.pole || [0, 0.2, 1]);
+  if (ik.footR) chain(B.thighR, B.shinR, B.footR, Object.assign(ik.footR.t.slice(), { world: ik.footR.world }), ik.footR.pole || [0, 0.2, 1]);
   // matrices: x' = Rw (x - Jb) + Pw
   const out = new Float32Array(19 * 16);
   for (let i = 0; i < 19; i++) {
@@ -2303,17 +2304,31 @@ function poseSpec(name, t, opt) {
     case 'esulta': { const j = Math.abs(Math.sin(t * 4)) * 0.04; spec.root = at(0, j, 0); spec.ik.handL = { t: at(0.3, 1.95 + j, 0.05), pole: [1, 0, -0.3] }; spec.ik.handR = { t: at(-0.3, 1.95 + j, 0.05), pole: [-1, 0, -0.3] }; rot.head = [-0.2, 0, 0]; break; }
     case 'pensieroso': spec.ik.handR = { t: at(-0.02, 1.53, 0.12), pole: [-1, -1, 0] }; spec.ik.handL = { t: at(-0.05, 1.18, 0.12), pole: [1, -1, 0] }; rot.head = [0.12, -0.2, 0.05]; break;
     case 'cammina': case 'corre': {
-      const run = name === 'corre' || (opt.speed || 0) > 3, sp = opt.speed || (run ? 5 : 1.4), f = run ? 1.45 : 0.95, ph = t * f * PI * 2, A = run ? 0.7 : 0.42;
-      const s1 = Math.sin(ph), c1 = Math.cos(ph);
-      rot.thighL = [-A * s1, 0, 0.02]; rot.thighR = [A * s1, 0, -0.02];
-      rot.shinL = [Math.max(0, Math.sin(ph - 1.2)) * (run ? 1.4 : 0.75) + 0.05, 0, 0]; rot.shinR = [Math.max(0, Math.sin(ph + PI - 1.2)) * (run ? 1.4 : 0.75) + 0.05, 0, 0];
-      rot.footL = [Math.sin(ph - 0.3) * 0.25, 0, 0]; rot.footR = [-Math.sin(ph - 0.3) * 0.25, 0, 0];
-      // arms swing opposite to the legs, close to the body; running: elbows bent ~90°, fists forward
-      rot.armL = [A * 0.85 * s1, 0, run ? 0.2 : 0.12]; rot.armR = [-A * 0.85 * s1, 0, run ? -0.2 : -0.12];
-      rot.foreL = [run ? -1.1 - 0.2 * Math.max(0, s1) : -0.3 - 0.15 * Math.max(0, s1), run ? 0.35 : 0, 0]; rot.foreR = [run ? -1.1 - 0.2 * Math.max(0, -s1) : -0.3 - 0.15 * Math.max(0, -s1), run ? -0.35 : 0, 0];
-      rot.handL = [0, -1.25, 0]; rot.handR = [0, 1.25, 0];
-      rot.pelvis = [run ? 0.18 : 0.04, s1 * 0.1, 0]; rot.chest = [0, -s1 * 0.12, 0]; rot.head = [run ? -0.12 : -0.03, s1 * 0.05, 0];
-      spec.root = at(0, -Math.abs(c1) * (run ? 0.06 : 0.025) + (run ? -0.03 : 0), 0); void sp;
+      // gait with planted feet: each ankle follows a stance (on the ground, sliding back at walking speed) + swing (lifted arc) path,
+      // knees by IK; heel strike → flat foot → toe-off; pelvis bobs, sways over the stance leg and yaws; shoulders counter-rotate
+      const run = name === 'corre' || (opt.speed || 0) > 3, f = run ? 1.45 : 0.95, cyc = t * f, L = (run ? 3.79 : 1.526) * S, beta = run ? 0.36 : 0.62, half = L * beta * 0.5;
+      const leg = off => { const p = ((cyc + off) % 1 + 1) % 1; let z, y, pitch;
+        if (p < beta) { const u = p / beta; z = half - u * 2 * half; y = 0;
+          pitch = u < 0.15 ? 0.3 * (1 - u / 0.15) : u > 0.72 ? -(run ? 0.85 : 0.65) * sstep(0.72, 1, u) : 0;
+          if (u > 0.72) y = 0.035 * S * sstep(0.72, 1, u); }
+        else { const u = (p - beta) / (1 - beta), e = 0.5 - 0.5 * Math.cos(u * PI); z = -half + e * 2 * half;
+          y = Math.pow(Math.sin(u * PI), run ? 0.7 : 1.3) * (run ? 0.3 : 0.11) * S + (1 - sstep(0, 0.35, u)) * 0.035 * S;
+          pitch = u < 0.5 ? lerp(run ? -0.85 : -0.65, 0.05, u / 0.5) : lerp(0.05, 0.32, (u - 0.5) / 0.5); }
+        return { z, y, pitch, a: z / half }; };
+      const lL = leg(0), lR = leg(0.5), ph2 = cyc * TAU;
+      const bob = run ? -0.035 * S * Math.cos(2 * ph2 - 0.3) - 0.05 * S : 0.018 * S * Math.cos(2 * (ph2 - 0.31 * TAU)) - 0.022 * S;
+      const swayX = (run ? 0.01 : 0.022) * S * Math.cos(ph2 - 0.31 * TAU);
+      spec.root = [swayX, bob, 0];
+      const ank = (sx, l) => [sx * 0.106 * S, 0.088 * S + l.y, -0.022 * S + l.z];
+      spec.ik.footL = { t: ank(1, lL), pole: [0.05, 0.1, 1], world: lL.pitch }; spec.ik.footR = { t: ank(-1, lR), pole: [-0.05, 0.1, 1], world: lR.pitch };
+      const lean = run ? 0.16 : 0.04, py = (run ? 0.14 : 0.09) * lL.a;
+      rot.pelvis = [lean * 0.5, -py, -swayX / S * 1.5]; rot.spine = [lean * 0.4, py * 0.6, 0]; rot.chest = [lean * 0.3 + br * 0.5, py * 1.1, swayX / S]; rot.neck = [0, 0, 0];
+      rot.head = [lean * 0.3 + 0.03, -py * 0.5 + Math.sin(t * 0.33) * 0.03, -swayX / S * 0.8];
+      // arms: counter-swing (left arm with the right leg), elbows bend more on the forward swing
+      const aL = -lR.a, aR = -lL.a, A = run ? 0.75 : 0.36;
+      rot.armL = [-A * aL, 0, run ? 0.18 : 0.1]; rot.armR = [-A * aR, 0, run ? -0.18 : -0.1];
+      rot.foreL = [run ? -1.15 - 0.3 * Math.max(0, aL) : -0.22 - 0.3 * Math.max(0, aL), run ? 0.3 : 0.05, 0]; rot.foreR = [run ? -1.15 - 0.3 * Math.max(0, aR) : -0.22 - 0.3 * Math.max(0, aR), run ? -0.3 : -0.05, 0];
+      rot.handL = [0, -1.25, run ? 0.2 : 0]; rot.handR = [0, 1.25, run ? -0.2 : 0];
       break; }
     case 'salta': rot.thighL = [-0.9, 0, 0.05]; rot.thighR = [-0.4, 0, -0.05]; rot.shinL = [1.3, 0, 0]; rot.shinR = [0.9, 0, 0]; rot.armL = [-0.6, 0, 0.6]; rot.armR = [-0.6, 0, -0.6]; break;
     case 'seduto': case 'barca': {
@@ -4887,7 +4902,12 @@ Game.prototype.frame = function (dt, inp) {
   const W = this.canvas.width, H = this.canvas.height;
   gl.viewport(0, 0, W, H);
   const er = eco ? 0.035 * Math.sin(t * 0.37) + 0.015 * Math.sin(t * 1.9) : 0;   // ECO: the horizon is never quite level
-  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], [Math.sin(er), Math.cos(er), 0]);
+  // camera roll (drone banking, the starship in turns): tilt the up vector about the view direction
+  let upV = [Math.sin(er), Math.cos(er), 0];
+  if (cv.roll) { const fx0 = cv.l[0] - cv.e[0], fy0 = cv.l[1] - cv.e[1], fz0 = cv.l[2] - cv.e[2], fl = Math.hypot(fx0, fy0, fz0) || 1, F0 = [fx0 / fl, fy0 / fl, fz0 / fl];
+    let Rr = [F0[1] * 0 - F0[2] * 1, F0[2] * 0 - F0[0] * 0, F0[0] * 1 - F0[1] * 0]; const rl = Math.hypot(Rr[0], Rr[1], Rr[2]) || 1; Rr = Rr.map(v => v / rl);
+    const cr = Math.cos(cv.roll), sr = Math.sin(cv.roll); upV = [upV[0] * cr + Rr[0] * sr, upV[1] * cr + Rr[1] * sr, upV[2] * cr + Rr[2] * sr]; }
+  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], upV);
   const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || 700;
   const Pm = perspective(fov, W / H, 0.12, far);
   const VP = mul(Pm, V.m);

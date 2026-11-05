@@ -650,7 +650,12 @@ Game.prototype.frame = function (dt, inp) {
   const W = this.canvas.width, H = this.canvas.height;
   gl.viewport(0, 0, W, H);
   const er = eco ? 0.035 * Math.sin(t * 0.37) + 0.015 * Math.sin(t * 1.9) : 0;   // ECO: the horizon is never quite level
-  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], [Math.sin(er), Math.cos(er), 0]);
+  // camera roll (drone banking, the starship in turns): tilt the up vector about the view direction
+  let upV = [Math.sin(er), Math.cos(er), 0];
+  if (cv.roll) { const fx0 = cv.l[0] - cv.e[0], fy0 = cv.l[1] - cv.e[1], fz0 = cv.l[2] - cv.e[2], fl = Math.hypot(fx0, fy0, fz0) || 1, F0 = [fx0 / fl, fy0 / fl, fz0 / fl];
+    let Rr = [F0[1] * 0 - F0[2] * 1, F0[2] * 0 - F0[0] * 0, F0[0] * 1 - F0[1] * 0]; const rl = Math.hypot(Rr[0], Rr[1], Rr[2]) || 1; Rr = Rr.map(v => v / rl);
+    const cr = Math.cos(cv.roll), sr = Math.sin(cv.roll); upV = [upV[0] * cr + Rr[0] * sr, upV[1] * cr + Rr[1] * sr, upV[2] * cr + Rr[2] * sr]; }
+  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], upV);
   const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || 700;
   const Pm = perspective(fov, W / H, 0.12, far);
   const VP = mul(Pm, V.m);

@@ -97,7 +97,7 @@ OnFoot.prototype.draw = function (ctx) {
   const f = this.g.fleet; if (!f) return;
   const rx = wrapD(this.x - ctx.camX), rz = wrapD(this.z - ctx.camZ);
   const t = this.anim === 'cammina' || this.anim === 'corre' ? this.ph : this.t;
-  f.drawPilotPose(ctx.set, U.mul(U.T(rx, this.y, rz), U.RY(this.h)), this.anim || 'in piedi', { speed: Math.abs(this.v) }, null, t);
+  f.drawPilotPose(ctx.set, U.mul(U.T(rx, this.y, rz), U.RY(this.h)), this.anim || 'in piedi', { speed: Math.abs(this.v), key: 'me' }, null, t);
 };
 OnFoot.prototype.drawHud = function (hud) {
   const g = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);

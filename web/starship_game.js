@@ -78,11 +78,13 @@ Star.prototype.update = function (dt, inp) {
     if (d.done >= d.total || !isFinite(c)) this.arrive();
   } else if (f && f.ss === 'helm') {
     // impulse: W/S throttle, A/D yaw, SPACE/X climb/dive (pitch in space), SHIFT = full impulse
+    // a 150 m ship has mass: the throttle sets the impulse, the speed follows slowly; turns build up and the hull banks into them
     s.imp = clamp(s.imp + (inp.fwd || 0) * dt * 0.5, -0.25, 1); if (inp.boost) s.imp = ease(s.imp, 1, 2, dt);
-    s.h = wrapA(s.h + (inp.yaw || 0) * 0.35 * dt);
-    const vmax = s.world === 'space' ? 260 : 70, v = s.imp * vmax;
-    if (s.world === 'space') s.pitch = clamp(s.pitch - (inp.lift || 0) * 0.4 * dt, -0.9, 0.9); else s.pitch = ease(s.pitch, -(inp.lift || 0) * 0.15, 2, dt);
-    s.roll = ease(s.roll, -(inp.yaw || 0) * 0.18, 2, dt);
+    const vmax = s.world === 'space' ? 260 : 70; s.v = ease(s.v || 0, s.imp * vmax, 0.35, dt); const v = s.v, vk = clamp(Math.abs(v) / vmax + 0.25, 0, 1);
+    s.yr = ease(s.yr || 0, (inp.yaw || 0) * 0.32 * vk, 1.1, dt); s.h = wrapA(s.h + s.yr * dt);
+    s.pr = ease(s.pr || 0, -(inp.lift || 0) * 0.35, 1.2, dt);
+    if (s.world === 'space') s.pitch = clamp(s.pitch + s.pr * dt, -0.9, 0.9); else s.pitch = ease(s.pitch, -(inp.lift || 0) * 0.12, 1.2, dt);
+    s.roll = ease(s.roll, -s.yr * 1.4 + Math.sin(this.t * 0.4) * 0.006, 1.5, dt);
     const fwd = mv(this.R4(), [0, 0, 1]);
     s.x += fwd[0] * v * dt; s.z += fwd[2] * v * dt; s.y += (s.world === 'space' ? fwd[1] * v : (inp.lift || 0) * 18) * dt;
     if (s.world === 'city') { s.x = wrapP(s.x); s.z = wrapP(s.z); s.y = clamp(s.y, 520, 1500); }
@@ -331,7 +333,11 @@ Star.prototype.camera = function (cv, dt) {
     E = W([ex, y + 1.95, ez]); L = W([f.lx + fx * 2, y + 1.4, f.lz + fz * 2]); fov = 70;
   } else if (f.ss === 'helm') {
     if (g.view % 2 === 0) { const y = D[0].y; E = W([0, y + 1.75, RIG.chair[1] - 0.6]); L = W([0, y + 1.4, 40]); fov = 78; }
-    else { this.cin = (this.cin || 0) + dt * 0.05; E = W([Math.sin(this.cin) * 60, 38, -170]); L = W([0, 0, 25]); fov = 55; }
+    else { this.cin = (this.cin || 0) + dt * 0.05; E = W([Math.sin(this.cin) * 60, 38, -170]); L = W([0, 0, 25]); fov = 55;
+      const off = [E[0] - s.x, E[1] - s.y, E[2] - s.z]; if (!this.camOff) this.camOff = off; const a = Math.min(1, dt * 1.8);
+      this.camOff = this.camOff.map((c, i) => c + (off[i] - c) * a); E = [s.x + this.camOff[0], s.y + this.camOff[1], s.z + this.camOff[2]]; }
+    if (s.mode === 'warp' && s.travel) { const k = Math.min(1, s.travel.t / 1.2); fov += 38 * Math.sin(k * PI) + 10 * k; }
+    this.camRoll = -(s.roll || 0) * (g.view % 2 === 0 ? 1 : 0.5);
   } else if (f.ss === 'eva') {
     const fx = Math.sin(f.lh), fz = Math.cos(f.lh); E = W([f.ex - fx * 5, f.ey + 1.8, f.ez - fz * 5]); L = W([f.ex + fx * 3, f.ey + 0.8, f.ez + fz * 3]); fov = 66;
   } else if (f.ss === 'beamout') { return cv; }
@@ -342,8 +348,9 @@ Star.prototype.camera = function (cv, dt) {
     if (view === 2) { E = [f.px, f.py + 30, f.pz - 6]; L = [f.px, f.py, f.pz]; }
   } else return cv;
   this.far = this.SPACE() || s.y > 900 ? 9000 : (this.aboard() ? 2600 : 700);
-  if (g.world === 'city') { const c = g.c, ex = wrapD(E[0] - c.x), ez = wrapD(E[2] - c.z); return { e: [ex, E[1], ez], l: [ex + wrapD(L[0] - E[0]), L[1], ez + wrapD(L[2] - E[2])], fov, drawCar: !this.aboard() && f.ss !== 'eva', cockpit: false }; }
-  this.E = E; return { e: [0, 0, 0], l: [L[0] - E[0], L[1] - E[1], L[2] - E[2]], fov, drawCar: false, cockpit: false };
+  if (g.world === 'city') { const c = g.c, ex = wrapD(E[0] - c.x), ez = wrapD(E[2] - c.z); return { e: [ex, E[1], ez], l: [ex + wrapD(L[0] - E[0]), L[1], ez + wrapD(L[2] - E[2])], fov, drawCar: !this.aboard() && f.ss !== 'eva', cockpit: false, roll: f.ss === 'helm' ? (this.camRoll || 0) : 0 }; }
+  const roll = f.ss === 'helm' ? (this.camRoll || 0) : 0;
+  this.E = E; return { e: [0, 0, 0], l: [L[0] - E[0], L[1] - E[1], L[2] - E[2]], fov, drawCar: false, cockpit: false, roll };
 };
 /** palette: climbing above Cybercity darkens the sky; space is black; each planet has its own sky */
 Star.prototype.pal = function (pal) {
@@ -363,7 +370,7 @@ Star.prototype.drawM = function (mesh, M, o) {
 };
 Star.prototype.drawAvatar = function (ctx, Mv, pose, opt, t) {
   const F = this.g.fleet; if (!F) return;
-  F.drawPilotPose(ctx.set, Mv, pose, opt || {}, null, t);
+  F.drawPilotPose(ctx.set, Mv, pose, Object.assign({ key: 'me' }, opt || {}), null, t);
   if (this.badge) { const pm = F.pilotMesh(true); if (!pm) return; const B = KP.pose(pose, t, opt || {}, pm.S), Sx = pm.S || 1;
     const bm = new Float32Array(B.buffer, B.byteOffset + 2 * 16 * 4, 16);
     const gl = this.gl, P = this.g.P.veh; gl.useProgram(P.p); ctx.set(P); gl.uniform1f(P.u.uGlowOnly, 0);
@@ -401,7 +408,7 @@ Star.prototype.drawWorld = function (ctx) {
     if (site === 'luna') { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_terra', () => KS.buildPlanet('terra', this.lod)), U.mul(U.T(...this.rel([600, 1400, 3200], ctx)), FM(420))); gl.uniform1f(u.uGlowOnly, 0); }
     if (site === 'proxima') { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_sun', () => KS.buildPlanet('alpha', 'hi')), U.mul(U.T(...this.rel([4200, 300, 1300], ctx)), FM(800))); gl.uniform1f(u.uGlowOnly, 0); }
     for (const [who, x, z] of (SITE_CREW[site] || [])) { const a = t * 0.12 + x, px = x + Math.cos(a) * 6, pz = z + Math.sin(a) * 6, h = -a;
-      F.drawPilotPose(ctx.set, U.mul(U.T(...this.rel([px, KS.siteHeight(site, px, pz), pz], ctx)), U.RY(h)), 'cammina', { speed: 1 }, this.person(who), t * 1.2 + x); }
+      F.drawPilotPose(ctx.set, U.mul(U.T(...this.rel([px, KS.siteHeight(site, px, pz), pz], ctx)), U.RY(h)), 'cammina', { speed: 0.72 }, this.person(who), t * 0.5 + x); }
     prep(); }
   // the ship (exterior when seen from outside; the current deck + crew when you're aboard)
   if (this.shipVisible()) {
@@ -412,10 +419,10 @@ Star.prototype.drawWorld = function (ctx) {
       this.drawM(this.mesh('deck' + di, () => KS.buildDeck(D[di].id, cfg, this.lod)), Ms, { rot: t * 0.7 }); gl.uniform1f(u.uLit, 1);
       // crew of this deck
       for (const c of CREW) { if (c.d !== di) continue; let x = c.x, z = c.z, h = c.h, pose = c.pose, tt = t + (c.x || 0);
-        if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; tt = c.ph * 9; }
+        if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; c.wd = (c.wd || 0) + Math.abs(k - (c.pk === undefined ? k : c.pk)) * Math.hypot(B[0] - A[0], B[1] - A[1]); c.pk = k; tt = c.wd / 1.45; }
         const near = f.ss === 'in' && f.deck === di && Math.hypot(f.lx - x, f.lz - z) < 3.2;
         if ((near && c.wave) || (c.greet && this.greetT > 0)) { pose = 'saluto'; h = Math.atan2(f.lx - x, f.lz - z); }
-        let opt = {}; if (pose === 'seduto_c') { pose = 'seduto'; opt = { seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
+        let opt = { key: 'crew' + CREW.indexOf(c) }; if (pose === 'seduto_c') { pose = 'seduto'; opt = { key: opt.key, seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
         F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(x, D[di].y, z), U.RY(h))), pose, opt, this.person(c.who), tt); }
       prep(); }
     // the avatar inside / on EVA

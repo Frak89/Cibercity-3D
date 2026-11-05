@@ -91,28 +91,32 @@ function collideDrone(st, city, prevY, rad) {
   return hit;
 }
 function stepDrone(st, inp, dt, city, cfg) {
-  const P = DRONE_P(cfg), boosting = inp.boost && st.energy > 0.02;
-  const vmax = P.vmax * (boosting ? 1.6 : 1) * (st.stun > 0 ? 0.5 : 1);
-  st.energy = boosting ? Math.max(0, st.energy - dt * 0.14) : Math.min(1, st.energy + dt * 0.05);
-  st.h = wrapA(st.h + (inp.yaw || 0) * 2.1 * dt);
-  const fx = Math.sin(st.h), fz = Math.cos(st.h), rx = -Math.cos(st.h), rz = Math.sin(st.h);   // forward, screen-right
-  const dF = (inp.fwd || 0) * vmax, dS = (inp.strafe || 0) * vmax * 0.7;
-  const tvx = fx * dF + rx * dS, tvz = fz * dF + rz * dS;
-  const vF0 = st.vx * fx + st.vz * fz, vS0 = st.vx * rx + st.vz * rz;
-  const k = P.acc * (boosting ? 1.3 : 1);
-  st.vx = ease(st.vx, tvx, k, dt); st.vz = ease(st.vz, tvz, k, dt);
-  st.vy = ease(st.vy, (inp.lift || 0) * 15, 3, dt);
+  // quadcopter in "angle mode": the sticks set the tilt, the tilt makes the thrust push you horizontally, air drag limits the speed;
+  // throttle = climb rate, yaw has inertia, gusts of wind push you around, the ground cushions the last metre (ground effect)
+  const P = DRONE_P(cfg), sport = inp.boost && st.energy > 0.02, g = 9.81;
+  st.energy = sport ? Math.max(0, st.energy - dt * 0.14) : Math.min(1, st.energy + dt * 0.05);
+  const maxTilt = (sport ? 0.68 : 0.46) * (st.stun > 0 ? 0.5 : 1), vmax = P.vmax * (sport ? 1.6 : 1);
+  const tp = clamp(inp.fwd || 0, -1, 1) * maxTilt, tr = clamp(inp.strafe || 0, -1, 1) * maxTilt;
+  const kA = 6 + P.acc * 2;
+  st.pitch = ease(st.pitch, tp, kA, dt); st.roll = ease(st.roll, tr + (inp.yaw || 0) * -0.08 * clamp(st.vF / 10, 0, 1), kA, dt);
+  st.yr = ease(st.yr || 0, (inp.yaw || 0) * (sport ? 2.8 : 2.1), 5, dt); st.h = wrapA(st.h + st.yr * dt);
+  const fx = Math.sin(st.h), fz = Math.cos(st.h), rx = -Math.cos(st.h), rz = Math.sin(st.h);
+  const aF = g * Math.tan(st.pitch), aS = g * Math.tan(st.roll);
+  st.wt = (st.wt || 0) + dt; const W = 0.35 * P.vmax / 36, wx = (Math.sin(st.wt * 0.31) * 2.2 + Math.sin(st.wt * 1.73 + 1) * 0.9) * W, wz = (Math.cos(st.wt * 0.27) * 1.8 + Math.sin(st.wt * 2.1) * 0.7) * W;
+  const kd = g * Math.tan(maxTilt) / (vmax * vmax), rvx = st.vx - wx, rvz = st.vz - wz, rs = Math.hypot(rvx, rvz);
+  st.vx += (fx * aF + rx * aS - kd * rs * rvx - 0.05 * rvx) * dt; st.vz += (fz * aF + rz * aS - kd * rs * rvz - 0.05 * rvz) * dt;
+  // vertical: climb-rate hold with a little lag; descending close to the ground the propwash cushions it
+  const near = st.y < 1.6 ? (1.6 - st.y) / 1.6 : 0, climb = (inp.lift || 0) * (sport ? 12 : 8);
+  st.vy = ease(st.vy, climb + (climb < 0 ? -climb * near * 0.7 : 0), 2.6, dt) + Math.sin(st.wt * 3.1) * 0.15 * dt;
   const prevY = st.y;
   st.x = wrapP(st.x + st.vx * dt); st.z = wrapP(st.z + st.vz * dt); st.y += st.vy * dt;
   const minY = isWater(st.x, st.z) ? -0.75 : 0.32;
-  if (st.y < minY) { st.y = minY; st.vy = 0; }
+  if (st.y < minY) { st.y = minY; if (st.vy < -3) st.shake = Math.min(1, st.shake + 0.4); st.vy = 0; st.vx *= 0.9; st.vz *= 0.9; }
   if (st.y > 420) { st.y = 420; st.vy = Math.min(0, st.vy); }
   const hit = collideDrone(st, city, prevY);
-  if (hit > 2) { st.shake = Math.min(1, st.shake + hit * 0.05); st.hit = Math.min(1, hit * 0.05); }
+  if (hit > 2) { st.shake = Math.min(1, st.shake + hit * 0.05); st.hit = Math.min(1, hit * 0.05); st.pitch *= -0.5; st.roll *= -0.5; }
   st.vF = st.vx * fx + st.vz * fz;
-  st.pitch = ease(st.pitch, clamp((dF - vF0) / vmax * 0.55 + st.vF / P.vmax * 0.16, -0.5, 0.55), 5, dt);
-  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.55 - (inp.yaw || 0) * clamp(st.vF / P.vmax, 0, 1) * 0.35, -0.6, 0.6), 5, dt);
-  st.thrust = clamp(0.55 + Math.abs(dF - vF0) / vmax + Math.max(0, inp.lift || 0) * 0.4, 0, 1.6);
+  st.thrust = clamp(0.55 + (Math.abs(st.pitch) + Math.abs(st.roll)) * 0.9 + Math.max(0, inp.lift || 0) * 0.45, 0, 1.6);
   st.rot += dt * (34 + st.thrust * 30); st.blur = ease(st.blur, st.y > 0.4 || st.thrust > 0.6 ? 0.85 : 0.5, 3, dt);
   st.shake = Math.max(0, st.shake - dt * 3); st.hit = Math.max(0, st.hit - dt * 2.5); st.stun = Math.max(0, st.stun - dt);
 }
@@ -134,7 +138,9 @@ function stepUfo(st, inp, dt, city) {
   if (hit > 2) st.shake = Math.min(1, st.shake + hit * 0.03);
   st.vF = st.vx * fx + st.vz * fz;
   st.pitch = ease(st.pitch, clamp((dF - vF0) / vmax * 0.18, -0.15, 0.15), 2, dt);
-  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.2 - (inp.yaw || 0) * 0.08, -0.2, 0.2), 2, dt);
+  st.wt = (st.wt || 0) + dt;
+  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.25 - (inp.yaw || 0) * 0.12 * clamp(Math.hypot(st.vx, st.vz) / 40, 0.3, 1), -0.3, 0.3) + Math.sin(st.wt * 1.3) * 0.012, 2, dt);
+  st.pitch += Math.sin(st.wt * 1.1 + 1) * 0.006 * dt * 10;
   st.rot += dt * (1.2 + Math.hypot(st.vx, st.vz) * 0.02 + (st.beam ? 2.5 : 0));
   st.beam = !!inp.fire && st.y > 2;
   st.shake = Math.max(0, st.shake - dt * 3);
@@ -507,8 +513,14 @@ FleetGame.prototype.camera = function (view, dt, t) {
   } else if (v === 3) { this.cinT += dt * 0.22; const r = D[2] * 0.9, a = this.cinT; e = [Math.sin(a) * r, yb + D[3] * 0.7 + Math.sin(this.cinT * 1.7) * D[1], Math.cos(a) * r]; l = [0, yb + D[1] * 0.3, 0]; fov = 50; }
   else { e = [-fx * 2, yb + (k === 'galleon' ? 180 : 75), -fz * 2]; l = [fx * 3, yb, fz * 3]; fov = 60; }
   if (k !== 'sub') { e[1] = Math.max(e[1], -0.4); if (k !== 'drone' && v !== 2) e[1] = Math.max(e[1], 1.5); } else e[1] = Math.min(e[1], -1.5);
+  // chase cameras ride on a spring (they lag behind in turns and climbs instead of being bolted to the vehicle)
+  if (v <= 1) { const W = [st.x + e[0], e[1], st.z + e[2]], kc = { drone: 4.5, ufo: 2.2, galleon: 2, boat: 3.5, hover: 3.5, sub: 3, moto: 7 }[k] || 4;
+    if (!this.camW || this.camW.k !== k + v || Math.hypot(wrapD(this.camW.x - W[0]), wrapD(this.camW.z - W[2])) > 150) this.camW = { k: k + v, x: W[0], y: W[1], z: W[2] };
+    const a = Math.min(1, dt * kc); this.camW.x = wrapP(this.camW.x + wrapD(W[0] - this.camW.x) * a); this.camW.y += (W[1] - this.camW.y) * a; this.camW.z = wrapP(this.camW.z + wrapD(W[2] - this.camW.z) * a);
+    e = [wrapD(this.camW.x - st.x), this.camW.y, wrapD(this.camW.z - st.z)]; }
   const sh = st.shake * 0.25; e[0] += (Math.random() - 0.5) * sh; e[1] += (Math.random() - 0.5) * sh;
-  this.cv = { e, l, fov, drawCar, cockpit: false, roll: v === 2 && k === 'drone' ? st.roll : 0 };
+  const roll = v === 2 && k === 'drone' ? st.roll : (v <= 1 && (k === 'drone' || k === 'ufo')) ? (st.roll || 0) * 0.35 : v <= 1 && k === 'moto' ? (st.roll || 0) * 0.25 : 0;
+  this.cv = { e, l, fov, drawCar, cockpit: false, roll };
   return this.cv;
 };
 FleetGame.prototype.wake = function (camX, camZ) {
@@ -549,7 +561,15 @@ FleetGame.prototype.drawPilotPose = function (set, Mv, pname, opt, mesh, tt) {
   gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uBlur, 0);
   if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
   gl.uniformMatrix4fv(u.uModel, false, Mv);
-  gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, KagePilot.pose(pname, tt === undefined ? this.g.t : tt, opt, pm.S));
+  const T0 = tt === undefined ? this.g.t : tt;
+  let Bn = KagePilot.pose(pname, T0, opt, pm.S);
+  // smooth transitions for a tracked character (opt.key): cross-fade the bones of the previous clip over 0.25 s
+  if (opt && opt.key) { const K = this.blend || (this.blend = {}), b = K[opt.key] || (K[opt.key] = { name: pname, from: null, w: 1, last: this.g.t });
+    const now = this.g.t, dt = Math.max(0, Math.min(0.1, now - b.last)); b.last = now;
+    if (b.name !== pname) { b.from = { name: b.name, t: b.t, opt: b.opt }; b.name = pname; b.w = 0; }
+    b.t = T0; b.opt = opt; b.w = Math.min(1, b.w + dt / 0.25);
+    if (b.from && b.w < 1) { const A = KagePilot.pose(b.from.name, b.from.t, b.from.opt, pm.S), w = b.w * b.w * (3 - 2 * b.w), out = new Float32Array(Bn.length); for (let i = 0; i < Bn.length; i++) out[i] = A[i] + (Bn[i] - A[i]) * w; Bn = out; } }
+  gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, Bn);
   this.g.draw(P, pm);
 };
 /** draw the pilot in vehicle `kind` whose model matrix is Mv (camera-relative) */

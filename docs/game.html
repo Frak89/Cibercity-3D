@@ -2263,11 +2263,12 @@ function bones(spec, S) {
     Rw[b] = Rb; Pw[c] = r.t;
     // end bone keeps the forearm / shin orientation (plus its own local rotation)
     const rl = rot[BN[c]]; Rw[c] = rl ? mm(Rb, eul(rl[0], rl[1], rl[2])) : Rb;
+    if (tgt.world !== undefined) Rw[c] = mm(RotY(spec.yaw || 0), RotX(-tgt.world));   // foot pitch in character space (flat on the ground)
   };
   if (ik.handL) chain(B.armL, B.foreL, B.handL, ik.handL.t, ik.handL.pole || [0.6, -0.6, -0.4]);
   if (ik.handR) chain(B.armR, B.foreR, B.handR, ik.handR.t, ik.handR.pole || [-0.6, -0.6, -0.4]);
-  if (ik.footL) chain(B.thighL, B.shinL, B.footL, ik.footL.t, ik.footL.pole || [0, 0.2, 1]);
-  if (ik.footR) chain(B.thighR, B.shinR, B.footR, ik.footR.t, ik.footR.pole || [0, 0.2, 1]);
+  if (ik.footL) chain(B.thighL, B.shinL, B.footL, Object.assign(ik.footL.t.slice(), { world: ik.footL.world }), ik.footL.pole || [0, 0.2, 1]);
+  if (ik.footR) chain(B.thighR, B.shinR, B.footR, Object.assign(ik.footR.t.slice(), { world: ik.footR.world }), ik.footR.pole || [0, 0.2, 1]);
   // matrices: x' = Rw (x - Jb) + Pw
   const out = new Float32Array(19 * 16);
   for (let i = 0; i < 19; i++) {
@@ -2299,17 +2300,31 @@ function poseSpec(name, t, opt) {
     case 'esulta': { const j = Math.abs(Math.sin(t * 4)) * 0.04; spec.root = at(0, j, 0); spec.ik.handL = { t: at(0.3, 1.95 + j, 0.05), pole: [1, 0, -0.3] }; spec.ik.handR = { t: at(-0.3, 1.95 + j, 0.05), pole: [-1, 0, -0.3] }; rot.head = [-0.2, 0, 0]; break; }
     case 'pensieroso': spec.ik.handR = { t: at(-0.02, 1.53, 0.12), pole: [-1, -1, 0] }; spec.ik.handL = { t: at(-0.05, 1.18, 0.12), pole: [1, -1, 0] }; rot.head = [0.12, -0.2, 0.05]; break;
     case 'cammina': case 'corre': {
-      const run = name === 'corre' || (opt.speed || 0) > 3, sp = opt.speed || (run ? 5 : 1.4), f = run ? 1.45 : 0.95, ph = t * f * PI * 2, A = run ? 0.7 : 0.42;
-      const s1 = Math.sin(ph), c1 = Math.cos(ph);
-      rot.thighL = [-A * s1, 0, 0.02]; rot.thighR = [A * s1, 0, -0.02];
-      rot.shinL = [Math.max(0, Math.sin(ph - 1.2)) * (run ? 1.4 : 0.75) + 0.05, 0, 0]; rot.shinR = [Math.max(0, Math.sin(ph + PI - 1.2)) * (run ? 1.4 : 0.75) + 0.05, 0, 0];
-      rot.footL = [Math.sin(ph - 0.3) * 0.25, 0, 0]; rot.footR = [-Math.sin(ph - 0.3) * 0.25, 0, 0];
-      // arms swing opposite to the legs, close to the body; running: elbows bent ~90°, fists forward
-      rot.armL = [A * 0.85 * s1, 0, run ? 0.2 : 0.12]; rot.armR = [-A * 0.85 * s1, 0, run ? -0.2 : -0.12];
-      rot.foreL = [run ? -1.1 - 0.2 * Math.max(0, s1) : -0.3 - 0.15 * Math.max(0, s1), run ? 0.35 : 0, 0]; rot.foreR = [run ? -1.1 - 0.2 * Math.max(0, -s1) : -0.3 - 0.15 * Math.max(0, -s1), run ? -0.35 : 0, 0];
-      rot.handL = [0, -1.25, 0]; rot.handR = [0, 1.25, 0];
-      rot.pelvis = [run ? 0.18 : 0.04, s1 * 0.1, 0]; rot.chest = [0, -s1 * 0.12, 0]; rot.head = [run ? -0.12 : -0.03, s1 * 0.05, 0];
-      spec.root = at(0, -Math.abs(c1) * (run ? 0.06 : 0.025) + (run ? -0.03 : 0), 0); void sp;
+      // gait with planted feet: each ankle follows a stance (on the ground, sliding back at walking speed) + swing (lifted arc) path,
+      // knees by IK; heel strike → flat foot → toe-off; pelvis bobs, sways over the stance leg and yaws; shoulders counter-rotate
+      const run = name === 'corre' || (opt.speed || 0) > 3, f = run ? 1.45 : 0.95, cyc = t * f, L = (run ? 3.79 : 1.526) * S, beta = run ? 0.36 : 0.62, half = L * beta * 0.5;
+      const leg = off => { const p = ((cyc + off) % 1 + 1) % 1; let z, y, pitch;
+        if (p < beta) { const u = p / beta; z = half - u * 2 * half; y = 0;
+          pitch = u < 0.15 ? 0.3 * (1 - u / 0.15) : u > 0.72 ? -(run ? 0.85 : 0.65) * sstep(0.72, 1, u) : 0;
+          if (u > 0.72) y = 0.035 * S * sstep(0.72, 1, u); }
+        else { const u = (p - beta) / (1 - beta), e = 0.5 - 0.5 * Math.cos(u * PI); z = -half + e * 2 * half;
+          y = Math.pow(Math.sin(u * PI), run ? 0.7 : 1.3) * (run ? 0.3 : 0.11) * S + (1 - sstep(0, 0.35, u)) * 0.035 * S;
+          pitch = u < 0.5 ? lerp(run ? -0.85 : -0.65, 0.05, u / 0.5) : lerp(0.05, 0.32, (u - 0.5) / 0.5); }
+        return { z, y, pitch, a: z / half }; };
+      const lL = leg(0), lR = leg(0.5), ph2 = cyc * TAU;
+      const bob = run ? -0.035 * S * Math.cos(2 * ph2 - 0.3) - 0.05 * S : 0.018 * S * Math.cos(2 * (ph2 - 0.31 * TAU)) - 0.022 * S;
+      const swayX = (run ? 0.01 : 0.022) * S * Math.cos(ph2 - 0.31 * TAU);
+      spec.root = [swayX, bob, 0];
+      const ank = (sx, l) => [sx * 0.106 * S, 0.088 * S + l.y, -0.022 * S + l.z];
+      spec.ik.footL = { t: ank(1, lL), pole: [0.05, 0.1, 1], world: lL.pitch }; spec.ik.footR = { t: ank(-1, lR), pole: [-0.05, 0.1, 1], world: lR.pitch };
+      const lean = run ? 0.16 : 0.04, py = (run ? 0.14 : 0.09) * lL.a;
+      rot.pelvis = [lean * 0.5, -py, -swayX / S * 1.5]; rot.spine = [lean * 0.4, py * 0.6, 0]; rot.chest = [lean * 0.3 + br * 0.5, py * 1.1, swayX / S]; rot.neck = [0, 0, 0];
+      rot.head = [lean * 0.3 + 0.03, -py * 0.5 + Math.sin(t * 0.33) * 0.03, -swayX / S * 0.8];
+      // arms: counter-swing (left arm with the right leg), elbows bend more on the forward swing
+      const aL = -lR.a, aR = -lL.a, A = run ? 0.75 : 0.36;
+      rot.armL = [-A * aL, 0, run ? 0.18 : 0.1]; rot.armR = [-A * aR, 0, run ? -0.18 : -0.1];
+      rot.foreL = [run ? -1.15 - 0.3 * Math.max(0, aL) : -0.22 - 0.3 * Math.max(0, aL), run ? 0.3 : 0.05, 0]; rot.foreR = [run ? -1.15 - 0.3 * Math.max(0, aR) : -0.22 - 0.3 * Math.max(0, aR), run ? -0.3 : -0.05, 0];
+      rot.handL = [0, -1.25, run ? 0.2 : 0]; rot.handR = [0, 1.25, run ? -0.2 : 0];
       break; }
     case 'salta': rot.thighL = [-0.9, 0, 0.05]; rot.thighR = [-0.4, 0, -0.05]; rot.shinL = [1.3, 0, 0]; rot.shinR = [0.9, 0, 0]; rot.armL = [-0.6, 0, 0.6]; rot.armR = [-0.6, 0, -0.6]; break;
     case 'seduto': case 'barca': {
@@ -4883,7 +4898,12 @@ Game.prototype.frame = function (dt, inp) {
   const W = this.canvas.width, H = this.canvas.height;
   gl.viewport(0, 0, W, H);
   const er = eco ? 0.035 * Math.sin(t * 0.37) + 0.015 * Math.sin(t * 1.9) : 0;   // ECO: the horizon is never quite level
-  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], [Math.sin(er), Math.cos(er), 0]);
+  // camera roll (drone banking, the starship in turns): tilt the up vector about the view direction
+  let upV = [Math.sin(er), Math.cos(er), 0];
+  if (cv.roll) { const fx0 = cv.l[0] - cv.e[0], fy0 = cv.l[1] - cv.e[1], fz0 = cv.l[2] - cv.e[2], fl = Math.hypot(fx0, fy0, fz0) || 1, F0 = [fx0 / fl, fy0 / fl, fz0 / fl];
+    let Rr = [F0[1] * 0 - F0[2] * 1, F0[2] * 0 - F0[0] * 0, F0[0] * 1 - F0[1] * 0]; const rl = Math.hypot(Rr[0], Rr[1], Rr[2]) || 1; Rr = Rr.map(v => v / rl);
+    const cr = Math.cos(cv.roll), sr = Math.sin(cv.roll); upV = [upV[0] * cr + Rr[0] * sr, upV[1] * cr + Rr[1] * sr, upV[2] * cr + Rr[2] * sr]; }
+  const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], upV);
   const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || 700;
   const Pm = perspective(fov, W / H, 0.12, far);
   const VP = mul(Pm, V.m);
@@ -5257,28 +5277,32 @@ function collideDrone(st, city, prevY, rad) {
   return hit;
 }
 function stepDrone(st, inp, dt, city, cfg) {
-  const P = DRONE_P(cfg), boosting = inp.boost && st.energy > 0.02;
-  const vmax = P.vmax * (boosting ? 1.6 : 1) * (st.stun > 0 ? 0.5 : 1);
-  st.energy = boosting ? Math.max(0, st.energy - dt * 0.14) : Math.min(1, st.energy + dt * 0.05);
-  st.h = wrapA(st.h + (inp.yaw || 0) * 2.1 * dt);
-  const fx = Math.sin(st.h), fz = Math.cos(st.h), rx = -Math.cos(st.h), rz = Math.sin(st.h);   // forward, screen-right
-  const dF = (inp.fwd || 0) * vmax, dS = (inp.strafe || 0) * vmax * 0.7;
-  const tvx = fx * dF + rx * dS, tvz = fz * dF + rz * dS;
-  const vF0 = st.vx * fx + st.vz * fz, vS0 = st.vx * rx + st.vz * rz;
-  const k = P.acc * (boosting ? 1.3 : 1);
-  st.vx = ease(st.vx, tvx, k, dt); st.vz = ease(st.vz, tvz, k, dt);
-  st.vy = ease(st.vy, (inp.lift || 0) * 15, 3, dt);
+  // quadcopter in "angle mode": the sticks set the tilt, the tilt makes the thrust push you horizontally, air drag limits the speed;
+  // throttle = climb rate, yaw has inertia, gusts of wind push you around, the ground cushions the last metre (ground effect)
+  const P = DRONE_P(cfg), sport = inp.boost && st.energy > 0.02, g = 9.81;
+  st.energy = sport ? Math.max(0, st.energy - dt * 0.14) : Math.min(1, st.energy + dt * 0.05);
+  const maxTilt = (sport ? 0.68 : 0.46) * (st.stun > 0 ? 0.5 : 1), vmax = P.vmax * (sport ? 1.6 : 1);
+  const tp = clamp(inp.fwd || 0, -1, 1) * maxTilt, tr = clamp(inp.strafe || 0, -1, 1) * maxTilt;
+  const kA = 6 + P.acc * 2;
+  st.pitch = ease(st.pitch, tp, kA, dt); st.roll = ease(st.roll, tr + (inp.yaw || 0) * -0.08 * clamp(st.vF / 10, 0, 1), kA, dt);
+  st.yr = ease(st.yr || 0, (inp.yaw || 0) * (sport ? 2.8 : 2.1), 5, dt); st.h = wrapA(st.h + st.yr * dt);
+  const fx = Math.sin(st.h), fz = Math.cos(st.h), rx = -Math.cos(st.h), rz = Math.sin(st.h);
+  const aF = g * Math.tan(st.pitch), aS = g * Math.tan(st.roll);
+  st.wt = (st.wt || 0) + dt; const W = 0.35 * P.vmax / 36, wx = (Math.sin(st.wt * 0.31) * 2.2 + Math.sin(st.wt * 1.73 + 1) * 0.9) * W, wz = (Math.cos(st.wt * 0.27) * 1.8 + Math.sin(st.wt * 2.1) * 0.7) * W;
+  const kd = g * Math.tan(maxTilt) / (vmax * vmax), rvx = st.vx - wx, rvz = st.vz - wz, rs = Math.hypot(rvx, rvz);
+  st.vx += (fx * aF + rx * aS - kd * rs * rvx - 0.05 * rvx) * dt; st.vz += (fz * aF + rz * aS - kd * rs * rvz - 0.05 * rvz) * dt;
+  // vertical: climb-rate hold with a little lag; descending close to the ground the propwash cushions it
+  const near = st.y < 1.6 ? (1.6 - st.y) / 1.6 : 0, climb = (inp.lift || 0) * (sport ? 12 : 8);
+  st.vy = ease(st.vy, climb + (climb < 0 ? -climb * near * 0.7 : 0), 2.6, dt) + Math.sin(st.wt * 3.1) * 0.15 * dt;
   const prevY = st.y;
   st.x = wrapP(st.x + st.vx * dt); st.z = wrapP(st.z + st.vz * dt); st.y += st.vy * dt;
   const minY = isWater(st.x, st.z) ? -0.75 : 0.32;
-  if (st.y < minY) { st.y = minY; st.vy = 0; }
+  if (st.y < minY) { st.y = minY; if (st.vy < -3) st.shake = Math.min(1, st.shake + 0.4); st.vy = 0; st.vx *= 0.9; st.vz *= 0.9; }
   if (st.y > 420) { st.y = 420; st.vy = Math.min(0, st.vy); }
   const hit = collideDrone(st, city, prevY);
-  if (hit > 2) { st.shake = Math.min(1, st.shake + hit * 0.05); st.hit = Math.min(1, hit * 0.05); }
+  if (hit > 2) { st.shake = Math.min(1, st.shake + hit * 0.05); st.hit = Math.min(1, hit * 0.05); st.pitch *= -0.5; st.roll *= -0.5; }
   st.vF = st.vx * fx + st.vz * fz;
-  st.pitch = ease(st.pitch, clamp((dF - vF0) / vmax * 0.55 + st.vF / P.vmax * 0.16, -0.5, 0.55), 5, dt);
-  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.55 - (inp.yaw || 0) * clamp(st.vF / P.vmax, 0, 1) * 0.35, -0.6, 0.6), 5, dt);
-  st.thrust = clamp(0.55 + Math.abs(dF - vF0) / vmax + Math.max(0, inp.lift || 0) * 0.4, 0, 1.6);
+  st.thrust = clamp(0.55 + (Math.abs(st.pitch) + Math.abs(st.roll)) * 0.9 + Math.max(0, inp.lift || 0) * 0.45, 0, 1.6);
   st.rot += dt * (34 + st.thrust * 30); st.blur = ease(st.blur, st.y > 0.4 || st.thrust > 0.6 ? 0.85 : 0.5, 3, dt);
   st.shake = Math.max(0, st.shake - dt * 3); st.hit = Math.max(0, st.hit - dt * 2.5); st.stun = Math.max(0, st.stun - dt);
 }
@@ -5300,7 +5324,9 @@ function stepUfo(st, inp, dt, city) {
   if (hit > 2) st.shake = Math.min(1, st.shake + hit * 0.03);
   st.vF = st.vx * fx + st.vz * fz;
   st.pitch = ease(st.pitch, clamp((dF - vF0) / vmax * 0.18, -0.15, 0.15), 2, dt);
-  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.2 - (inp.yaw || 0) * 0.08, -0.2, 0.2), 2, dt);
+  st.wt = (st.wt || 0) + dt;
+  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.25 - (inp.yaw || 0) * 0.12 * clamp(Math.hypot(st.vx, st.vz) / 40, 0.3, 1), -0.3, 0.3) + Math.sin(st.wt * 1.3) * 0.012, 2, dt);
+  st.pitch += Math.sin(st.wt * 1.1 + 1) * 0.006 * dt * 10;
   st.rot += dt * (1.2 + Math.hypot(st.vx, st.vz) * 0.02 + (st.beam ? 2.5 : 0));
   st.beam = !!inp.fire && st.y > 2;
   st.shake = Math.max(0, st.shake - dt * 3);
@@ -5673,8 +5699,14 @@ FleetGame.prototype.camera = function (view, dt, t) {
   } else if (v === 3) { this.cinT += dt * 0.22; const r = D[2] * 0.9, a = this.cinT; e = [Math.sin(a) * r, yb + D[3] * 0.7 + Math.sin(this.cinT * 1.7) * D[1], Math.cos(a) * r]; l = [0, yb + D[1] * 0.3, 0]; fov = 50; }
   else { e = [-fx * 2, yb + (k === 'galleon' ? 180 : 75), -fz * 2]; l = [fx * 3, yb, fz * 3]; fov = 60; }
   if (k !== 'sub') { e[1] = Math.max(e[1], -0.4); if (k !== 'drone' && v !== 2) e[1] = Math.max(e[1], 1.5); } else e[1] = Math.min(e[1], -1.5);
+  // chase cameras ride on a spring (they lag behind in turns and climbs instead of being bolted to the vehicle)
+  if (v <= 1) { const W = [st.x + e[0], e[1], st.z + e[2]], kc = { drone: 4.5, ufo: 2.2, galleon: 2, boat: 3.5, hover: 3.5, sub: 3, moto: 7 }[k] || 4;
+    if (!this.camW || this.camW.k !== k + v || Math.hypot(wrapD(this.camW.x - W[0]), wrapD(this.camW.z - W[2])) > 150) this.camW = { k: k + v, x: W[0], y: W[1], z: W[2] };
+    const a = Math.min(1, dt * kc); this.camW.x = wrapP(this.camW.x + wrapD(W[0] - this.camW.x) * a); this.camW.y += (W[1] - this.camW.y) * a; this.camW.z = wrapP(this.camW.z + wrapD(W[2] - this.camW.z) * a);
+    e = [wrapD(this.camW.x - st.x), this.camW.y, wrapD(this.camW.z - st.z)]; }
   const sh = st.shake * 0.25; e[0] += (Math.random() - 0.5) * sh; e[1] += (Math.random() - 0.5) * sh;
-  this.cv = { e, l, fov, drawCar, cockpit: false, roll: v === 2 && k === 'drone' ? st.roll : 0 };
+  const roll = v === 2 && k === 'drone' ? st.roll : (v <= 1 && (k === 'drone' || k === 'ufo')) ? (st.roll || 0) * 0.35 : v <= 1 && k === 'moto' ? (st.roll || 0) * 0.25 : 0;
+  this.cv = { e, l, fov, drawCar, cockpit: false, roll };
   return this.cv;
 };
 FleetGame.prototype.wake = function (camX, camZ) {
@@ -5715,7 +5747,15 @@ FleetGame.prototype.drawPilotPose = function (set, Mv, pname, opt, mesh, tt) {
   gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uBlur, 0);
   if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
   gl.uniformMatrix4fv(u.uModel, false, Mv);
-  gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, KagePilot.pose(pname, tt === undefined ? this.g.t : tt, opt, pm.S));
+  const T0 = tt === undefined ? this.g.t : tt;
+  let Bn = KagePilot.pose(pname, T0, opt, pm.S);
+  // smooth transitions for a tracked character (opt.key): cross-fade the bones of the previous clip over 0.25 s
+  if (opt && opt.key) { const K = this.blend || (this.blend = {}), b = K[opt.key] || (K[opt.key] = { name: pname, from: null, w: 1, last: this.g.t });
+    const now = this.g.t, dt = Math.max(0, Math.min(0.1, now - b.last)); b.last = now;
+    if (b.name !== pname) { b.from = { name: b.name, t: b.t, opt: b.opt }; b.name = pname; b.w = 0; }
+    b.t = T0; b.opt = opt; b.w = Math.min(1, b.w + dt / 0.25);
+    if (b.from && b.w < 1) { const A = KagePilot.pose(b.from.name, b.from.t, b.from.opt, pm.S), w = b.w * b.w * (3 - 2 * b.w), out = new Float32Array(Bn.length); for (let i = 0; i < Bn.length; i++) out[i] = A[i] + (Bn[i] - A[i]) * w; Bn = out; } }
+  gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, Bn);
   this.g.draw(P, pm);
 };
 /** draw the pilot in vehicle `kind` whose model matrix is Mv (camera-relative) */
@@ -6390,7 +6430,7 @@ OnFoot.prototype.draw = function (ctx) {
   const f = this.g.fleet; if (!f) return;
   const rx = wrapD(this.x - ctx.camX), rz = wrapD(this.z - ctx.camZ);
   const t = this.anim === 'cammina' || this.anim === 'corre' ? this.ph : this.t;
-  f.drawPilotPose(ctx.set, U.mul(U.T(rx, this.y, rz), U.RY(this.h)), this.anim || 'in piedi', { speed: Math.abs(this.v) }, null, t);
+  f.drawPilotPose(ctx.set, U.mul(U.T(rx, this.y, rz), U.RY(this.h)), this.anim || 'in piedi', { speed: Math.abs(this.v), key: 'me' }, null, t);
 };
 OnFoot.prototype.drawHud = function (hud) {
   const g = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);
@@ -6582,7 +6622,7 @@ XenoGame.prototype.drawWorld = function (ctx) {
   if (near < 60) { const Ms = this.shipM(ctx), f = g.foot, inside = f && f.active && f.xs === 'in';
     for (const c of CREW) {
       const waves = c.wave && inside && Math.hypot(f.lx - c.x, f.lz - c.z) < 3.5;
-      F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(c.x, R.floor, c.z), U.RY(c.h))), waves ? 'saluto' : c.pose, {}, this.person({ species: c.sp }), t + c.x);
+      F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(c.x, R.floor, c.z), U.RY(c.h))), waves ? 'saluto' : c.pose, { key: 'ufo' + c.sp }, this.person({ species: c.sp }), t + c.x);
     }
     gl.useProgram(P.p); ctx.set(P); }
   // whatever is going up the beam
@@ -6742,11 +6782,13 @@ Star.prototype.update = function (dt, inp) {
     if (d.done >= d.total || !isFinite(c)) this.arrive();
   } else if (f && f.ss === 'helm') {
     // impulse: W/S throttle, A/D yaw, SPACE/X climb/dive (pitch in space), SHIFT = full impulse
+    // a 150 m ship has mass: the throttle sets the impulse, the speed follows slowly; turns build up and the hull banks into them
     s.imp = clamp(s.imp + (inp.fwd || 0) * dt * 0.5, -0.25, 1); if (inp.boost) s.imp = ease(s.imp, 1, 2, dt);
-    s.h = wrapA(s.h + (inp.yaw || 0) * 0.35 * dt);
-    const vmax = s.world === 'space' ? 260 : 70, v = s.imp * vmax;
-    if (s.world === 'space') s.pitch = clamp(s.pitch - (inp.lift || 0) * 0.4 * dt, -0.9, 0.9); else s.pitch = ease(s.pitch, -(inp.lift || 0) * 0.15, 2, dt);
-    s.roll = ease(s.roll, -(inp.yaw || 0) * 0.18, 2, dt);
+    const vmax = s.world === 'space' ? 260 : 70; s.v = ease(s.v || 0, s.imp * vmax, 0.35, dt); const v = s.v, vk = clamp(Math.abs(v) / vmax + 0.25, 0, 1);
+    s.yr = ease(s.yr || 0, (inp.yaw || 0) * 0.32 * vk, 1.1, dt); s.h = wrapA(s.h + s.yr * dt);
+    s.pr = ease(s.pr || 0, -(inp.lift || 0) * 0.35, 1.2, dt);
+    if (s.world === 'space') s.pitch = clamp(s.pitch + s.pr * dt, -0.9, 0.9); else s.pitch = ease(s.pitch, -(inp.lift || 0) * 0.12, 1.2, dt);
+    s.roll = ease(s.roll, -s.yr * 1.4 + Math.sin(this.t * 0.4) * 0.006, 1.5, dt);
     const fwd = mv(this.R4(), [0, 0, 1]);
     s.x += fwd[0] * v * dt; s.z += fwd[2] * v * dt; s.y += (s.world === 'space' ? fwd[1] * v : (inp.lift || 0) * 18) * dt;
     if (s.world === 'city') { s.x = wrapP(s.x); s.z = wrapP(s.z); s.y = clamp(s.y, 520, 1500); }
@@ -6995,7 +7037,11 @@ Star.prototype.camera = function (cv, dt) {
     E = W([ex, y + 1.95, ez]); L = W([f.lx + fx * 2, y + 1.4, f.lz + fz * 2]); fov = 70;
   } else if (f.ss === 'helm') {
     if (g.view % 2 === 0) { const y = D[0].y; E = W([0, y + 1.75, RIG.chair[1] - 0.6]); L = W([0, y + 1.4, 40]); fov = 78; }
-    else { this.cin = (this.cin || 0) + dt * 0.05; E = W([Math.sin(this.cin) * 60, 38, -170]); L = W([0, 0, 25]); fov = 55; }
+    else { this.cin = (this.cin || 0) + dt * 0.05; E = W([Math.sin(this.cin) * 60, 38, -170]); L = W([0, 0, 25]); fov = 55;
+      const off = [E[0] - s.x, E[1] - s.y, E[2] - s.z]; if (!this.camOff) this.camOff = off; const a = Math.min(1, dt * 1.8);
+      this.camOff = this.camOff.map((c, i) => c + (off[i] - c) * a); E = [s.x + this.camOff[0], s.y + this.camOff[1], s.z + this.camOff[2]]; }
+    if (s.mode === 'warp' && s.travel) { const k = Math.min(1, s.travel.t / 1.2); fov += 38 * Math.sin(k * PI) + 10 * k; }
+    this.camRoll = -(s.roll || 0) * (g.view % 2 === 0 ? 1 : 0.5);
   } else if (f.ss === 'eva') {
     const fx = Math.sin(f.lh), fz = Math.cos(f.lh); E = W([f.ex - fx * 5, f.ey + 1.8, f.ez - fz * 5]); L = W([f.ex + fx * 3, f.ey + 0.8, f.ez + fz * 3]); fov = 66;
   } else if (f.ss === 'beamout') { return cv; }
@@ -7006,8 +7052,9 @@ Star.prototype.camera = function (cv, dt) {
     if (view === 2) { E = [f.px, f.py + 30, f.pz - 6]; L = [f.px, f.py, f.pz]; }
   } else return cv;
   this.far = this.SPACE() || s.y > 900 ? 9000 : (this.aboard() ? 2600 : 700);
-  if (g.world === 'city') { const c = g.c, ex = wrapD(E[0] - c.x), ez = wrapD(E[2] - c.z); return { e: [ex, E[1], ez], l: [ex + wrapD(L[0] - E[0]), L[1], ez + wrapD(L[2] - E[2])], fov, drawCar: !this.aboard() && f.ss !== 'eva', cockpit: false }; }
-  this.E = E; return { e: [0, 0, 0], l: [L[0] - E[0], L[1] - E[1], L[2] - E[2]], fov, drawCar: false, cockpit: false };
+  if (g.world === 'city') { const c = g.c, ex = wrapD(E[0] - c.x), ez = wrapD(E[2] - c.z); return { e: [ex, E[1], ez], l: [ex + wrapD(L[0] - E[0]), L[1], ez + wrapD(L[2] - E[2])], fov, drawCar: !this.aboard() && f.ss !== 'eva', cockpit: false, roll: f.ss === 'helm' ? (this.camRoll || 0) : 0 }; }
+  const roll = f.ss === 'helm' ? (this.camRoll || 0) : 0;
+  this.E = E; return { e: [0, 0, 0], l: [L[0] - E[0], L[1] - E[1], L[2] - E[2]], fov, drawCar: false, cockpit: false, roll };
 };
 /** palette: climbing above Cybercity darkens the sky; space is black; each planet has its own sky */
 Star.prototype.pal = function (pal) {
@@ -7027,7 +7074,7 @@ Star.prototype.drawM = function (mesh, M, o) {
 };
 Star.prototype.drawAvatar = function (ctx, Mv, pose, opt, t) {
   const F = this.g.fleet; if (!F) return;
-  F.drawPilotPose(ctx.set, Mv, pose, opt || {}, null, t);
+  F.drawPilotPose(ctx.set, Mv, pose, Object.assign({ key: 'me' }, opt || {}), null, t);
   if (this.badge) { const pm = F.pilotMesh(true); if (!pm) return; const B = KP.pose(pose, t, opt || {}, pm.S), Sx = pm.S || 1;
     const bm = new Float32Array(B.buffer, B.byteOffset + 2 * 16 * 4, 16);
     const gl = this.gl, P = this.g.P.veh; gl.useProgram(P.p); ctx.set(P); gl.uniform1f(P.u.uGlowOnly, 0);
@@ -7065,7 +7112,7 @@ Star.prototype.drawWorld = function (ctx) {
     if (site === 'luna') { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_terra', () => KS.buildPlanet('terra', this.lod)), U.mul(U.T(...this.rel([600, 1400, 3200], ctx)), FM(420))); gl.uniform1f(u.uGlowOnly, 0); }
     if (site === 'proxima') { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_sun', () => KS.buildPlanet('alpha', 'hi')), U.mul(U.T(...this.rel([4200, 300, 1300], ctx)), FM(800))); gl.uniform1f(u.uGlowOnly, 0); }
     for (const [who, x, z] of (SITE_CREW[site] || [])) { const a = t * 0.12 + x, px = x + Math.cos(a) * 6, pz = z + Math.sin(a) * 6, h = -a;
-      F.drawPilotPose(ctx.set, U.mul(U.T(...this.rel([px, KS.siteHeight(site, px, pz), pz], ctx)), U.RY(h)), 'cammina', { speed: 1 }, this.person(who), t * 1.2 + x); }
+      F.drawPilotPose(ctx.set, U.mul(U.T(...this.rel([px, KS.siteHeight(site, px, pz), pz], ctx)), U.RY(h)), 'cammina', { speed: 0.72 }, this.person(who), t * 0.5 + x); }
     prep(); }
   // the ship (exterior when seen from outside; the current deck + crew when you're aboard)
   if (this.shipVisible()) {
@@ -7076,10 +7123,10 @@ Star.prototype.drawWorld = function (ctx) {
       this.drawM(this.mesh('deck' + di, () => KS.buildDeck(D[di].id, cfg, this.lod)), Ms, { rot: t * 0.7 }); gl.uniform1f(u.uLit, 1);
       // crew of this deck
       for (const c of CREW) { if (c.d !== di) continue; let x = c.x, z = c.z, h = c.h, pose = c.pose, tt = t + (c.x || 0);
-        if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; tt = c.ph * 9; }
+        if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; c.wd = (c.wd || 0) + Math.abs(k - (c.pk === undefined ? k : c.pk)) * Math.hypot(B[0] - A[0], B[1] - A[1]); c.pk = k; tt = c.wd / 1.45; }
         const near = f.ss === 'in' && f.deck === di && Math.hypot(f.lx - x, f.lz - z) < 3.2;
         if ((near && c.wave) || (c.greet && this.greetT > 0)) { pose = 'saluto'; h = Math.atan2(f.lx - x, f.lz - z); }
-        let opt = {}; if (pose === 'seduto_c') { pose = 'seduto'; opt = { seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
+        let opt = { key: 'crew' + CREW.indexOf(c) }; if (pose === 'seduto_c') { pose = 'seduto'; opt = { key: opt.key, seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
         F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(x, D[di].y, z), U.RY(h))), pose, opt, this.person(c.who), tt); }
       prep(); }
     // the avatar inside / on EVA

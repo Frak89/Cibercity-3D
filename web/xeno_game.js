@@ -174,7 +174,7 @@ XenoGame.prototype.drawWorld = function (ctx) {
   if (near < 60) { const Ms = this.shipM(ctx), f = g.foot, inside = f && f.active && f.xs === 'in';
     for (const c of CREW) {
       const waves = c.wave && inside && Math.hypot(f.lx - c.x, f.lz - c.z) < 3.5;
-      F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(c.x, R.floor, c.z), U.RY(c.h))), waves ? 'saluto' : c.pose, {}, this.person({ species: c.sp }), t + c.x);
+      F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(c.x, R.floor, c.z), U.RY(c.h))), waves ? 'saluto' : c.pose, { key: 'ufo' + c.sp }, this.person({ species: c.sp }), t + c.x);
     }
     gl.useProgram(P.p); ctx.set(P); }
   // whatever is going up the beam
