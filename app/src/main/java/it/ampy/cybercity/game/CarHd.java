@@ -1,5 +1,7 @@
 package it.ampy.cybercity.game;
 
+import it.ampy.cybercity.L;
+
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.Matrix;
@@ -35,7 +37,7 @@ public final class CarHd {
     private static float sm(float t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); }
 
     public static final String[] PAINT_KEYS = {"nero", "rosso", "perla", "oro", "ciano", "viola"};
-    public static final String[] PAINT_NAMES = {"NERO NEON", "ROSSO CORSA", "BIANCO PERLA", "ORO", "CIANO", "VIOLA"};
+    public static final String[] PAINT_NAMES = {L.t("NERO NEON"), L.t("ROSSO CORSA"), L.t("BIANCO PERLA"), L.t("ORO"), L.t("CIANO"), L.t("VIOLA")};
     static final float[][] PAINTS = {{0.03f, 0.03f, 0.04f}, {0.42f, 0.02f, 0.04f}, {0.72f, 0.72f, 0.76f}, {0.55f, 0.38f, 0.08f}, {0.0f, 0.30f, 0.36f}, {0.20f, 0.03f, 0.30f}};
     public static int paintIndex(String k) { for (int i = 0; i < PAINT_KEYS.length; i++) if (PAINT_KEYS[i].equals(k)) return i; return 0; }
 
@@ -43,12 +45,12 @@ public final class CarHd {
     public static final class State { public float hood, doorL, doorR, wheelSteer, steerWheel, spin, roof, time, chronoPh, fly, hand; public int power, kit, rim, livery, text = -1; public boolean race, chrono; }
     /* customisation (same as KAGE_COLORS / KAGE_BRAKES / RIG in the web build) */
     public static final String[] COLOR_KEYS = {"bianco", "nero", "rosso", "oro", "ciano", "viola", "arancio"};
-    public static final String[] COLOR_NAMES = {"BIANCO", "NERO", "ROSSO", "ORO", "CIANO", "VIOLA", "ARANCIO"};
+    public static final String[] COLOR_NAMES = {L.t("BIANCO"), L.t("NERO"), L.t("ROSSO"), L.t("ORO"), L.t("CIANO"), L.t("VIOLA"), L.t("ARANCIO")};
     public static final float[][] COLORS = {{0.92f, 0.92f, 0.94f}, {0.03f, 0.03f, 0.035f}, {0.8f, 0.05f, 0.08f}, {0.85f, 0.62f, 0.18f}, {0f, 0.85f, 0.85f}, {0.55f, 0.2f, 0.85f}, {1f, 0.45f, 0.05f}};
-    public static final String[] BRAKE_NAMES = {"ACCIAIO · PINZE NEON", "CARBOCERAMICA · GIALLO", "ORO · ROSSO", "BLU ANODIZZATO"};
+    public static final String[] BRAKE_NAMES = {L.t("ACCIAIO · PINZE NEON"), L.t("CARBOCERAMICA · GIALLO"), L.t("ORO · ROSSO"), L.t("BLU ANODIZZATO")};
     static final float[][] BRAKE_DISC = {{0.35f, 0.35f, 0.37f}, {0.10f, 0.10f, 0.11f}, {0.62f, 0.48f, 0.20f}, {0.18f, 0.28f, 0.55f}};
     static final float[][] BRAKE_CAL = {null, {0.95f, 0.75f, 0.05f}, {0.80f, 0.04f, 0.06f}, {0.10f, 0.35f, 0.95f}};
-    public static final String[] KIT_NAMES = {"SERIE", "WIDEBODY I", "WIDEBODY II GT"}, RIM_NAMES = {"SERIE", "FORGED Y", "TURBOFAN"}, LIVERY_NAMES = {"NESSUNA", "DOPPIA STRISCIA", "LATERALE"};
+    public static final String[] KIT_NAMES = {L.t("SERIE"), "WIDEBODY I", "WIDEBODY II GT"}, RIM_NAMES = {L.t("SERIE"), "FORGED Y", "TURBOFAN"}, LIVERY_NAMES = {L.t("NESSUNA"), L.t("DOPPIA STRISCIA"), L.t("LATERALE")};
     public static final String[] TEXT_PRESETS = {"KAGE GT", "AMPY", "CYBERCITY", "NEON RUN"};
     static final float[] KIT_TRACK = {0, 0.07f, 0.10f};
     static final float[] HB_PIVOT = {-0.13f, 0.50f, -0.18f}; static final float HB_PULL = -0.55f;
@@ -266,54 +268,54 @@ public final class CarHd {
 
     /* performance sheets (fictional) — generated from SPECS_BY in web/car_hd.js */
     public static final String[] POWER_KEYS = {"v8", "wankel", "mag"};
-    public static final String[] POWER_NAMES = {"V8 BITURBO IBRIDO", "WANKEL 4 ROTORI H₂", "LEVITA ELETTRICA"};
+    public static final String[] POWER_NAMES = {L.t("V8 BITURBO IBRIDO"), L.t("WANKEL 4 ROTORI H₂"), L.t("LEVITA ELETTRICA")};
     public static final String[] MODEL_NAMES = {"AMPY KAGE GT", "AMPY KAGE GT R4-H", "AMPY KAGE GT LEVITA"};
     public static int powerIndex(String k) { for (int i = 0; i < 3; i++) if (POWER_KEYS[i].equals(k)) return i; return 0; }
     public static final String[][][] SPECS_BY = {
         {
-            {"MOTORE", "V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore"},
-            {"POTENZA", "780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min"},
-            {"COPPIA", "1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)"},
-            {"REGIME MAX", "9.000 giri/min"},
-            {"TRASMISSIONE", "Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring"},
-            {"ACCELERAZIONE", "0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s"},
-            {"VELOCITÀ MAX", "345 km/h (con N₂O) · 260 km/h senza boost"},
-            {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
-            {"PESO", "1.420 kg · rapporto peso/potenza 1,42 kg/CV"},
-            {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
-            {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
-            {"PNEUMATICI", "265/30 R21 ant. · 325/25 R22 post."},
-            {"BATTERIA", "6,2 kWh · boost elettrico 18 s · ricarica in frenata"}
+            {L.t("MOTORE"), L.t("V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore")},
+            {L.t("POTENZA"), L.t("780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min")},
+            {L.t("COPPIA"), L.t("1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)")},
+            {L.t("REGIME MAX"), L.t("9.000 giri/min")},
+            {L.t("TRASMISSIONE"), L.t("Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring")},
+            {L.t("ACCELERAZIONE"), L.t("0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s")},
+            {L.t("VELOCITÀ MAX"), L.t("345 km/h (con N₂O) · 260 km/h senza boost")},
+            {L.t("FRENATA"), L.t("100–0 km/h in 29 m · dischi carboceramici 410/390 mm")},
+            {L.t("PESO"), L.t("1.420 kg · rapporto peso/potenza 1,42 kg/CV")},
+            {L.t("AERODINAMICA"), L.t("Deportanza 520 kg a 250 km/h · ala posteriore attiva")},
+            {L.t("DIMENSIONI"), L.t("L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m")},
+            {L.t("PNEUMATICI"), L.t("265/30 R21 ant. · 325/25 R22 post.")},
+            {L.t("BATTERIA"), L.t("6,2 kWh · boost elettrico 18 s · ricarica in frenata")}
         },
         {
-            {"MOTORE", "Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale"},
-            {"POTENZA", "860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min"},
-            {"COPPIA", "1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)"},
-            {"REGIME MAX", "10.500 giri/min"},
-            {"TRASMISSIONE", "Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring"},
-            {"ACCELERAZIONE", "0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s"},
-            {"VELOCITÀ MAX", "352 km/h (con N₂O) · 268 km/h senza boost"},
-            {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
-            {"PESO", "1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)"},
-            {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
-            {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
-            {"PNEUMATICI", "265/30 R21 ant. · 325/25 R22 post."},
-            {"BATTERIA", "5,0 kWh · allo scarico solo vapore acqueo"}
+            {L.t("MOTORE"), L.t("Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale")},
+            {L.t("POTENZA"), L.t("860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min")},
+            {L.t("COPPIA"), L.t("1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)")},
+            {L.t("REGIME MAX"), L.t("10.500 giri/min")},
+            {L.t("TRASMISSIONE"), L.t("Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring")},
+            {L.t("ACCELERAZIONE"), L.t("0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s")},
+            {L.t("VELOCITÀ MAX"), L.t("352 km/h (con N₂O) · 268 km/h senza boost")},
+            {L.t("FRENATA"), L.t("100–0 km/h in 29 m · dischi carboceramici 410/390 mm")},
+            {L.t("PESO"), L.t("1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)")},
+            {L.t("AERODINAMICA"), L.t("Deportanza 520 kg a 250 km/h · ala posteriore attiva")},
+            {L.t("DIMENSIONI"), L.t("L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m")},
+            {L.t("PNEUMATICI"), L.t("265/30 R21 ant. · 325/25 R22 post.")},
+            {L.t("BATTERIA"), L.t("5,0 kWh · allo scarico solo vapore acqueo")}
         },
         {
-            {"MOTORE", "Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati"},
-            {"POTENZA", "4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico"},
-            {"COPPIA", "2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)"},
-            {"REGIME MAX", "22.000 giri/min (motori-sfera)"},
-            {"TRASMISSIONE", "Presa diretta · controllo di campo per ogni sfera"},
-            {"ACCELERAZIONE", "0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s"},
-            {"VELOCITÀ MAX", "380 km/h (boost di campo) · 290 km/h di serie"},
-            {"FRENATA", "100–0 km/h in 29 m · dischi carboceramici 410/390 mm"},
-            {"PESO", "1.480 kg · altezza di levitazione 4 cm"},
-            {"AERODINAMICA", "Deportanza 520 kg a 250 km/h · ala posteriore attiva"},
-            {"DIMENSIONI", "L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m"},
-            {"PNEUMATICI", "Sfere Ø 670 mm con battistrada in elastomero a grafene"},
-            {"BATTERIA", "28 kWh a stato solido · ronzio elettrostatico di serie"}
+            {L.t("MOTORE"), L.t("Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati")},
+            {L.t("POTENZA"), L.t("4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico")},
+            {L.t("COPPIA"), L.t("2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)")},
+            {L.t("REGIME MAX"), L.t("22.000 giri/min (motori-sfera)")},
+            {L.t("TRASMISSIONE"), L.t("Presa diretta · controllo di campo per ogni sfera")},
+            {L.t("ACCELERAZIONE"), L.t("0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s")},
+            {L.t("VELOCITÀ MAX"), L.t("380 km/h (boost di campo) · 290 km/h di serie")},
+            {L.t("FRENATA"), L.t("100–0 km/h in 29 m · dischi carboceramici 410/390 mm")},
+            {L.t("PESO"), L.t("1.480 kg · altezza di levitazione 4 cm")},
+            {L.t("AERODINAMICA"), L.t("Deportanza 520 kg a 250 km/h · ala posteriore attiva")},
+            {L.t("DIMENSIONI"), L.t("L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m")},
+            {L.t("PNEUMATICI"), L.t("Sfere Ø 670 mm con battistrada in elastomero a grafene")},
+            {L.t("BATTERIA"), L.t("28 kWh a stato solido · ronzio elettrostatico di serie")}
         },
     };
     public static final String[][] SPECS = SPECS_BY[0];

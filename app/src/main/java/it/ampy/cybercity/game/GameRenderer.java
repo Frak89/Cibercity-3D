@@ -1,5 +1,7 @@
 package it.ampy.cybercity.game;
 
+import it.ampy.cybercity.L;
+
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
@@ -18,7 +20,7 @@ import it.ampy.cybercity.Weather;
 
 /** NEON RUN renderer: same shaders as the screensaver, camera-relative torus world. Mirrors Game.frame() in web/game.js. */
 public class GameRenderer implements GLSurfaceView.Renderer {
-    public static final String[] VIEWS = {"INSEGUIMENTO", "INSEGUIMENTO LONTANO", "COFANO", "ABITACOLO", "PARAURTI", "CINEMATICA", "DALL'ALTO"};
+    public static final String[] VIEWS = {L.t("INSEGUIMENTO"), L.t("INSEGUIMENTO LONTANO"), L.t("COFANO"), L.t("ABITACOLO"), L.t("PARAURTI"), L.t("CINEMATICA"), L.t("DALL'ALTO")};
     static final float S = GameCity.S;
 
     private final Context ctx;

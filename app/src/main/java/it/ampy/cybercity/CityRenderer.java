@@ -23,7 +23,7 @@ import javax.microedition.khronos.opengles.GL10;
 public class CityRenderer implements GLSurfaceView.Renderer {
     static final String TAG = "Cybercity";
     public static final String[] MODES = {"avenue", "glide", "drone", "skyline"};
-    public static final String[] MODE_NAMES = {"VOLO SUL VIALE", "PLANATA", "DRONE A BASSA QUOTA", "SOPRA I TETTI"};
+    public static final String[] MODE_NAMES = {L.t("VOLO SUL VIALE"), L.t("PLANATA"), L.t("DRONE A BASSA QUOTA"), L.t("SOPRA I TETTI")};
 
     private final Context ctx;
     private volatile Prefs.Snapshot cfg;

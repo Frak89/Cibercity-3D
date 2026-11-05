@@ -1,5 +1,7 @@
 package it.ampy.cybercity.game;
 
+import it.ampy.cybercity.L;
+
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
@@ -17,7 +19,7 @@ import it.ampy.cybercity.Palette;
 public class GameHud extends View {
     public interface Listener { void onView(); void onPause(); }
     static final int B_LEFT = 0, B_RIGHT = 1, B_GAS = 2, B_BRAKE = 3, B_DRIFT = 4, B_NOS = 5, B_VIEW = 6, B_PAUSE = 7;
-    static final String[] LABEL = {"◀", "▶", "GAS", "FRENO", "DRIFT", "N₂O", "VISTA", "II"};
+    static final String[] LABEL = {"◀", "▶", "GAS", L.t("FRENO"), "DRIFT", "N₂O", L.t("VISTA"), "II"};
 
     private final GameRenderer r;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG), t = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -92,10 +94,10 @@ public class GameHud extends View {
             if (rect) c.drawRoundRect(q, m * 0.02f, m * 0.02f, p); else c.drawOval(q, p);
             t.setTextAlign(Paint.Align.CENTER); t.setColor(0xffecfcff);
             t.setTextSize(q.height() * (rect ? 0.42f : b <= B_RIGHT ? 0.42f : 0.24f));
-            c.drawText(b == B_VIEW ? "VISTA" : LABEL[b], q.centerX(), q.centerY() + t.getTextSize() * 0.35f, t);
+            c.drawText(b == B_VIEW ? L.t("VISTA") : LABEL[b], q.centerX(), q.centerY() + t.getTextSize() * 0.35f, t);
         }
         if (b(B_NOS)) { }
-        if (r.hdError != null) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.028f); t.setColor(0xffff6177); c.drawText("AUTO HD NON CARICATA: " + r.hdError, m * 0.04f, m * 0.16f, t); }
+        if (r.hdError != null) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.028f); t.setColor(0xffff6177); c.drawText(L.t("AUTO HD NON CARICATA: ") + r.hdError, m * 0.04f, m * 0.16f, t); }
         // top-left info
         t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.035f); t.setColor(accent);
         c.drawText("NEON RUN · " + GameRenderer.VIEWS[r.view], m * 0.04f, m * 0.07f, t);
@@ -154,9 +156,9 @@ public class GameHud extends View {
             p.setStyle(Paint.Style.FILL); p.setColor(0x1fffffff); c.drawRect(bx, by, bx + bw, by + m * 0.012f, p);
             p.setColor(accent); p.setShadowLayer(m * 0.02f * kc + 0.01f, 0, 0, accent); c.drawRect(bx, by, bx + bw * kc, by + m * 0.012f, p); p.clearShadowLayer();
             t.setTextAlign(Paint.Align.CENTER); t.setTextSize(m * 0.022f); t.setColor(0xffecfcff);
-            c.drawText(r.hudCool > 0 ? "CRONO · RICARICA" : kc > 0 ? "CRONO · TIENI 300 KM/H" : "CRONO · PRONTO A 300 KM/H", cx, by - m * 0.014f, t);
+            c.drawText(r.hudCool > 0 ? L.t("CRONO · RICARICA") : kc > 0 ? L.t("CRONO · TIENI 300 KM/H") : L.t("CRONO · PRONTO A 300 KM/H"), cx, by - m * 0.014f, t);
         }
-        if (r.hudPast) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.032f); t.setColor(0xfffff6c8); c.drawText("⏳ PRATERIA DEL PASSATO", m * 0.04f, m * 0.2f, t); }
+        if (r.hudPast) { t.setTextAlign(Paint.Align.LEFT); t.setTextSize(m * 0.032f); t.setColor(0xfffff6c8); c.drawText(L.t("⏳ PRATERIA DEL PASSATO"), m * 0.04f, m * 0.2f, t); }
         // minimap
         float mr = m * 0.16f, mx = W - mr - m * 0.04f, my = mr + m * 0.04f, scale = mr / 220f;
         c.save();

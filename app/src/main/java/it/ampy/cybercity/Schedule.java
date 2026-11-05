@@ -16,10 +16,10 @@ import java.util.Locale;
 public final class Schedule {
     /** What to put on screen. */
     public static final int SHOW_CITY = 0, SHOW_CLOCK = 1, SHOW_BLACK = 2, SHOW_NONE = 3;
-    public static final String[] SHOW_NAMES = {"CITTÀ 3D", "SOLO OROLOGIO", "SCHERMO NERO", "NON MOSTRARE (chiudi)"};
+    public static final String[] SHOW_NAMES = {L.t("CITTÀ 3D"), L.t("SOLO OROLOGIO"), L.t("SCHERMO NERO"), L.t("NON MOSTRARE (chiudi)")};
     /** Legacy names for the pause choice (same values). */
     public static final int PAUSE_BLACK = SHOW_BLACK, PAUSE_CLOCK = SHOW_CLOCK, PAUSE_CLOSE = SHOW_NONE;
-    public static final String[] PAUSE_CHOICES = {"SOLO OROLOGIO", "SCHERMO NERO", "CHIUDI SALVASCHERMO"};
+    public static final String[] PAUSE_CHOICES = {L.t("SOLO OROLOGIO"), L.t("SCHERMO NERO"), L.t("CHIUDI SALVASCHERMO")};
     public static final int[] PAUSE_VALUES = {SHOW_CLOCK, SHOW_BLACK, SHOW_NONE};
     public static final String[] DAYS = {"L", "M", "M", "G", "V", "S", "D"};
     public static final int ALL_DAYS = 0x7f, WEEKDAYS = 0x1f;
@@ -28,7 +28,7 @@ public final class Schedule {
     /** A time slot. palette/mode empty = use the global ones. */
     public static final class Slot {
         public boolean on = true;
-        public String name = "FASCIA";
+        public String name = L.t("FASCIA");
         public int from = 22 * 60, to = 7 * 60, days = ALL_DAYS;
         public int show = SHOW_CITY;
         public String palette = "", mode = "";
@@ -40,15 +40,15 @@ public final class Schedule {
         }
         static Slot of(JSONObject o) {
             Slot s = new Slot();
-            s.on = o.optBoolean("on", true); s.name = o.optString("name", "FASCIA"); s.from = o.optInt("from", 0); s.to = o.optInt("to", 0);
+            s.on = o.optBoolean("on", true); s.name = o.optString("name", L.t("FASCIA")); s.from = o.optInt("from", 0); s.to = o.optInt("to", 0);
             s.days = o.optInt("days", ALL_DAYS); s.show = o.optInt("show", SHOW_CITY); s.palette = o.optString("palette", "");
             s.mode = o.optString("mode", ""); s.bright = o.optInt("bright", BRIGHT_GLOBAL);
             return s;
         }
         public String summary() {
             StringBuilder b = new StringBuilder(hhmm(from) + "–" + hhmm(to) + "  " + days(days) + "\n" + SHOW_NAMES[show]);
-            if (show == SHOW_CITY) b.append(" · ").append(palette.isEmpty() ? "atmosfera globale" : Palette.of(palette).name)
-                .append(" · ").append(mode.isEmpty() ? "telecamera globale" : CityRenderer.modeName(mode));
+            if (show == SHOW_CITY) b.append(" · ").append(palette.isEmpty() ? L.t("atmosfera globale") : Palette.of(palette).name)
+                .append(" · ").append(mode.isEmpty() ? L.t("telecamera globale") : CityRenderer.modeName(mode));
             if (show != SHOW_NONE && show != SHOW_BLACK) b.append(" · ").append(brightLabel(bright));
             return b.toString();
         }
@@ -106,8 +106,8 @@ public final class Schedule {
     public State resolve(Calendar now, boolean dnd) {
         State s = new State();
         s.palette = gPalette; s.mode = gMode; s.bright = bright;
-        if (respectDnd && dnd) { s.show = hiddenMode; s.why = "NON DISTURBARE"; s.bright = pauseBright; return s; }
-        if (workOn && matches(workFrom, workTo, workDays, now)) { s.show = hiddenMode; s.why = "ORARIO DI LAVORO"; s.bright = pauseBright; return s; }
+        if (respectDnd && dnd) { s.show = hiddenMode; s.why = L.t("NON DISTURBARE"); s.bright = pauseBright; return s; }
+        if (workOn && matches(workFrom, workTo, workDays, now)) { s.show = hiddenMode; s.why = L.t("ORARIO DI LAVORO"); s.bright = pauseBright; return s; }
         for (Slot sl : slots) {
             if (!sl.on || !matches(sl.from, sl.to, sl.days, now)) continue;
             s.slot = sl; s.show = sl.show; s.why = sl.name;
@@ -116,7 +116,7 @@ public final class Schedule {
             if (sl.bright != BRIGHT_GLOBAL) s.bright = sl.bright;
             return s;
         }
-        if (!slots.isEmpty() && onlySlots) { s.show = hiddenMode; s.why = "FUORI FASCIA"; s.bright = pauseBright; }
+        if (!slots.isEmpty() && onlySlots) { s.show = hiddenMode; s.why = L.t("FUORI FASCIA"); s.bright = pauseBright; }
         return s;
     }
     /** When slots exist, outside all slots the screensaver is hidden (set by Prefs). */
@@ -142,31 +142,31 @@ public final class Schedule {
 
     public static String hhmm(int min) { return String.format(Locale.US, "%02d:%02d", (min / 60) % 24, min % 60); }
     public static String days(int mask) {
-        if (mask == ALL_DAYS) return "tutti i giorni";
+        if (mask == ALL_DAYS) return L.t("tutti i giorni");
         if (mask == WEEKDAYS) return "lun–ven";
         if (mask == 0x60) return "sab–dom";
         StringBuilder b = new StringBuilder();
         String[] n = {"lun", "mar", "mer", "gio", "ven", "sab", "dom"};
         for (int i = 0; i < 7; i++) if ((mask & (1 << i)) != 0) b.append(b.length() > 0 ? " " : "").append(n[i]);
-        return b.length() == 0 ? "nessun giorno" : b.toString();
+        return b.length() == 0 ? L.t("nessun giorno") : b.toString();
     }
     public static String brightLabel(int b) {
-        if (b == BRIGHT_SYSTEM) return "luminosità di sistema";
-        if (b == BRIGHT_GLOBAL) return "luminosità globale";
-        return "luminosità " + b + "%";
+        if (b == BRIGHT_SYSTEM) return L.t("luminosità di sistema");
+        if (b == BRIGHT_GLOBAL) return L.t("luminosità globale");
+        return L.t("luminosità ") + b + "%";
     }
 
     public String summary() {
         StringBuilder s = new StringBuilder();
-        s.append(onlyCharging ? "Solo in carica" : "In carica e no");
+        s.append(onlyCharging ? L.t("Solo in carica") : L.t("In carica e no"));
         s.append(" · ").append(brightLabel(bright)).append(" (pausa ").append(pauseBright).append("%)");
-        if (workOn) s.append("\nLavoro / non disturbare: ").append(hhmm(workFrom)).append("–").append(hhmm(workTo)).append(" ").append(days(workDays));
-        if (respectDnd) s.append("\nRispetta il Non disturbare di Android");
+        if (workOn) s.append(L.t("\nLavoro / non disturbare: ")).append(hhmm(workFrom)).append("–").append(hhmm(workTo)).append(" ").append(days(workDays));
+        if (respectDnd) s.append(L.t("\nRispetta il Non disturbare di Android"));
         int active = 0; for (Slot sl : slots) if (sl.on) active++;
-        s.append("\n").append(active).append(" fasce orarie attive").append(onlySlots && active > 0 ? " (fuori fascia: nascosto)" : "");
-        if (delayMin > 0) s.append("\nParte ").append(delayMin).append(" min dopo l'avvio");
+        s.append("\n").append(active).append(L.t(" fasce orarie attive")).append(onlySlots && active > 0 ? L.t(" (fuori fascia: nascosto)") : "");
+        if (delayMin > 0) s.append(L.t("\nParte ")).append(delayMin).append(L.t(" min dopo l'avvio"));
         if (runMin > 0 && offMin > 0) s.append("\nAnimazione ").append(runMin).append(" min → pausa ").append(offMin).append(" min → riparte");
-        else s.append("\nAnimazione continua, senza pause");
+        else s.append(L.t("\nAnimazione continua, senza pause"));
         return s.toString();
     }
 }

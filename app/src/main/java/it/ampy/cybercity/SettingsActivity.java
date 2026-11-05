@@ -27,6 +27,7 @@ public class SettingsActivity extends Activity {
     int dp(float v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 
     @Override protected void onCreate(Bundle b) {
+        it.ampy.cybercity.L.init(this);
         super.onCreate(b);
         p = Prefs.get(this);
         ScrollView sv = new ScrollView(this);
@@ -110,65 +111,65 @@ public class SettingsActivity extends Activity {
 
     /* ============================== METEO ============================== */
     private void buildWeather() {
-        section("METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE");
-        choice("EFFETTO METEO", Weather.NAMES, Weather.index(p.weatherMode()), i -> p.putString("weather", Weather.KEYS[i]));
+        section(L.t("METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE"));
+        choice(L.t("EFFETTO METEO"), Weather.NAMES, Weather.index(p.weatherMode()), i -> p.putString("weather", Weather.KEYS[i]));
         if ("auto".equals(p.weatherMode())) {
             LinearLayout st = card();
             String live = p.liveWeather();
-            st.addView(text(p.city().isEmpty() ? "NESSUNA POSIZIONE IMPOSTATA" : "📍 " + p.city(), 13, ACC, true));
-            st.addView(text(live.isEmpty() ? "Meteo non ancora scaricato" : Weather.line(p) + " · aggiornato "
+            st.addView(text(p.city().isEmpty() ? L.t("NESSUNA POSIZIONE IMPOSTATA") : "📍 " + p.city(), 13, ACC, true));
+            st.addView(text(live.isEmpty() ? L.t("Meteo non ancora scaricato") : Weather.line(p) + " · aggiornato "
                 + android.text.format.DateFormat.format("HH:mm", p.weatherTime()), 12, FG, false));
-            st.addView(text("Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", 11, MUTED, false));
+            st.addView(text(L.t("Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti."), 11, MUTED, false));
             LinearLayout city = card();
-            city.addView(text("CITTÀ  ›", 14, ACC, true));
-            city.addView(text("Scrivi la città per il meteo", 11, MUTED, false));
+            city.addView(text(L.t("CITTÀ  ›"), 14, ACC, true));
+            city.addView(text(L.t("Scrivi la città per il meteo"), 11, MUTED, false));
             city.setOnClickListener(v -> {
                 android.widget.EditText e = new android.widget.EditText(this);
                 e.setHint("es. Roma, Milano, Treviso…"); e.setSingleLine(true);
-                new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("CITTÀ").setView(e)
-                    .setPositiveButton("CERCA", (d, w) -> runNet(() -> { Weather.geocode(p, e.getText().toString().trim()); Weather.refresh(this, p); }))
-                    .setNegativeButton("ANNULLA", null).show();
+                new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("CITTÀ")).setView(e)
+                    .setPositiveButton(L.t("CERCA"), (d, w) -> runNet(() -> { Weather.geocode(p, e.getText().toString().trim()); Weather.refresh(this, p); }))
+                    .setNegativeButton(L.t("ANNULLA"), null).show();
             });
             LinearLayout gps = card();
-            gps.addView(text("USA LA POSIZIONE DEL TELEFONO  ›", 14, ACC, true));
-            gps.addView(text("Posizione approssimativa, solo per il meteo", 11, MUTED, false));
+            gps.addView(text(L.t("USA LA POSIZIONE DEL TELEFONO  ›"), 14, ACC, true));
+            gps.addView(text(L.t("Posizione approssimativa, solo per il meteo"), 11, MUTED, false));
             gps.setOnClickListener(v -> {
                 if (checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED)
                     requestPermissions(new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION}, 11);
                 else useGps();
             });
             LinearLayout upd = card();
-            upd.addView(text("AGGIORNA ORA", 14, ACC, true));
+            upd.addView(text(L.t("AGGIORNA ORA"), 14, ACC, true));
             upd.setOnClickListener(v -> runNet(() -> Weather.refresh(this, p)));
         }
-        toggle("Meteo sotto l'orologio", "Icona, temperatura e condizione (con meteo automatico)", p.weatherLine(), v -> p.putBool("wLine", v));
+        toggle(L.t("Meteo sotto l'orologio"), L.t("Icona, temperatura e condizione (con meteo automatico)"), p.weatherLine(), v -> p.putBool("wLine", v));
         LinearLayout pv = card();
-        pv.addView(text("▶ ANTEPRIMA METEO", 15, 0xffffd16a, true));
-        pv.addView(text("Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti", 11, MUTED, false));
+        pv.addView(text(L.t("▶ ANTEPRIMA METEO"), 15, 0xffffd16a, true));
+        pv.addView(text(L.t("Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti"), 11, MUTED, false));
         pv.setOnClickListener(v -> {
             String[] k = java.util.Arrays.copyOfRange(Weather.KEYS, 2, Weather.KEYS.length);
             String[] n = java.util.Arrays.copyOfRange(Weather.NAMES, 2, Weather.NAMES.length);
-            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("ANTEPRIMA")
+            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("ANTEPRIMA"))
                 .setItems(n, (d, i) -> startActivity(new Intent(this, MainActivity.class).putExtra("previewWeather", k[i]))).show();
         });
     }
 
     interface Net { void run() throws Exception; }
     private void runNet(Net n) {
-        android.widget.Toast.makeText(this, "Aggiorno il meteo…", android.widget.Toast.LENGTH_SHORT).show();
+        android.widget.Toast.makeText(this, L.t("Aggiorno il meteo…"), android.widget.Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             String err = null;
             try { n.run(); } catch (Exception e) { err = e.getMessage(); }
             String fe = err;
             runOnUiThread(() -> {
-                if (fe != null) android.widget.Toast.makeText(this, "Meteo: " + fe, android.widget.Toast.LENGTH_LONG).show();
+                if (fe != null) android.widget.Toast.makeText(this, L.t("Meteo: ") + fe, android.widget.Toast.LENGTH_LONG).show();
                 rebuild();
             });
         }).start();
     }
     private void useGps() {
         p.putBool("wUseGps", true);
-        if (!Weather.fromDevice(this, p)) android.widget.Toast.makeText(this, "Posizione non disponibile: apri Maps una volta o scrivi la città", android.widget.Toast.LENGTH_LONG).show();
+        if (!Weather.fromDevice(this, p)) android.widget.Toast.makeText(this, L.t("Posizione non disponibile: apri Maps una volta o scrivi la città"), android.widget.Toast.LENGTH_LONG).show();
         else runNet(() -> Weather.refresh(this, p));
         rebuild();
     }
@@ -183,7 +184,7 @@ public class SettingsActivity extends Activity {
         View sw = new View(this); f.addView(sw, new LinearLayout.LayoutParams(-1, dp(46)));
         int[] cur = {initial};
         Runnable paint = () -> { cur[0] = android.graphics.Color.HSVToColor(hsv); GradientDrawable g = new GradientDrawable(); g.setColor(cur[0]); g.setCornerRadius(dp(8)); sw.setBackground(g); };
-        String[] lab = {"TINTA", "SATURAZIONE", "LUMINOSITÀ"}; int[] max = {360, 100, 100};
+        String[] lab = {L.t("TINTA"), L.t("SATURAZIONE"), L.t("LUMINOSITÀ")}; int[] max = {360, 100, 100};
         SeekBar[] bars = new SeekBar[3];
         for (int k = 0; k < 3; k++) {
             final int kk = k;
@@ -206,7 +207,7 @@ public class SettingsActivity extends Activity {
         f.addView(row);
         paint.run();
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(title).setView(f)
-            .setPositiveButton("OK", (d, w) -> { on.accept(cur[0]); rebuild(); }).setNegativeButton("ANNULLA", null).show();
+            .setPositiveButton("OK", (d, w) -> { on.accept(cur[0]); rebuild(); }).setNegativeButton(L.t("ANNULLA"), null).show();
     }
     private void colorRow(String title, String key, int def) {
         LinearLayout c = card();
@@ -219,7 +220,7 @@ public class SettingsActivity extends Activity {
     }
 
     private void buildClock() {
-        section("OROLOGIO");
+        section(L.t("OROLOGIO"));
         android.widget.FrameLayout pf = new android.widget.FrameLayout(this);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0xff05030c, 0xff2a1840});
         bg.setCornerRadius(dp(8)); pf.setBackground(bg);
@@ -229,47 +230,47 @@ public class SettingsActivity extends Activity {
         pf.addView(preview, new android.widget.FrameLayout.LayoutParams(-1, -1));
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(-1, dp(240)); plp.topMargin = dp(8);
         list.addView(pf, plp);
-        list.addView(text("Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)", 11, MUTED, false));
-        toggle("Mostra orologio", null, p.clock(), v -> p.putBool("clock", v));
+        list.addView(text(L.t("Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)"), 11, MUTED, false));
+        toggle(L.t("Mostra orologio"), null, p.clock(), v -> p.putBool("clock", v));
         toggle("Secondi", null, p.b("clkSec", false), v -> p.putBool("clkSec", v));
         toggle("Data", null, p.b("clkDate", true), v -> p.putBool("clkDate", v));
         toggle("Formato 24 ore", null, p.b("clk24", true), v -> p.putBool("clk24", v));
-        slider("DIMENSIONE", 5, 40, p.i("clkSize", 16), " %", v -> p.putInt("clkSize", v));
-        choice("STILE", ClockOverlay.STYLES, p.i("clkStyle", 0), i -> p.putInt("clkStyle", i));
+        slider(L.t("DIMENSIONE"), 5, 40, p.i("clkSize", 16), " %", v -> p.putInt("clkSize", v));
+        choice(L.t("STILE"), ClockOverlay.STYLES, p.i("clkStyle", 0), i -> p.putInt("clkStyle", i));
         int cm = p.i("clkColorMode", 4);
-        choice("COLORI", ClockOverlay.COLOR_MODES, cm, i -> p.putInt("clkColorMode", i));
-        if (cm == 0) colorRow("COLORE", "clkColor", 0xffecfcff);
+        choice(L.t("COLORI"), ClockOverlay.COLOR_MODES, cm, i -> p.putInt("clkColorMode", i));
+        if (cm == 0) colorRow(L.t("COLORE"), "clkColor", 0xffecfcff);
         if (cm == 1) {
-            String[] nm = {"1ª CIFRA (decine ore)", "2ª CIFRA (unità ore)", "3ª CIFRA (decine minuti)", "4ª CIFRA (unità minuti)"};
+            String[] nm = {L.t("1ª CIFRA (decine ore)"), L.t("2ª CIFRA (unità ore)"), L.t("3ª CIFRA (decine minuti)"), L.t("4ª CIFRA (unità minuti)")};
             int[] dd = {0xff00ffe2, 0xffecfcff, 0xffff3ac8, 0xffffd16a};
             for (int i = 0; i < 4; i++) colorRow(nm[i], "clkDigit" + i, dd[i]);
-            colorRow("DUE PUNTI  :", "clkColon", 0xffecfcff);
+            colorRow(L.t("DUE PUNTI  :"), "clkColon", 0xffecfcff);
         }
         if (cm == 2) {
-            colorRow("SFUMATURA · COLORE A", "clkGradA", 0xff00ffe2);
-            colorRow("SFUMATURA · COLORE B", "clkGradB", 0xffff3ac8);
+            colorRow(L.t("SFUMATURA · COLORE A"), "clkGradA", 0xff00ffe2);
+            colorRow(L.t("SFUMATURA · COLORE B"), "clkGradB", 0xffff3ac8);
         }
-        if (cm == 2 || cm == 3) slider("VELOCITÀ DEI COLORI", 0, 100, p.i("clkGradSpeed", 40), "", v -> p.putInt("clkGradSpeed", v));
-        slider("BAGLIORE NEON", 0, 100, p.i("clkGlow", 60), " %", v -> p.putInt("clkGlow", v));
-        choice("MOVIMENTO", ClockOverlay.MOVES, p.i("clkMove", 0), i -> p.putInt("clkMove", i));
-        if (p.i("clkMove", 0) >= 1) slider("VELOCITÀ MOVIMENTO", 5, 200, p.i("clkMoveSpeed", 50), " %", v -> p.putInt("clkMoveSpeed", v));
-        if (p.i("clkMove", 0) <= 1) choice("POSIZIONE", ClockOverlay.POSITIONS, p.i("clkPos", 0), i -> p.putInt("clkPos", i));
+        if (cm == 2 || cm == 3) slider(L.t("VELOCITÀ DEI COLORI"), 0, 100, p.i("clkGradSpeed", 40), "", v -> p.putInt("clkGradSpeed", v));
+        slider(L.t("BAGLIORE NEON"), 0, 100, p.i("clkGlow", 60), " %", v -> p.putInt("clkGlow", v));
+        choice(L.t("MOVIMENTO"), ClockOverlay.MOVES, p.i("clkMove", 0), i -> p.putInt("clkMove", i));
+        if (p.i("clkMove", 0) >= 1) slider(L.t("VELOCITÀ MOVIMENTO"), 5, 200, p.i("clkMoveSpeed", 50), " %", v -> p.putInt("clkMoveSpeed", v));
+        if (p.i("clkMove", 0) <= 1) choice(L.t("POSIZIONE"), ClockOverlay.POSITIONS, p.i("clkPos", 0), i -> p.putInt("clkPos", i));
         LinearLayout fx = card();
         int mask = p.i("clkFx", 1);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < ClockOverlay.EFFECTS.length; i++) if ((mask & (1 << i)) != 0) sb.append(sb.length() > 0 ? ", " : "").append(ClockOverlay.EFFECTS[i]);
-        fx.addView(text("EFFETTI GRAFICI CASUALI", 11, MUTED, false));
-        fx.addView(text((sb.length() == 0 ? "NESSUNO" : sb.toString()) + "  ▾", 14, ACC, true));
+        fx.addView(text(L.t("EFFETTI GRAFICI CASUALI"), 11, MUTED, false));
+        fx.addView(text((sb.length() == 0 ? L.t("NESSUNO") : sb.toString()) + "  ▾", 14, ACC, true));
         fx.setOnClickListener(v -> {
             boolean[] ch = new boolean[ClockOverlay.EFFECTS.length];
             for (int i = 0; i < ch.length; i++) ch[i] = (p.i("clkFx", 1) & (1 << i)) != 0;
-            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("EFFETTI CASUALI")
+            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("EFFETTI CASUALI"))
                 .setMultiChoiceItems(ClockOverlay.EFFECTS, ch, (d, w, on) -> ch[w] = on)
                 .setPositiveButton("OK", (d, w) -> { int m = 0; for (int i = 0; i < ch.length; i++) if (ch[i]) m |= 1 << i; p.putInt("clkFx", m); rebuild(); })
-                .setNeutralButton("TUTTI", (d, w) -> { p.putInt("clkFx", (1 << ClockOverlay.EFFECTS.length) - 1); rebuild(); })
-                .setNegativeButton("ANNULLA", null).show();
+                .setNeutralButton(L.t("TUTTI"), (d, w) -> { p.putInt("clkFx", (1 << ClockOverlay.EFFECTS.length) - 1); rebuild(); })
+                .setNegativeButton(L.t("ANNULLA"), null).show();
         });
-        slider("FREQUENZA EFFETTI (ogni circa)", 2, 120, p.i("clkFxEvery", 12), " s", v -> p.putInt("clkFxEvery", v));
+        slider(L.t("FREQUENZA EFFETTI (ogni circa)"), 2, 120, p.i("clkFxEvery", 12), " s", v -> p.putInt("clkFxEvery", v));
     }
 
     private TextView sumView;
@@ -300,20 +301,20 @@ public class SettingsActivity extends Activity {
     }
 
     private void buildSchedule() {
-        section("PROGRAMMAZIONE");
+        section(L.t("PROGRAMMAZIONE"));
         LinearLayout sum = card();
         sumView = text(new Schedule(p).summary(), 12, FG, false);
         sum.addView(sumView);
 
-        section("LUMINOSITÀ");
-        choice("LUMINOSITÀ DEL SALVASCHERMO", new String[]{"COME IL SISTEMA", "PERSONALIZZATA"}, p.bright() < 0 ? 0 : 1,
+        section(L.t("LUMINOSITÀ"));
+        choice(L.t("LUMINOSITÀ DEL SALVASCHERMO"), new String[]{L.t("COME IL SISTEMA"), L.t("PERSONALIZZATA")}, p.bright() < 0 ? 0 : 1,
             i -> p.putInt("bright", i == 0 ? Schedule.BRIGHT_SYSTEM : 40));
-        if (p.bright() >= 0) slider("LUMINOSITÀ CITTÀ / OROLOGIO", 1, 100, p.bright(), " %", v -> { p.putInt("bright", v); updSum(); });
-        slider("LUMINOSITÀ IN PAUSA / NASCOSTO", 1, 100, p.pauseBright(), " %", v -> { p.putInt("pauseBright", v); updSum(); });
+        if (p.bright() >= 0) slider(L.t("LUMINOSITÀ CITTÀ / OROLOGIO"), 1, 100, p.bright(), " %", v -> { p.putInt("bright", v); updSum(); });
+        slider(L.t("LUMINOSITÀ IN PAUSA / NASCOSTO"), 1, 100, p.pauseBright(), " %", v -> { p.putInt("pauseBright", v); updSum(); });
 
-        section("FASCE ORARIE · QUALE SALVASCHERMO E QUANDO");
-        list.addView(text("Ogni fascia sceglie cosa mostrare (città con la sua atmosfera, solo orologio, nero o niente) e con che luminosità. "
-            + "Vince la prima fascia attiva che corrisponde all'ora.", 11, MUTED, false));
+        section(L.t("FASCE ORARIE · QUALE SALVASCHERMO E QUANDO"));
+        list.addView(text(L.t("Ogni fascia sceglie cosa mostrare (città con la sua atmosfera, solo orologio, nero o niente) e con che luminosità. ")
+            + L.t("Vince la prima fascia attiva che corrisponde all'ora."), 11, MUTED, false));
         java.util.List<Schedule.Slot> slots = Schedule.loadSlots(p.slotsJson());
         for (int i = 0; i < slots.size(); i++) {
             final int idx = i;
@@ -324,50 +325,50 @@ public class SettingsActivity extends Activity {
             c.setOnClickListener(v -> editSlot(slots, idx));
         }
         LinearLayout add = card();
-        add.addView(text("+ AGGIUNGI FASCIA", 14, ACC, true));
-        add.setOnClickListener(v -> { Schedule.Slot n = new Schedule.Slot(); n.name = "FASCIA " + (slots.size() + 1); n.from = 8 * 60; n.to = 12 * 60;
+        add.addView(text(L.t("+ AGGIUNGI FASCIA"), 14, ACC, true));
+        add.setOnClickListener(v -> { Schedule.Slot n = new Schedule.Slot(); n.name = L.t("FASCIA ") + (slots.size() + 1); n.from = 8 * 60; n.to = 12 * 60;
             slots.add(n); editSlot(slots, slots.size() - 1); });
-        toggle("Fuori dalle fasce: non mostrare la città", "Spento = fuori fascia usa atmosfera e luminosità globali", p.onlySlots(),
+        toggle(L.t("Fuori dalle fasce: non mostrare la città"), L.t("Spento = fuori fascia usa atmosfera e luminosità globali"), p.onlySlots(),
             v -> { p.putBool("onlySlots", v); updSum(); });
 
-        section("ORARIO DI LAVORO · NON DISTURBARE");
-        toggle("Orario di lavoro", "In questo orario il salvaschermo non mostra la città", p.workOn(), v -> { p.putBool("workOn", v); rebuild(); });
+        section(L.t("ORARIO DI LAVORO · NON DISTURBARE"));
+        toggle(L.t("Orario di lavoro"), L.t("In questo orario il salvaschermo non mostra la città"), p.workOn(), v -> { p.putBool("workOn", v); rebuild(); });
         if (p.workOn()) {
-            timeRow("DALLE", p.workFrom(), v -> p.putInt("workFrom", v));
-            timeRow("ALLE", p.workTo(), v -> p.putInt("workTo", v));
+            timeRow(L.t("DALLE"), p.workFrom(), v -> p.putInt("workFrom", v));
+            timeRow(L.t("ALLE"), p.workTo(), v -> p.putInt("workTo", v));
             LinearLayout dc = card();
-            dc.addView(text("GIORNI DI LAVORO", 12, MUTED, false));
+            dc.addView(text(L.t("GIORNI DI LAVORO"), 12, MUTED, false));
             dc.addView(daysRow(p.workDays(), m -> { p.putInt("workDays", m); updSum(); }));
         }
-        toggle("Rispetta il Non disturbare di Android", "Se la modalità Non disturbare (o una modalità Focus/Bedtime) è attiva, niente città", p.respectDnd(),
+        toggle(L.t("Rispetta il Non disturbare di Android"), L.t("Se la modalità Non disturbare (o una modalità Focus/Bedtime) è attiva, niente città"), p.respectDnd(),
             v -> { p.putBool("respectDnd", v); updSum(); });
         int[] hv = Schedule.PAUSE_VALUES; int hi = 1; for (int i = 0; i < hv.length; i++) if (hv[i] == p.hiddenMode()) hi = i;
-        choice("QUANDO È NASCOSTO (lavoro / non disturbare / fuori fascia)", Schedule.PAUSE_CHOICES, hi, i -> p.putInt("hiddenMode", hv[i]));
+        choice(L.t("QUANDO È NASCOSTO (lavoro / non disturbare / fuori fascia)"), Schedule.PAUSE_CHOICES, hi, i -> p.putInt("hiddenMode", hv[i]));
 
-        section("CICLO E AVVIO");
-        toggle("Solo quando è in carica", "Se stacchi il caricatore il salvaschermo si chiude subito", p.onlyCharging(),
+        section(L.t("CICLO E AVVIO"));
+        toggle(L.t("Solo quando è in carica"), L.t("Se stacchi il caricatore il salvaschermo si chiude subito"), p.onlyCharging(),
             v -> { p.putBool("onlyCharging", v); updSum(); });
-        slider("RITARDO DOPO LA MESSA IN CARICA / AVVIO", 0, 60, p.delayMin(), " min", v -> { p.putInt("delayMin", v); updSum(); });
-        slider("DURATA ANIMAZIONE (0 = sempre accesa)", 0, 120, p.runMin(), " min", v -> { p.putInt("runMin", v); updSum(); });
-        slider("PAUSA PRIMA CHE RICOMPAIA", 1, 120, p.offMin(), " min", v -> { p.putInt("offMin", v); updSum(); });
+        slider(L.t("RITARDO DOPO LA MESSA IN CARICA / AVVIO"), 0, 60, p.delayMin(), " min", v -> { p.putInt("delayMin", v); updSum(); });
+        slider(L.t("DURATA ANIMAZIONE (0 = sempre accesa)"), 0, 120, p.runMin(), " min", v -> { p.putInt("runMin", v); updSum(); });
+        slider(L.t("PAUSA PRIMA CHE RICOMPAIA"), 1, 120, p.offMin(), " min", v -> { p.putInt("offMin", v); updSum(); });
         int pi = 0; for (int i = 0; i < hv.length; i++) if (hv[i] == p.pauseMode()) pi = i;
-        choice("DURANTE LA PAUSA", Schedule.PAUSE_CHOICES, pi, i -> p.putInt("pauseMode2", hv[i]));
-        TextView note = text("Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → "
-            + "\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", 11, MUTED, false);
+        choice(L.t("DURANTE LA PAUSA"), Schedule.PAUSE_CHOICES, pi, i -> p.putInt("pauseMode2", hv[i]));
+        TextView note = text(L.t("Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → ")
+            + L.t("\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi."), 11, MUTED, false);
         note.setPadding(0, dp(8), 0, 0);
         list.addView(note);
-        section("TELEFONO ROVESCIATO · NOTIFICHE");
-        choice("QUANDO ROVESCI IL TELEFONO (schermo verso il basso)", Prefs.FACEDOWN_NAMES, p.faceDown(), i -> p.putInt("faceDown", i));
-        toggle("Icone notifiche", "Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri", p.notifIcons(), v -> p.putBool("notifIcons", v));
+        section(L.t("TELEFONO ROVESCIATO · NOTIFICHE"));
+        choice(L.t("QUANDO ROVESCI IL TELEFONO (schermo verso il basso)"), Prefs.FACEDOWN_NAMES, p.faceDown(), i -> p.putInt("faceDown", i));
+        toggle(L.t("Icone notifiche"), L.t("Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri"), p.notifIcons(), v -> p.putBool("notifIcons", v));
         if (p.notifIcons() && !NotifListener.granted(this)) {
             LinearLayout g = card();
-            g.addView(text("CONCEDI ACCESSO ALLE NOTIFICHE  ›", 14, 0xffffd16a, true));
-            g.addView(text("Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", 11, MUTED, false));
+            g.addView(text(L.t("CONCEDI ACCESSO ALLE NOTIFICHE  ›"), 14, 0xffffd16a, true));
+            g.addView(text(L.t("Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato."), 11, MUTED, false));
             g.setOnClickListener(v -> { try { startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); } catch (Exception ignored) { } });
         }
         buildWeather();
         buildClock();
-        section("GRAFICA (GLOBALE)");
+        section(L.t("GRAFICA (GLOBALE)"));
     }
 
     /** Editor of one time slot. */
@@ -379,21 +380,21 @@ public class SettingsActivity extends Activity {
         android.widget.EditText name = new android.widget.EditText(this);
         name.setText(s.name); name.setTextColor(FG); name.setTypeface(Typeface.MONOSPACE); name.setSingleLine(true);
         f.addView(name);
-        Switch on = new Switch(this); on.setText("Fascia attiva"); on.setTextColor(FG); on.setChecked(s.on);
+        Switch on = new Switch(this); on.setText(L.t("Fascia attiva")); on.setTextColor(FG); on.setChecked(s.on);
         on.setOnCheckedChangeListener((b, v) -> s.on = v); f.addView(on);
-        TextView from = text("DALLE " + Schedule.hhmm(s.from) + "  ▾", 15, ACC, true), to = text("ALLE  " + Schedule.hhmm(s.to) + "  ▾", 15, ACC, true);
+        TextView from = text(L.t("DALLE ") + Schedule.hhmm(s.from) + "  ▾", 15, ACC, true), to = text(L.t("ALLE  ") + Schedule.hhmm(s.to) + "  ▾", 15, ACC, true);
         from.setPadding(0, dp(10), 0, dp(6)); to.setPadding(0, dp(6), 0, dp(6));
         from.setOnClickListener(v -> new TimePickerDialog(this, android.R.style.Theme_Material_Dialog_Alert,
-            (tp, hh, mm) -> { s.from = hh * 60 + mm; from.setText("DALLE " + Schedule.hhmm(s.from) + "  ▾"); }, s.from / 60, s.from % 60, true).show());
+            (tp, hh, mm) -> { s.from = hh * 60 + mm; from.setText(L.t("DALLE ") + Schedule.hhmm(s.from) + "  ▾"); }, s.from / 60, s.from % 60, true).show());
         to.setOnClickListener(v -> new TimePickerDialog(this, android.R.style.Theme_Material_Dialog_Alert,
-            (tp, hh, mm) -> { s.to = hh * 60 + mm; to.setText("ALLE  " + Schedule.hhmm(s.to) + "  ▾"); }, s.to / 60, s.to % 60, true).show());
+            (tp, hh, mm) -> { s.to = hh * 60 + mm; to.setText(L.t("ALLE  ") + Schedule.hhmm(s.to) + "  ▾"); }, s.to / 60, s.to % 60, true).show());
         f.addView(from); f.addView(to);
         f.addView(daysRow(s.days, m -> s.days = m));
         TextView show = text("", 14, FG, true), pal = text("", 14, FG, true), mode = text("", 14, FG, true), br = text("", 14, FG, true);
         Runnable paint = () -> {
-            show.setText("MOSTRA: " + Schedule.SHOW_NAMES[s.show] + "  ▾");
-            pal.setText("ATMOSFERA: " + (s.palette.isEmpty() ? "GLOBALE" : Palette.of(s.palette).name) + "  ▾");
-            mode.setText("TELECAMERA: " + (s.mode.isEmpty() ? "GLOBALE" : CityRenderer.modeName(s.mode)) + "  ▾");
+            show.setText(L.t("MOSTRA: ") + Schedule.SHOW_NAMES[s.show] + "  ▾");
+            pal.setText(L.t("ATMOSFERA: ") + (s.palette.isEmpty() ? L.t("GLOBALE") : Palette.of(s.palette).name) + "  ▾");
+            mode.setText(L.t("TELECAMERA: ") + (s.mode.isEmpty() ? L.t("GLOBALE") : CityRenderer.modeName(s.mode)) + "  ▾");
             br.setText(Schedule.brightLabel(s.bright).toUpperCase(java.util.Locale.ROOT) + "  ▾");
             boolean city = s.show == Schedule.SHOW_CITY;
             pal.setAlpha(city ? 1 : 0.35f); mode.setAlpha(city ? 1 : 0.35f);
@@ -406,42 +407,42 @@ public class SettingsActivity extends Activity {
             @Override public void onStopTrackingTouch(SeekBar b) { }
         });
         f.addView(sb);
-        show.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("COSA MOSTRARE")
+        show.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("COSA MOSTRARE"))
             .setSingleChoiceItems(Schedule.SHOW_NAMES, s.show, (d, i) -> { s.show = i; paint.run(); d.dismiss(); }).show());
-        String[] pl = new String[Palette.NAMES.length + 1]; pl[0] = "GLOBALE"; System.arraycopy(Palette.NAMES, 0, pl, 1, Palette.NAMES.length);
-        pal.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("ATMOSFERA")
+        String[] pl = new String[Palette.NAMES.length + 1]; pl[0] = L.t("GLOBALE"); System.arraycopy(Palette.NAMES, 0, pl, 1, Palette.NAMES.length);
+        pal.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("ATMOSFERA"))
             .setSingleChoiceItems(pl, s.palette.isEmpty() ? 0 : Palette.index(s.palette) + 1, (d, i) -> { s.palette = i == 0 ? "" : Palette.KEYS[i - 1]; paint.run(); d.dismiss(); }).show());
-        String[] ml = new String[CityRenderer.MODES.length + 2]; ml[0] = "GLOBALE"; ml[1] = "AUTO (ciclo)";
+        String[] ml = new String[CityRenderer.MODES.length + 2]; ml[0] = L.t("GLOBALE"); ml[1] = L.t("AUTO (ciclo)");
         System.arraycopy(CityRenderer.MODE_NAMES, 0, ml, 2, CityRenderer.MODES.length);
         mode.setOnClickListener(v -> {
             int sel = 0; if ("auto".equals(s.mode)) sel = 1; for (int i = 0; i < CityRenderer.MODES.length; i++) if (CityRenderer.MODES[i].equals(s.mode)) sel = i + 2;
-            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("TELECAMERA")
+            new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("TELECAMERA"))
                 .setSingleChoiceItems(ml, sel, (d, i) -> { s.mode = i == 0 ? "" : i == 1 ? "auto" : CityRenderer.MODES[i - 2]; paint.run(); d.dismiss(); }).show();
         });
-        br.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("LUMINOSITÀ")
-            .setSingleChoiceItems(new String[]{"GLOBALE", "COME IL SISTEMA", "PERSONALIZZATA (usa la barra)"},
+        br.setOnClickListener(v -> new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("LUMINOSITÀ"))
+            .setSingleChoiceItems(new String[]{L.t("GLOBALE"), L.t("COME IL SISTEMA"), L.t("PERSONALIZZATA (usa la barra)")},
                 s.bright == Schedule.BRIGHT_GLOBAL ? 0 : s.bright == Schedule.BRIGHT_SYSTEM ? 1 : 2,
                 (d, i) -> { s.bright = i == 0 ? Schedule.BRIGHT_GLOBAL : i == 1 ? Schedule.BRIGHT_SYSTEM : sb.getProgress() + 1; paint.run(); d.dismiss(); }).show());
         paint.run();
         ScrollView sv = new ScrollView(this); sv.addView(f);
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("FASCIA ORARIA").setView(sv)
-            .setPositiveButton("SALVA", (d, w) -> {
-                String n = name.getText().toString().trim(); s.name = n.isEmpty() ? "FASCIA" : n.toUpperCase(java.util.Locale.ROOT);
+            .setTitle(L.t("FASCIA ORARIA")).setView(sv)
+            .setPositiveButton(L.t("SALVA"), (d, w) -> {
+                String n = name.getText().toString().trim(); s.name = n.isEmpty() ? L.t("FASCIA") : n.toUpperCase(java.util.Locale.ROOT);
                 p.putString("slots", Schedule.saveSlots(slots)); rebuild();
             })
-            .setNeutralButton("ELIMINA", (d, w) -> { slots.remove(idx); p.putString("slots", Schedule.saveSlots(slots)); rebuild(); })
-            .setNegativeButton("ANNULLA", (d, w) -> rebuild())
+            .setNeutralButton(L.t("ELIMINA"), (d, w) -> { slots.remove(idx); p.putString("slots", Schedule.saveSlots(slots)); rebuild(); })
+            .setNegativeButton(L.t("ANNULLA"), (d, w) -> rebuild())
             .show();
     }
 
     private void build() {
         TextView h = text("// CYBERCITY 3D", 22, ACC, true);
         list.addView(h);
-        list.addView(text("Salvaschermo 3D · città cyberpunk procedurale", 12, MUTED, false));
+        list.addView(text(L.t("Salvaschermo 3D · città cyberpunk procedurale"), 12, MUTED, false));
 
         Button set = new Button(this);
-        set.setText("IMPOSTA COME SALVASCHERMO");
+        set.setText(L.t("IMPOSTA COME SALVASCHERMO"));
         set.setTextColor(BG); set.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         set.setBackgroundColor(ACC);
         set.setOnClickListener(v -> {
@@ -452,29 +453,29 @@ public class SettingsActivity extends Activity {
         list.addView(set, lp);
         buildSchedule();
 
-        choice("ATMOSFERA", Palette.NAMES, Palette.index(p.palette()), i -> p.putString("palette", Palette.KEYS[i]));
+        choice(L.t("ATMOSFERA"), Palette.NAMES, Palette.index(p.palette()), i -> p.putString("palette", Palette.KEYS[i]));
         String[] modeLabels = new String[CityRenderer.MODES.length + 1];
-        modeLabels[0] = "AUTO (ciclo di tutte le telecamere)";
+        modeLabels[0] = L.t("AUTO (ciclo di tutte le telecamere)");
         System.arraycopy(CityRenderer.MODE_NAMES, 0, modeLabels, 1, CityRenderer.MODES.length);
         int ms = 0;
         for (int i = 0; i < CityRenderer.MODES.length; i++) if (CityRenderer.MODES[i].equals(p.mode())) ms = i + 1;
-        choice("TELECAMERA", modeLabels, ms, i -> p.putString("mode", i == 0 ? "auto" : CityRenderer.MODES[i - 1]));
-        slider("DURATA DI OGNI INQUADRATURA (AUTO)", 20, 120, p.cycleSec(), " s", v -> p.putInt("cycle", v));
-        slider("VELOCITÀ DI VOLO", 30, 250, p.speedPct(), " %", v -> p.putInt("speed", v));
-        slider("PIOGGIA", 0, 100, p.rainPct(), " %", v -> p.putInt("rain", v));
-        slider("CAMPO VISIVO", 45, 90, p.fov(), "°", v -> p.putInt("fov", v));
-        toggle("Traffico volante", "Scie luminose di auto e spinner su più livelli", p.traffic(), v -> p.putBool("traffic", v));
-        toggle("Orologio glitch", "Si sposta di poco ogni minuto per proteggere lo schermo OLED", p.clock(), v -> p.putBool("clock", v));
-        toggle("Scanlines CRT", null, p.scanlines(), v -> p.putBool("scanlines", v));
+        choice(L.t("TELECAMERA"), modeLabels, ms, i -> p.putString("mode", i == 0 ? "auto" : CityRenderer.MODES[i - 1]));
+        slider(L.t("DURATA DI OGNI INQUADRATURA (AUTO)"), 20, 120, p.cycleSec(), " s", v -> p.putInt("cycle", v));
+        slider(L.t("VELOCITÀ DI VOLO"), 30, 250, p.speedPct(), " %", v -> p.putInt("speed", v));
+        slider(L.t("PIOGGIA"), 0, 100, p.rainPct(), " %", v -> p.putInt("rain", v));
+        slider(L.t("CAMPO VISIVO"), 45, 90, p.fov(), "°", v -> p.putInt("fov", v));
+        toggle(L.t("Traffico volante"), L.t("Scie luminose di auto e spinner su più livelli"), p.traffic(), v -> p.putBool("traffic", v));
+        toggle(L.t("Orologio glitch"), L.t("Si sposta di poco ogni minuto per proteggere lo schermo OLED"), p.clock(), v -> p.putBool("clock", v));
+        toggle(L.t("Scanlines CRT"), null, p.scanlines(), v -> p.putBool("scanlines", v));
         int qi = 1; for (int i = 0; i < Prefs.QUALITY_VALUES.length; i++) if (Prefs.QUALITY_VALUES[i] == p.quality()) qi = i;
-        choice("QUALITÀ DI RENDERING", Prefs.QUALITY_LABELS, qi, i -> p.putInt("quality", Prefs.QUALITY_VALUES[i]));
-        String[] fpsL = {"30 FPS (risparmio)", "45 FPS", "60 FPS (fluido)"};
+        choice(L.t("QUALITÀ DI RENDERING"), Prefs.QUALITY_LABELS, qi, i -> p.putInt("quality", Prefs.QUALITY_VALUES[i]));
+        String[] fpsL = {L.t("30 FPS (risparmio)"), "45 FPS", L.t("60 FPS (fluido)")};
         int fi = 1; for (int i = 0; i < Prefs.FPS_VALUES.length; i++) if (Prefs.FPS_VALUES[i] == p.fps()) fi = i;
-        choice("FREQUENZA FOTOGRAMMI", fpsL, fi, i -> p.putInt("fps", Prefs.FPS_VALUES[i]));
+        choice(L.t("FREQUENZA FOTOGRAMMI"), fpsL, fi, i -> p.putInt("fps", Prefs.FPS_VALUES[i]));
         String[] seeds = {"2077 · Night City", "2019 · Los Angeles", "2049 · Megalopoli", "1988 · Neo Tokyo", "3030 · Arcologia"};
         int[] seedV = {2077, 2019, 2049, 1988, 3030};
         int si = 0; for (int i = 0; i < seedV.length; i++) if (seedV[i] == p.seed()) si = i;
-        choice("PIANTA DELLA CITTÀ", seeds, si, i -> p.putInt("seed", seedV[i]));
+        choice(L.t("PIANTA DELLA CITTÀ"), seeds, si, i -> p.putInt("seed", seedV[i]));
 
         TextView about = text("Davide Fraccaro · github.com/Frak89 · v" + version(), 11, MUTED, false);
         about.setGravity(Gravity.CENTER);

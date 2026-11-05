@@ -90,7 +90,7 @@ function CarRender(gl, prog, model) {
   this.loc = { aPos: gl.getAttribLocation(prog.p, 'aPos'), aNorm: gl.getAttribLocation(prog.p, 'aNorm'), aUV: gl.getAttribLocation(prog.p, 'aUV'), aMat: gl.getAttribLocation(prog.p, 'aMat') };
 }
 CarRender.prototype.setMaterials = function (paint, a, b, extra) {
-  const gl = this.gl, u = this.prog.u, mats = materials(PAINTS[paint] || PAINTS.nero, a, b, extra);
+  const gl = this.gl, u = this.prog.u, mats = materials(Array.isArray(paint) ? paint : (PAINTS[paint] || PAINTS.nero), a, b, extra);
   const col = new Float32Array(72), par = new Float32Array(96);
   mats.forEach((m, i) => { col.set(m[0], i * 3); par.set([m[1], m[2], m[3], m[4]], i * 4); });
   gl.useProgram(this.prog.p);

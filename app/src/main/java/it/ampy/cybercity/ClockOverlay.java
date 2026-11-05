@@ -27,13 +27,13 @@ import java.util.Random;
  */
 public class ClockOverlay extends View implements SharedPreferences.OnSharedPreferenceChangeListener {
     static final String GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*+=<>/|ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ";
-    static final String[] DAYS = {"DOMENICA", "LUNEDÌ", "MARTEDÌ", "MERCOLEDÌ", "GIOVEDÌ", "VENERDÌ", "SABATO"};
+    static final String[] DAYS = {L.t("DOMENICA"), L.t("LUNEDÌ"), L.t("MARTEDÌ"), L.t("MERCOLEDÌ"), L.t("GIOVEDÌ"), L.t("VENERDÌ"), L.t("SABATO")};
 
-    public static final String[] STYLES = {"CYBER MONO", "PIXEL SOTTILE", "LIGHT", "CONDENSATO", "BLACK", "SERIF", "NEON CONTORNO", "7 SEGMENTI", "LED A PUNTINI"};
-    public static final String[] COLOR_MODES = {"COLORE UNICO", "COLORE PER OGNI CIFRA", "SFUMATURA CROMATICA IN MOVIMENTO", "ARCOBALENO", "COME L'ATMOSFERA"};
-    public static final String[] MOVES = {"FERMO (anti burn-in)", "DERIVA LENTA", "RIMBALZO (stile DVD)", "FLUTTUA", "ORBITA"};
-    public static final String[] POSITIONS = {"IN BASSO A SINISTRA", "IN BASSO AL CENTRO", "AL CENTRO", "IN ALTO A SINISTRA", "IN ALTO AL CENTRO"};
-    public static final String[] EFFECTS = {"GLITCH (strappi + RGB)", "DECODIFICA CIFRE", "SFARFALLIO NEON", "ONDA", "ABERRAZIONE CROMATICA", "PULSAZIONE", "GIRO 3D", "SCANLINE"};
+    public static final String[] STYLES = {"CYBER MONO", L.t("PIXEL SOTTILE"), "LIGHT", L.t("CONDENSATO"), "BLACK", "SERIF", L.t("NEON CONTORNO"), L.t("7 SEGMENTI"), L.t("LED A PUNTINI")};
+    public static final String[] COLOR_MODES = {L.t("COLORE UNICO"), L.t("COLORE PER OGNI CIFRA"), L.t("SFUMATURA CROMATICA IN MOVIMENTO"), L.t("ARCOBALENO"), L.t("COME L'ATMOSFERA")};
+    public static final String[] MOVES = {L.t("FERMO (anti burn-in)"), L.t("DERIVA LENTA"), L.t("RIMBALZO (stile DVD)"), L.t("FLUTTUA"), L.t("ORBITA")};
+    public static final String[] POSITIONS = {L.t("IN BASSO A SINISTRA"), L.t("IN BASSO AL CENTRO"), L.t("AL CENTRO"), L.t("IN ALTO A SINISTRA"), L.t("IN ALTO AL CENTRO")};
+    public static final String[] EFFECTS = {L.t("GLITCH (strappi + RGB)"), L.t("DECODIFICA CIFRE"), L.t("SFARFALLIO NEON"), L.t("ONDA"), L.t("ABERRAZIONE CROMATICA"), L.t("PULSAZIONE"), L.t("GIRO 3D"), "SCANLINE"};
 
     private final Random R = new Random();
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG), small = new Paint(Paint.ANTI_ALIAS_FLAG);

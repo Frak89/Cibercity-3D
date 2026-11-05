@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 
 /** Settings shared by the screensaver, the preview and the settings screen. */
 public final class Prefs {
-    public static final String[] QUALITY_LABELS = {"BATTERIA (60%)", "BILANCIATA (85%)", "MASSIMA (100%)"};
+    public static final String[] QUALITY_LABELS = {L.t("BATTERIA (60%)"), L.t("BILANCIATA (85%)"), L.t("MASSIMA (100%)")};
     public static final int[] QUALITY_VALUES = {60, 85, 100};
     public static final int[] FPS_VALUES = {30, 45, 60};
 
@@ -28,8 +28,8 @@ public final class Prefs {
     public int seed() { return sp.getInt("seed", 2077); }
 
     // schedule
-    public static final String DEFAULT_SLOTS = "[{\"on\":true,\"name\":\"SERA\",\"from\":1140,\"to\":1380,\"days\":127,\"show\":0,\"palette\":\"neon\",\"mode\":\"\",\"bright\":60},"
-        + "{\"on\":true,\"name\":\"NOTTE\",\"from\":1380,\"to\":420,\"days\":127,\"show\":1,\"palette\":\"bloodmoon\",\"mode\":\"\",\"bright\":8}]";
+    public static final String DEFAULT_SLOTS = ("[{\"on\":true,\"name\":\"SERA\",\"from\":1140,\"to\":1380,\"days\":127,\"show\":0,\"palette\":\"neon\",\"mode\":\"\",\"bright\":60},")
+        + ("{\"on\":true,\"name\":\"NOTTE\",\"from\":1380,\"to\":420,\"days\":127,\"show\":1,\"palette\":\"bloodmoon\",\"mode\":\"\",\"bright\":8}]");
     public boolean onlyCharging() { return sp.getBoolean("onlyCharging", true); }
     public int delayMin() { return sp.getInt("delayMin", 0); }
     public int runMin() { return sp.getInt("runMin", 0); }      // 0 = always
@@ -44,7 +44,7 @@ public final class Prefs {
     public int workDays() { return sp.getInt("workDays", Schedule.WEEKDAYS); }
     public boolean respectDnd() { return sp.getBoolean("respectDnd", true); }
     public boolean onlySlots() { return sp.getBoolean("onlySlots", false); }
-    public static final String[] FACEDOWN_NAMES = {"SPEGNI (schermo nero, 3D fermo)", "CHIUDI SALVASCHERMO", "IGNORA"};
+    public static final String[] FACEDOWN_NAMES = {L.t("SPEGNI (schermo nero, 3D fermo)"), L.t("CHIUDI SALVASCHERMO"), L.t("IGNORA")};
     public int faceDown() { return sp.getInt("faceDown", 0); }
     public boolean notifIcons() { return sp.getBoolean("notifIcons", true); }
     // weather

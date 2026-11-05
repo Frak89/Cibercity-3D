@@ -1,5 +1,7 @@
 package it.ampy.cybercity.game;
 
+import it.ampy.cybercity.L;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
@@ -41,6 +43,7 @@ public class GameActivity extends Activity implements SensorEventListener {
     };
 
     @Override protected void onCreate(Bundle b) {
+        it.ampy.cybercity.L.init(this);
         super.onCreate(b);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         sp = Prefs.get(this).raw();
@@ -80,30 +83,30 @@ public class GameActivity extends Activity implements SensorEventListener {
     private EngineSound sound;
     private void menu() {
         r.paused = true;
-        String[] items = {"▶ RIPRENDI", "SUONO MOTORE: " + (sp.getBoolean("gSound", true) ? "ON" : "OFF"), "PROPULSIONE: " + CarHd.POWER_NAMES[r.power], "CAPOTE: " + (r.roofOpen ? "APERTA (SPIDER)" : "CHIUSA"), "SCARICO: " + (r.race ? "ELABORATO" : "SERIE"), "MODULO CRONO: " + (r.chronoOn ? "ON (salto a 300 km/h)" : "OFF"), "VOLO LEVITA: " + (r.flyOn ? "ON" : "OFF"), "VISTA: " + GameRenderer.VIEWS[r.view], "ATMOSFERA: " + Palette.of(r.palette).name,
-            "METEO: " + weatherName(sp.getString("gWeather", "")), "COLORE AUTO: " + CarModel.PAINT_NAMES[CarModel.paintIndex(r.paint)],
-            "STERZO: " + (hud.tilt ? "INCLINAZIONE DEL TELEFONO" : "PULSANTI ◀ ▶"), "↺ RIPARTI DAL VIA", "✕ ESCI", "🏁 SHOWROOM (garage)", "🏎 KAGE CIRCUIT · PISTA 11 KM"};
+        String[] items = {L.t("▶ RIPRENDI"), L.t("SUONO MOTORE: ") + (sp.getBoolean("gSound", true) ? "ON" : "OFF"), L.t("PROPULSIONE: ") + CarHd.POWER_NAMES[r.power], L.t("CAPOTE: ") + (r.roofOpen ? L.t("APERTA (SPIDER)") : L.t("CHIUSA")), L.t("SCARICO: ") + (r.race ? L.t("ELABORATO") : L.t("SERIE")), L.t("MODULO CRONO: ") + (r.chronoOn ? L.t("ON (salto a 300 km/h)") : "OFF"), L.t("VOLO LEVITA: ") + (r.flyOn ? "ON" : "OFF"), L.t("VISTA: ") + GameRenderer.VIEWS[r.view], L.t("ATMOSFERA: ") + Palette.of(r.palette).name,
+            L.t("METEO: ") + weatherName(sp.getString("gWeather", "")), L.t("COLORE AUTO: ") + CarModel.PAINT_NAMES[CarModel.paintIndex(r.paint)],
+            L.t("STERZO: ") + (hud.tilt ? L.t("INCLINAZIONE DEL TELEFONO") : L.t("PULSANTI ◀ ▶")), L.t("↺ RIPARTI DAL VIA"), L.t("✕ ESCI"), "🏁 SHOWROOM (garage)", L.t("🏎 KAGE CIRCUIT · PISTA 11 KM")};
         new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
-            .setTitle("NEON RUN · PAUSA")
+            .setTitle(L.t("NEON RUN · PAUSA"))
             .setItems(items, (d, i) -> {
                 switch (i) {
                     case 1: { boolean on = !sp.getBoolean("gSound", true); sp.edit().putBoolean("gSound", on).apply(); if (sound != null) sound.muted = !on; r.paused = false; return; }
-                    case 2: pick("PROPULSIONE", CarHd.POWER_NAMES, r.power, k -> { r.power = k; sp.edit().putString("gPower", CarHd.POWER_KEYS[k]).apply(); }); return;
+                    case 2: pick(L.t("PROPULSIONE"), CarHd.POWER_NAMES, r.power, k -> { r.power = k; sp.edit().putString("gPower", CarHd.POWER_KEYS[k]).apply(); }); return;
                     case 3: r.roofOpen = !r.roofOpen; sp.edit().putBoolean("gRoof", r.roofOpen).apply(); r.paused = false; return;
                     case 4: r.race = !r.race; sp.edit().putBoolean("gRace", r.race).apply(); r.paused = false; return;
                     case 5: r.chronoOn = !r.chronoOn; sp.edit().putBoolean("gChrono", r.chronoOn).apply(); r.paused = false; return;
                     case 6: r.flyOn = !r.flyOn; if (r.flyOn && r.power != 2) { r.power = 2; sp.edit().putString("gPower", "mag").apply(); } r.paused = false; return;
-                    case 7: pick("VISTA", GameRenderer.VIEWS, r.view, k -> { r.view = k; sp.edit().putInt("gView", k).apply(); }); return;
-                    case 8: pick("ATMOSFERA", Palette.NAMES, Palette.index(r.palette), k -> { r.palette = Palette.KEYS[k]; hud.setPalette(Palette.of(r.palette)); sp.edit().putString("gPalette", r.palette).apply(); }); return;
+                    case 7: pick(L.t("VISTA"), GameRenderer.VIEWS, r.view, k -> { r.view = k; sp.edit().putInt("gView", k).apply(); }); return;
+                    case 8: pick(L.t("ATMOSFERA"), Palette.NAMES, Palette.index(r.palette), k -> { r.palette = Palette.KEYS[k]; hud.setPalette(Palette.of(r.palette)); sp.edit().putString("gPalette", r.palette).apply(); }); return;
                     case 9: {
                         String[] keys = {"", "auto", "clear", "cloudy", "fog", "drizzle", "rain", "storm", "snow"};
                         String[] names = new String[keys.length];
                         int sel = 0;
                         for (int k = 0; k < keys.length; k++) { names[k] = weatherName(keys[k]); if (keys[k].equals(sp.getString("gWeather", ""))) sel = k; }
-                        pick("METEO", names, sel, k -> { sp.edit().putString("gWeather", keys[k]).apply(); applyWeather(); });
+                        pick(L.t("METEO"), names, sel, k -> { sp.edit().putString("gWeather", keys[k]).apply(); applyWeather(); });
                         return;
                     }
-                    case 10: pick("COLORE AUTO", CarModel.PAINT_NAMES, CarModel.paintIndex(r.paint), k -> { r.paint = CarModel.PAINT_KEYS[k]; sp.edit().putString("gPaint", r.paint).apply(); }); return;
+                    case 10: pick(L.t("COLORE AUTO"), CarModel.PAINT_NAMES, CarModel.paintIndex(r.paint), k -> { r.paint = CarModel.PAINT_KEYS[k]; sp.edit().putString("gPaint", r.paint).apply(); }); return;
                     case 11: hud.tilt = !hud.tilt; sp.edit().putBoolean("gTilt", hud.tilt).apply(); registerTilt(); r.paused = false; return;
                     case 12: r.resetCar(); r.paused = false; return;
                     case 13: finish(); return;
@@ -116,7 +119,7 @@ public class GameActivity extends Activity implements SensorEventListener {
             .show();
     }
     private static String weatherName(String k) {
-        if (k == null || k.isEmpty()) return "SERENO (nessun effetto)";
+        if (k == null || k.isEmpty()) return L.t("SERENO (nessun effetto)");
         return Weather.name(k);
     }
     interface IntCb { void on(int i); }

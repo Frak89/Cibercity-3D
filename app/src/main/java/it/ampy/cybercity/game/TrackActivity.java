@@ -24,6 +24,7 @@ public class TrackActivity extends Activity {
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override protected void onCreate(Bundle b) {
+        it.ampy.cybercity.L.init(this);
         super.onCreate(b);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -42,7 +43,7 @@ public class TrackActivity extends Activity {
             + ",\"text\":\"" + (tx < 0 ? "none" : String.valueOf(tx)) + "\",\"stripe\":\"" + CarHd.COLOR_KEYS[Math.max(0, Math.min(6, sp.getInt("cStripe", 0)))]
             + "\",\"rimcol\":\"" + CarHd.COLOR_KEYS[Math.max(0, Math.min(6, sp.getInt("cRimC", 3)))] + "\",\"brakes\":" + sp.getInt("cBrakes", 0) + "}";
         String url = "file:///android_asset/web/track.html?car=" + Uri.encode(car) + "&paint=" + Uri.encode(sp.getString("gPaint", "rosso"))
-            + "&power=" + Uri.encode(sp.getString("gPower", "v8")) + "&exhaust=" + (sp.getBoolean("gRace", false) ? "race" : "serie") + "&roof=" + (sp.getBoolean("gRoof", false) ? "1" : "0");
+            + "&power=" + Uri.encode(sp.getString("gPower", "v8")) + "&exhaust=" + (sp.getBoolean("gRace", false) ? "race" : "serie") + "&roof=" + (sp.getBoolean("gRoof", false) ? "1" : "0") + "&lang=" + (it.ampy.cybercity.L.english() ? "en" : "it");
         web.loadUrl(url);
     }
     @Override protected void onResume() {

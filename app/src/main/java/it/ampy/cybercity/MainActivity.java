@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
     int dp(float v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 
     @Override protected void onCreate(Bundle b) {
+        it.ampy.cybercity.L.init(this);
         super.onCreate(b);
         Prefs p = Prefs.get(this);
         FrameLayout root = new FrameLayout(this);
@@ -52,17 +53,23 @@ public class MainActivity extends Activity {
         t.setTextColor(0xff00ffe2); t.setTextSize(18); t.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         panel.addView(t);
         TextView s = new TextView(this);
-        s.setText("Anteprima dal vivo · tocca per nascondere");
+        s.setText(L.t("Anteprima dal vivo · tocca per nascondere"));
         s.setTextColor(0xff86adbf); s.setTextSize(11); s.setTypeface(Typeface.MONOSPACE);
         panel.addView(s);
-        panel.addView(button("IMPOSTA COME SALVASCHERMO", true, v -> {
+        panel.addView(button(L.t("IMPOSTA COME SALVASCHERMO"), true, v -> {
             try { startActivity(new Intent(Settings.ACTION_DREAM_SETTINGS)); }
             catch (Exception e) { startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS)); }
         }));
-        panel.addView(button("▶ GIOCA · NEON RUN", true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.GameActivity.class))));
+        panel.addView(button(L.t("▶ GIOCA · NEON RUN"), true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.GameActivity.class))));
         panel.addView(button("SHOWROOM · AMPY KAGE GT", false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.ShowroomActivity.class))));
-        panel.addView(button("🏁 KAGE CIRCUIT · PISTA 11 KM", false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class))));
-        panel.addView(button("IMPOSTAZIONI", false, v -> startActivity(new Intent(this, SettingsActivity.class))));
+        panel.addView(button(L.t("🏁 KAGE CIRCUIT · PISTA 11 KM"), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class))));
+        panel.addView(button(L.t("IMPOSTAZIONI"), false, v -> startActivity(new Intent(this, SettingsActivity.class))));
+        panel.addView(button(L.english() ? "🌐 LANGUAGE: ENGLISH · tap for ITALIANO" : "🌐 LINGUA: ITALIANO · tocca per ENGLISH", false, v -> {
+            L.set(this, !L.english());
+            Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (i != null) { i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); startActivity(i); }
+            Runtime.getRuntime().exit(0);      // restart so every screen is rebuilt in the new language
+        }));
         weatherBtn = button("", false, v -> {
             // cycle the preview through every weather effect (not saved)
             int i = previewWeather == null ? 1 : Weather.index(previewWeather);
@@ -84,7 +91,7 @@ public class MainActivity extends Activity {
         Prefs p = Prefs.get(this);
         String w = previewWeather != null ? previewWeather : Weather.effective(p);
         city.renderer.setConfig(p.snapshot().weather(w));
-        weatherBtn.setText("METEO: " + (previewWeather != null ? "ANTEPRIMA " : "") + Weather.name(w).replace(" (usa la pioggia manuale)", "") + "  ›");
+        weatherBtn.setText(L.t("METEO: ") + (previewWeather != null ? L.t("ANTEPRIMA ") : "") + Weather.name(w).replace(L.t(" (usa la pioggia manuale)"), "") + "  ›");
         clock.setWeatherLine(p.weatherLine() ? Weather.line(p) : "");
     }
 

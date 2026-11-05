@@ -51,6 +51,7 @@
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyB'&&game.audio) game.audio.toggle();
+    if(e.code==='KeyL') setLang(LANG==='it'?'en':'it');
     if(e.code==='KeyE'){ const ks=['v8','wankel','mag']; o.power=ks[(ks.indexOf(o.power||'v8')+1)%3]; save(); }
     if(e.code==='KeyT'){ o.roof=!o.roof; save(); }
     if(e.code==='KeyX'){ o.exhaust=o.exhaust==='race'?'serie':'race'; save(); }

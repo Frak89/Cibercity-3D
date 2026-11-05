@@ -1,9 +1,11 @@
 package it.ampy.cybercity.game;
 
+import it.ampy.cybercity.L;
+
 /** Original low neon coupe ("AMPY KAGE GT"). Port of buildCarModel() in web/game.js. */
 final class CarModel {
     static final String[] PAINT_KEYS = {"nero", "rosso", "perla", "oro", "ciano", "viola"};
-    static final String[] PAINT_NAMES = {"NERO NEON", "ROSSO CORSA", "BIANCO PERLA", "ORO", "CIANO", "VIOLA"};
+    static final String[] PAINT_NAMES = {L.t("NERO NEON"), L.t("ROSSO CORSA"), L.t("BIANCO PERLA"), L.t("ORO"), L.t("CIANO"), L.t("VIOLA")};
     static final float[][] PAINTS = {{0.05f, 0.05f, 0.07f}, {0.42f, 0.03f, 0.05f}, {0.72f, 0.72f, 0.76f}, {0.5f, 0.36f, 0.08f}, {0.0f, 0.32f, 0.38f}, {0.22f, 0.04f, 0.32f}};
     static int paintIndex(String k) { for (int i = 0; i < PAINT_KEYS.length; i++) if (PAINT_KEYS[i].equals(k)) return i; return 0; }
 

@@ -230,6 +230,9 @@ function Race(canvas, hud, opts) {
   // AI car meshes (low-poly, one per colour)
   this.aiMesh = AI_COLS.map(c => { const m = NR.buildCarModel(c, [0, 1, 0.9]); return this.mesh({ aPos: [m.solid.pos, 3], aNorm: [m.solid.norm, 3], aCol: [m.solid.col, 4] }, m.solid.idx); });
   this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' }));
+  // rivals: the same HD car (lighter tessellation), each with its own paint, kit and rims, same power unit as yours
+  this.hdAI = new CarRender(gl, this.P.hd, CarHD.build({ quality: 'low' }));
+  this.rivalSim = new EngineFX.EngineSim(opts.power || 'v8');
   this.car = kageLoad(); if (this.car.text === 'C') this.hd.replaceParts(CarHD.buildText(this.car.customText || 'KAGE GT'));
   this.eng = new EngineFX.EngineSim(opts.power || 'v8'); this.fx = new EngineFX.ExhaustFX(700); this.fxgl = new EngineFX.ExhaustGL(gl, this.P.fx); this.audio = new EngineFX.EngineAudio();
   this.buildMs = performance.now() - t0;
@@ -256,7 +259,7 @@ Race.prototype.setup = function (o, resume) {
   for (let k = 0, a = 0; a < nAI; k++) {
     if (k === pSlot && this.mode === 'race') continue;
     const g = this.mode === 'race' ? gridPos(k) : { s: (ct.L * (a + 1) / (nAI + 1)) % ct.L, lat: 0 };
-    this.ai.push({ name: AI_NAMES[a], col: a, skill: 0.955 + ((a * 37) % 10) / 230, s: g.s, lat: g.lat, latT: g.lat, v: this.mode === 'race' ? 0 : 50, lap: this.mode === 'race' ? 0 : 0, lapStart: 0, best: null, last: null,
+    this.ai.push({ name: AI_NAMES[a], col: a, kit: a % 3, rim: 'ABC'[(a * 2) % 3], livery: a % 4 === 1 ? 1 : a % 4 === 3 ? 2 : 0, skill: 0.955 + ((a * 37) % 10) / 230, s: g.s, lat: g.lat, latT: g.lat, v: this.mode === 'race' ? 0 : 50, lap: this.mode === 'race' ? 0 : 0, lapStart: 0, best: null, last: null,
       cmp: o.tyre || 'medium', wear: 0, fuel: 1, pitLap: Math.max(1, Math.floor(this.laps / 2)), pitted: false, stopT: 0, total: 0, dist: this.mode === 'race' ? g.s - ct.L : 0, finished: false });
     a++;
   }
@@ -315,7 +318,7 @@ Race.prototype.frame = function (dt, inp) {
   c.drag = this.surface === 'ghiaia' ? 1.4 : this.surface === 'erba' ? 0.5 : 0;
   // race control: lights, pit limiter, pit service
   let ctl = Object.assign({}, inp);
-  if (this.state === 'grid') { this.lightT += dt; ctl.gas = inp.gas && false; ctl.brake = true; if (this.lightT > 5.6 + (this.goDelay || (this.goDelay = 0.2 + Math.random() * 1.2))) { this.state = 'run'; this.raceT = 0; } }
+  if (this.state === 'grid') { this.lightT += dt; ctl.gas = false; ctl.brake = false; ctl.steer = 0; c.vx = c.vz = 0; this.gridHold = true; if (this.lightT > 5.6 + (this.goDelay || (this.goDelay = 0.2 + Math.random() * 1.2))) { this.state = 'run'; this.raceT = 0; } }
   if (pl.pit && pl.pit.phase === 'service') { ctl.gas = false; ctl.brake = true; c.vx *= 0.8; c.vz *= 0.8; }
   if (pl.finished) { ctl.gas = false; ctl.brake = Math.hypot(c.vx, c.vz) > 15; }
   const spd0 = Math.hypot(c.vx, c.vz);
@@ -323,6 +326,8 @@ Race.prototype.frame = function (dt, inp) {
   c.pk = { v8: 1, wankel: 1.03, mag: 1.1 }[this.o.power || 'v8'];
   const prevS = pl.s;
   const phys = NR.stepCar(c, ctl, dt, null);
+  if (this.state === 'grid') { c.vx = c.vz = 0; phys.vF = 0; }      // engine revs on the line, the car stays put
+  if (this.state === 'grid' && inp.gas) { ctl.gas = true; }
   this.phys = phys;
   // engine, fuel, sound
   e.race = this.o.exhaust === 'race';
@@ -355,6 +360,10 @@ Race.prototype.frame = function (dt, inp) {
   if (pl.pit && pl.pit.phase === 'done' && !pl.inPit) pl.pit = null;
   // AI
   this.stepAI(dt);
+  // the nearest rival is heard: its own engine (same power unit) with distance attenuation
+  { let best = null, bd = 1e9; for (const a of this.ai) { const q = ct.at(a.s, a.lat), d = Math.hypot(q.x - c.x, q.z - c.z); if (d < bd) { bd = d; best = a; } }
+    if (best) { const rs = this.rivalSim; if (rs.type !== (this.o.power || 'v8')) rs.setType(this.o.power || 'v8'); rs.race = this.o.exhaust === 'race';
+      rs.update(dt, { speed: best.v, throttle: best.accel ? 1 : best.braking ? 0 : 0.45 }); this.audio.feedOther(rs, Math.min(0.8, 9 / (bd + 6))); } }
   // positions
   const all = [pl, ...this.ai];
   if (this.mode === 'race') all.sort((a, b) => (b.finished - a.finished) || (a.finished && b.finished ? a.total - b.total : b.dist - a.dist));
@@ -381,7 +390,8 @@ Race.prototype.stepAI = function (dt) {
     if (this.state === 'grid' || a.finished && a.v < 1) { if (a.finished) a.v = Math.max(0, a.v - 8 * dt); continue; }
     const i = Math.floor(a.s / ct.ds) % ct.N, ahead = Math.floor((a.s + 40) / ct.ds) % ct.N;
     const muA = tyreMu(a.cmp, this.wet, a.wear);
-    let vt = Math.min(this.vprof[i], this.vprof[ahead]) * Math.sqrt(muA) * a.skill;
+    const pk = { v8: 1, wankel: 1.03, mag: 1.1 }[this.o.power || 'v8'];
+    let vt = Math.min(this.vprof[i] * pk, this.vprof[ahead] * pk, 72 * pk + 6) * Math.sqrt(muA) * a.skill;
     // pit stop at mid race: into the pit lane at the limiter, stop at the box, back out
     const off = ct.pitOffset(a.s);
     if (this.mode === 'race' && !a.pitted && a.lap >= a.pitLap && off !== null) {
@@ -395,6 +405,7 @@ Race.prototype.stepAI = function (dt) {
       for (const b of [this.player, ...this.ai]) { if (b === a) continue; let d = b.s - a.s; if (d < -ct.L / 2) d += ct.L; if (d > 0 && d < 14 && Math.abs(b.lat - a.lat) < 2.6) { a.latT = b.lat > 0 ? b.lat - 3.4 : b.lat + 3.4; vt = Math.min(vt, (b.v || Math.hypot(this.c.vx, this.c.vz)) + 2.5); } }
     }
     const acc = vt > a.v ? 7.5 * Math.min(1, muA + 0.1) : -12 * muA;
+    a.braking = vt < a.v - 1; a.accel = vt > a.v + 0.5;
     a.v = Math.max(0, a.v + Math.max(-12 * dt, Math.min(acc * dt, vt - a.v)));
     a.lat += (a.latT - a.lat) * Math.min(1, dt * 0.9);
     const prev = a.s; a.s = (a.s + a.v * dt) % ct.L; a.dist += a.v * dt;
@@ -473,11 +484,23 @@ Race.prototype.render = function (dt, inp, rainNow) {
   set(P.ground); this.draw(P.ground, this.M.ground);
   set(P.road); this.draw(P.road, this.M.road);
   set(P.world); for (const m of this.M.scen) this.draw(P.world, m);
-  // AI cars (low-poly) — only those near the camera
+  // rivals: HD cars up close (same model and power unit as yours), low-poly far away
+  const U0 = CarRenderUtil, nearAI = [];
   set(P.solid); gl.uniform1f(P.solid.u.uGloss, 1);
   for (const a of this.ai) {
-    const q = ct.at(a.s, a.lat); const dx = q.x - origin[0], dz = q.z - origin[2]; if (dx * dx + dz * dz > 900 * 900) continue;
+    const q = ct.at(a.s, a.lat); const dx = q.x - origin[0], dz = q.z - origin[2], d2 = dx * dx + dz * dz; if (d2 > 900 * 900) continue;
+    if (d2 < 170 * 170) { nearAI.push([a, q, dx, dz]); continue; }
     gl.uniformMatrix4fv(P.solid.u.uModel, false, NR.model(q.h, dx, 0, dz)); this.draw(P.solid, this.aiMesh[a.col % this.aiMesh.length]);
+  }
+  const aiState = (a, q) => ({ hood: 0, doorL: 0, doorR: 0, wheelSteer: Math.max(-0.5, Math.min(0.5, q.k * 30)), steerWheel: 0, spin: a.spin || 0, roof: 0, power: o.power || 'v8', time: this.t,
+    exhaust: o.exhaust || 'serie', chrono: false, fly: 0, kit: a.kit, rim: a.rim, livery: a.livery, text: 'none', hand: 0 });
+  if (nearAI.length) {
+    set(P.hd); gl.uniform1f(P.hd.u.uKey, night ? 0.4 : 1.0); gl.uniform1f(P.hd.u.uLights, night || wx.rain > 0.3 ? 1 : 0.3); if (P.hd.u.uSpd) gl.uniform1f(P.hd.u.uSpd, 0);
+    for (const [a, q, dx, dz] of nearAI) {
+      this.hdAI.setMaterials(AI_COLS[a.col % AI_COLS.length], neonA, neonB, { stripe: [0.92, 0.92, 0.94], rim: [0.75, 0.6, 0.25] });
+      gl.uniform1f(P.hd.u.uBrake, a.braking ? 1 : 0);
+      a.M = U0.mul(U0.T(dx, 0, dz), U0.RY(q.h)); this.hdAI.draw(a.M, aiState(a, q), 'opaque');
+    }
   }
   // player HD car
   const U = CarRenderUtil;
@@ -493,6 +516,7 @@ Race.prototype.render = function (dt, inp, rainNow) {
   }
   gl.enable(gl.BLEND); gl.depthMask(false);
   if (cv.drawCar) { gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); set(P.hd); this.hd.draw(carM, st, 'glass'); }
+  if (nearAI.length) { gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); set(P.hd); for (const [a, q] of nearAI) this.hdAI.draw(a.M, aiState(a, q), 'glass'); }
   // exhaust, tyre smoke, rain spray (fx live in the camera frame: follow the origin)
   if (this.fxO) this.fx.shift(-(origin[0] - this.fxO[0]), 0, -(origin[2] - this.fxO[2])); this.fxO = origin;
   const tp = EngineFX.tipsFrom(carM, o.exhaust === 'race');

@@ -79,6 +79,7 @@ public class CyberDreamService extends DreamService implements SensorEventListen
     };
 
     @Override public void onAttachedToWindow() {
+        L.init(this);
         super.onAttachedToWindow();
         prefs = Prefs.get(this);
         sch = new Schedule(prefs);

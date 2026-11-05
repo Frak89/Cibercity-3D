@@ -234,10 +234,20 @@
     node.onaudioprocess = (e) => {
       const out = e.outputBuffer.getChannelData(0), s = this.sim;
       if (!s || !this.on) { out.fill(0); return; }
+      const os = this.other;
       syn.vol = this.master;
       if (syn.type !== s.type) { syn.type = s.type; syn.rpm = s.rpm; }
       syn.race = !!s.race; syn.tyre = s.tyre || 0; syn.burn = s.burn || 0; syn.chrono = this.chronoLvl || 0; if (this.boomPend) { syn.boomQ = 1; this.boomPend = 0; }
       syn.render(out, s.rpm, s.load, s.boost, pend.pops, pend.s, s.speed || 0); pend.pops = 0; pend.s = 0;
+      // a second engine (the nearest rival), mixed in with a distance gain
+      if (os && this.otherGain > 0.003) {
+        if (!this.osyn || this.osyn.type !== os.type) this.osyn = new EngineSynth(ctx.sampleRate, os.type);
+        const tmp = this.otmp && this.otmp.length === out.length ? this.otmp : (this.otmp = new Float32Array(out.length));
+        this.osyn.vol = 1; this.osyn.race = !!os.race;
+        this.osyn.render(tmp, os.rpm, os.load, os.boost, 0, 0, os.speed || 0);
+        const gg = this.otherGain * this.master;
+        for (let i = 0; i < out.length; i++) out[i] = Math.tanh(out[i] + tmp[i] * gg);
+      }
     };
     node.connect(ctx.destination); this.node = node;
   };
@@ -246,6 +256,7 @@
   /** chrono layer: level 0..1 while charging, boom() at the jump */
   EngineAudio.prototype.setChrono = function (lvl) { this.chronoLvl = lvl; };
   EngineAudio.prototype.boom = function () { this.boomPend = 1; };
+  EngineAudio.prototype.feedOther = function (sim, gain) { this.other = sim; this.otherGain = gain; };
   EngineAudio.prototype.toggle = function () { this.on = !this.on; return this.on; };
 
   /* ------------------------------------------------------------------ exhaust particles */

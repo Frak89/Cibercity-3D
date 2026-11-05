@@ -1,5 +1,7 @@
 package it.ampy.cybercity.game;
 
+import it.ampy.cybercity.L;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -36,6 +38,7 @@ public class ShowroomActivity extends Activity {
     int dp(float v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 
     @Override protected void onCreate(Bundle b) {
+        it.ampy.cybercity.L.init(this);
         super.onCreate(b);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         sp = Prefs.get(this).raw();
@@ -70,23 +73,23 @@ public class ShowroomActivity extends Activity {
         root.addView(ss, slp);
 
         LinearLayout bar = new LinearLayout(this); bar.setPadding(dp(10), 0, dp(10), 0);
-        add(bar, "turn", "⟳ RUOTA", true, v -> { r.auto = !r.auto; sel("turn", r.auto); });
-        add(bar, "hood", "COFANO", false, v -> { r.tHood = r.tHood > 0 ? 0 : 1; sel("hood", r.tHood > 0); });
-        add(bar, "doors", "PORTIERE", false, v -> { r.tDoors = r.tDoors > 0 ? 0 : 1; sel("doors", r.tDoors > 0); });
-        add(bar, "int", "INTERNI", false, v -> mode(ShowroomRenderer.CAM_INTERIOR));
-        add(bar, "cock", "ABITACOLO", false, v -> mode(ShowroomRenderer.CAM_COCKPIT));
-        add(bar, "eng", "MOTORE", false, v -> mode(ShowroomRenderer.CAM_ENGINE));
-        add(bar, "steer", "STERZO", false, v -> { r.steerDemo = !r.steerDemo; sel("steer", r.steerDemo); });
-        add(bar, "lights", "LUCI", true, v -> { r.lights = r.lights > 0 ? 0 : 1; sel("lights", r.lights > 0); });
-        add(bar, "paint", "COLORE", false, v -> {
+        add(bar, "turn", L.t("⟳ RUOTA"), true, v -> { r.auto = !r.auto; sel("turn", r.auto); });
+        add(bar, "hood", L.t("COFANO"), false, v -> { r.tHood = r.tHood > 0 ? 0 : 1; sel("hood", r.tHood > 0); });
+        add(bar, "doors", L.t("PORTIERE"), false, v -> { r.tDoors = r.tDoors > 0 ? 0 : 1; sel("doors", r.tDoors > 0); });
+        add(bar, "int", L.t("INTERNI"), false, v -> mode(ShowroomRenderer.CAM_INTERIOR));
+        add(bar, "cock", L.t("ABITACOLO"), false, v -> mode(ShowroomRenderer.CAM_COCKPIT));
+        add(bar, "eng", L.t("MOTORE"), false, v -> mode(ShowroomRenderer.CAM_ENGINE));
+        add(bar, "steer", L.t("STERZO"), false, v -> { r.steerDemo = !r.steerDemo; sel("steer", r.steerDemo); });
+        add(bar, "lights", L.t("LUCI"), true, v -> { r.lights = r.lights > 0 ? 0 : 1; sel("lights", r.lights > 0); });
+        add(bar, "paint", L.t("COLORE"), false, v -> {
             int i = (CarHd.paintIndex(r.paint) + 1) % CarHd.PAINT_KEYS.length; r.paint = CarHd.PAINT_KEYS[i];
-            sp.edit().putString("gPaint", r.paint).apply(); btn.get("paint").setText("COLORE: " + CarHd.PAINT_NAMES[i]);
+            sp.edit().putString("gPaint", r.paint).apply(); btn.get("paint").setText(L.t("COLORE: ") + CarHd.PAINT_NAMES[i]);
         });
-        add(bar, "pal", "ATMOSFERA", false, v -> {
+        add(bar, "pal", L.t("ATMOSFERA"), false, v -> {
             int i = (Palette.index(r.palette) + 1) % Palette.KEYS.length; r.palette = Palette.KEYS[i]; sp.edit().putString("gPalette", r.palette).apply();
         });
-        add(bar, "specs", "SCHEDA TECNICA", false, v -> { boolean on = ss.getVisibility() != View.VISIBLE; ss.setVisibility(on ? View.VISIBLE : View.GONE); sel("specs", on); });
-        add(bar, "drive", "▶ GUIDALA", false, v -> { startActivity(new Intent(this, GameActivity.class)); finish(); });
+        add(bar, "specs", L.t("SCHEDA TECNICA"), false, v -> { boolean on = ss.getVisibility() != View.VISIBLE; ss.setVisibility(on ? View.VISIBLE : View.GONE); sel("specs", on); });
+        add(bar, "drive", L.t("▶ GUIDALA"), false, v -> { startActivity(new Intent(this, GameActivity.class)); finish(); });
         HorizontalScrollView hs = new HorizontalScrollView(this); hs.setHorizontalScrollBarEnabled(false); hs.addView(bar);
         FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM); blp.bottomMargin = dp(18);
         root.addView(hs, blp);
@@ -94,31 +97,31 @@ public class ShowroomActivity extends Activity {
         LinearLayout eb = new LinearLayout(this); eb.setGravity(Gravity.CENTER_VERTICAL);
         rpmText = text("900 RPM", 16, accent, true); rpmText.setShadowLayer(dp(8), 0, 0, accent);
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(-2, -2); rp.rightMargin = dp(12); eb.addView(rpmText, rp);
-        add(bar, "roof", "CAPOTE: CHIUSA", false, v -> { r.tRoof = r.tRoof > 0 ? 0 : 1; sel("roof", r.tRoof > 0); btn.get("roof").setText(r.tRoof > 0 ? "CAPOTE: APERTA (SPIDER)" : "CAPOTE: CHIUSA"); });
+        add(bar, "roof", L.t("CAPOTE: CHIUSA"), false, v -> { r.tRoof = r.tRoof > 0 ? 0 : 1; sel("roof", r.tRoof > 0); btn.get("roof").setText(r.tRoof > 0 ? L.t("CAPOTE: APERTA (SPIDER)") : L.t("CAPOTE: CHIUSA")); });
         add(bar, "power", CarHd.POWER_NAMES[r.power], false, v -> {
             r.power = (r.power + 1) % 3; sp.edit().putString("gPower", CarHd.POWER_KEYS[r.power]).apply();
             btn.get("power").setText(CarHd.POWER_NAMES[r.power]); specs.setText(specsText()); titleView.setText(CarHd.MODEL_NAMES[r.power]);
         });
-        add(bar, "custom", "🎨 PERSONALIZZA", false, v -> customize());
-        add(bar, "exh", "SCARICO: SERIE", false, v -> { r.race = !r.race; sel("exh", r.race); btn.get("exh").setText(r.race ? "SCARICO: ELABORATO" : "SCARICO: SERIE"); sp.edit().putBoolean("gRace", r.race).apply(); });
-        add(bar, "chrono", "MODULO CRONO", false, v -> { r.chrono = !r.chrono; sel("chrono", r.chrono); sp.edit().putBoolean("gChrono", r.chrono).apply(); });
-        add(bar, "fly", "VOLO", false, v -> {
+        add(bar, "custom", L.t("🎨 PERSONALIZZA"), false, v -> customize());
+        add(bar, "exh", L.t("SCARICO: SERIE"), false, v -> { r.race = !r.race; sel("exh", r.race); btn.get("exh").setText(r.race ? L.t("SCARICO: ELABORATO") : L.t("SCARICO: SERIE")); sp.edit().putBoolean("gRace", r.race).apply(); });
+        add(bar, "chrono", L.t("MODULO CRONO"), false, v -> { r.chrono = !r.chrono; sel("chrono", r.chrono); sp.edit().putBoolean("gChrono", r.chrono).apply(); });
+        add(bar, "fly", L.t("VOLO"), false, v -> {
             if (r.power != 2) { r.power = 2; btn.get("power").setText(CarHd.POWER_NAMES[2]); specs.setText(specsText()); titleView.setText(CarHd.MODEL_NAMES[2]); }
             r.fly = !r.fly; sel("fly", r.fly);
         });
-        sel("exh", r.race); btn.get("exh").setText(r.race ? "SCARICO: ELABORATO" : "SCARICO: SERIE"); sel("chrono", r.chrono);
-        add(eb, "motor", "MOTORE ON", true, v -> {
-            r.engineOn = !r.engineOn; sel("motor", r.engineOn); btn.get("motor").setText(r.engineOn ? "MOTORE ON" : "MOTORE OFF");
+        sel("exh", r.race); btn.get("exh").setText(r.race ? L.t("SCARICO: ELABORATO") : L.t("SCARICO: SERIE")); sel("chrono", r.chrono);
+        add(eb, "motor", L.t("MOTORE ON"), true, v -> {
+            r.engineOn = !r.engineOn; sel("motor", r.engineOn); btn.get("motor").setText(r.engineOn ? L.t("MOTORE ON") : L.t("MOTORE OFF"));
             if (r.engineOn) { r.eng.rpm = 300; r.rev = 0.45f; glv.postDelayed(() -> { if (!revHeld) r.rev = 0; }, 260); }
         });
-        TextView revB = text("🔥 SU DI GIRI", 14, 0xffffd2b0, true);
+        TextView revB = text(L.t("🔥 SU DI GIRI"), 14, 0xffffd2b0, true);
         revB.setPadding(dp(18), dp(12), dp(18), dp(12));
         revBg(revB, false);
         revB.setOnTouchListener((v, e) -> {
             int a = e.getActionMasked();
             if (a == MotionEvent.ACTION_DOWN) {
                 revHeld = true; v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
-                if (!r.engineOn) { r.engineOn = true; sel("motor", true); btn.get("motor").setText("MOTORE ON"); }
+                if (!r.engineOn) { r.engineOn = true; sel("motor", true); btn.get("motor").setText(L.t("MOTORE ON")); }
                 r.rev = 1; revBg(revB, true);
             } else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) { revHeld = false; r.rev = 0; revBg(revB, false); }
             return true;
@@ -166,10 +169,10 @@ public class ShowroomActivity extends Activity {
         r.stripeC = sp.getInt("cStripe", 0); r.text = sp.getInt("cText", -1); r.brakes = sp.getInt("cBrakes", 0);
     }
     private void customize() {
-        String[] items = {"KIT: " + CarHd.KIT_NAMES[r.kit], "CERCHI: " + CarHd.RIM_NAMES[r.rim], "COLORE CERCHI: " + CarHd.COLOR_NAMES[r.rimC],
-            "LIVREA: " + CarHd.LIVERY_NAMES[r.livery], "COLORE LIVREA: " + CarHd.COLOR_NAMES[r.stripeC], "SCRITTA: " + (r.text < 0 ? "NESSUNA" : CarHd.TEXT_PRESETS[r.text]),
-            "FRENI: " + CarHd.BRAKE_NAMES[r.brakes], "TARGA: KAGE 2789 GT"};
-        new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle("PERSONALIZZAZIONE")
+        String[] items = {"KIT: " + CarHd.KIT_NAMES[r.kit], L.t("CERCHI: ") + CarHd.RIM_NAMES[r.rim], L.t("COLORE CERCHI: ") + CarHd.COLOR_NAMES[r.rimC],
+            L.t("LIVREA: ") + CarHd.LIVERY_NAMES[r.livery], L.t("COLORE LIVREA: ") + CarHd.COLOR_NAMES[r.stripeC], L.t("SCRITTA: ") + (r.text < 0 ? L.t("NESSUNA") : CarHd.TEXT_PRESETS[r.text]),
+            L.t("FRENI: ") + CarHd.BRAKE_NAMES[r.brakes], L.t("TARGA: KAGE 2789 GT")};
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert).setTitle(L.t("PERSONALIZZAZIONE"))
             .setItems(items, (d, i) -> {
                 switch (i) {
                     case 0: r.kit = (r.kit + 1) % 3; break;
@@ -223,7 +226,7 @@ public class ShowroomActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume(); glv.onResume(); sound.start();
-        glv.postDelayed(() -> { if (r.error != null) android.widget.Toast.makeText(this, "Auto HD non caricata: " + r.error, android.widget.Toast.LENGTH_LONG).show(); }, 2500);
+        glv.postDelayed(() -> { if (r.error != null) android.widget.Toast.makeText(this, L.t("Auto HD non caricata: ") + r.error, android.widget.Toast.LENGTH_LONG).show(); }, 2500);
     }
     @Override protected void onPause() { sound.stop(); r.rev = 0; glv.onPause(); super.onPause(); }
 }

@@ -5,3 +5,4 @@ local.properties
 *.iml
 .DS_Store
 models/
+tools/__pycache__/

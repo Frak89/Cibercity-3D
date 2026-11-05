@@ -18,8 +18,8 @@ import java.util.Locale;
 /** Weather presets for the city and live weather from Open-Meteo (free, no API key). */
 public final class Weather {
     public static final String[] KEYS = {"off", "auto", "clear", "cloudy", "fog", "drizzle", "rain", "storm", "snow"};
-    public static final String[] NAMES = {"SPENTO (usa la pioggia manuale)", "AUTOMATICO (meteo reale)", "SERENO", "NUVOLOSO",
-        "NEBBIA", "PIOGGERELLA", "PIOGGIA", "TEMPORALE", "NEVE"};
+    public static final String[] NAMES = {L.t("SPENTO (usa la pioggia manuale)"), L.t("AUTOMATICO (meteo reale)"), L.t("SERENO"), L.t("NUVOLOSO"),
+        L.t("NEBBIA"), L.t("PIOGGERELLA"), L.t("PIOGGIA"), L.t("TEMPORALE"), L.t("NEVE")};
     public static final String[] ICONS = {"", "", "☾", "☁", "≋", "☂", "☔", "⚡", "❄"};
 
     /** Effect parameters — identical to WEATHER in web/cybercity.js. */
@@ -82,7 +82,7 @@ public final class Weather {
     public static String geocode(Prefs p, String city) throws Exception {
         String j = get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=it&format=json&name=" + URLEncoder.encode(city, "UTF-8"));
         JSONObject o = new JSONObject(j);
-        if (!o.has("results") || o.getJSONArray("results").length() == 0) throw new IllegalArgumentException("Città non trovata");
+        if (!o.has("results") || o.getJSONArray("results").length() == 0) throw new IllegalArgumentException(L.t("Città non trovata"));
         JSONObject r = o.getJSONArray("results").getJSONObject(0);
         String name = r.optString("name", city) + (r.has("country_code") ? " (" + r.optString("country_code") + ")" : "");
         p.edit().putFloat("wLat", (float) r.getDouble("latitude")).putFloat("wLon", (float) r.getDouble("longitude"))
@@ -110,7 +110,7 @@ public final class Weather {
     /** Downloads the current weather and caches it. Network: call off the UI thread. */
     public static String refresh(Context c, Prefs p) throws Exception {
         if (p.useGps()) fromDevice(c, p);
-        if (!p.hasLocation()) throw new IllegalStateException("Imposta una città o la posizione");
+        if (!p.hasLocation()) throw new IllegalStateException(L.t("Imposta una città o la posizione"));
         String url = String.format(Locale.US, "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f"
             + "&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m,is_day", p.lat(), p.lon());
         JSONObject cur = new JSONObject(get(url)).getJSONObject("current");
