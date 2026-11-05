@@ -29,6 +29,12 @@ const SPECS = {
     ['ASSIST', 'reattore a fusione compatto da 2 MW · eliche retrattili'], ['VELOCITÀ', '12 nodi a vela · 21 nodi con assist'],
     ['ARMAMENTO', c.cannons ? '18 cannoni a luce (stordiscono, non distruggono)' : 'disarmato'], ['EQUIPAGGIO', '24 + 6 droni di bordo'], ['DISLOCAMENTO', '480 t']]
 };
+SPECS.moto = c => [['TIPO', 'Superbike elettrica · ' + KF.optLabel('moto', 'fairing', c.fairing)], ['MOTORE', 'motore assiale da 160 kW · 300 Nm'], ['BATTERIA', '24 kWh · ricarica in 25 minuti'],
+  ['VELOCITÀ MAX', '280 km/h'], ['ACCELERAZIONE', '0–100 km/h in 2,6 s'], ['RUOTE', KF.optLabel('moto', 'wheels', c.wheels) + ' · LED integrati'], ['PESO', '198 kg']];
+SPECS.hover = c => [['TIPO', 'Hovercraft anfibio · strada e acqua'], ['PROPULSIONE', c.fans === 1 ? '1 elica intubata da 2,2 m' : '2 eliche intubate da 1,4 m'], ['SOSTENTAMENTO', 'cuscino d\'aria a 0,5 m · gonna in neoprene'],
+  ['VELOCITÀ MAX', '95 km/h · 130 in boost'], ['CABINA', c.cabin === 'chiusa' ? 'chiusa, 4 posti' : 'pozzetto aperto, 2 posti'], ['DIMENSIONI', 'L 8,6 m · B 4,6 m'], ['PESO', '1.900 kg']];
+SPECS.sub = c => [['TIPO', 'Sottomarino da esplorazione · ' + KF.optLabel('sub', 'hull', c.hull)], ['PROFONDITÀ MAX', '1.200 m (laguna: 24 m)'], ['PROPULSIONE', '2 propulsori elettrici orientabili'],
+  ['VELOCITÀ', '32 km/h · 50 km/h in boost'], ['AUTONOMIA', '14 ore'], ['ATTREZZATURA', (c.arms ? '2 bracci robotici · ' : '') + 'fari da 20.000 lm · sonar'], ['EQUIPAGGIO', '2']];
 SPECS.pilot = c => [['RUOLO', 'Pilota collaudatore KAGE · auto, drone, mare'], ['ALTEZZA', KagePilot.label('height', c.height)], ['CORPORATURA', KagePilot.label('build', c.build)],
   ['TUTA', 'ignifuga in fibra aramidica · ' + KagePilot.label('suit', c.suit) + ' con LED ' + KagePilot.label('accent', c.accent)],
   ['CASCO', 'integrale in carbonio · visiera a realtà aumentata'], ['LICENZE', 'KAGE GT · STRIX · RIPTIDE · LEVIATHAN'], ['STATO', 'pronto al via']];
@@ -59,7 +65,7 @@ SR.prototype.setVehicle = function (kind, cfg) {
   const F = this.F; F.kind = kind; F.cfg = Object.assign({}, cfg || (kind === 'pilot' ? KagePilot.load() : KF.loadCfg(kind))); F.t = 0;
   this.rebuildFleet();
   const b = F.mesh.bounds, R = Math.max(b[3] - b[0], b[4] - b[1], b[5] - b[2]);
-  this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : kind === 'pilot' ? 0.08 : 0.2;
+  this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4, moto: 4, hover: 12, sub: 10 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : kind === 'pilot' ? 0.08 : 0.2;
   if (this.cam.mode !== 'orbit' && this.cam.mode !== 'cockpit') this.cam.mode = 'orbit';
 };
 SR.prototype.rebuildFleet = function () {
@@ -104,10 +110,11 @@ SR.prototype.frame = function (dt) {
   this.t += dt; F.t += dt; const t = this.t;
   if (cam.auto && cam.mode === 'orbit') this.turn += dt * (k === 'galleon' ? 0.12 : 0.25);
   const W = this.canvas.width, H = this.canvas.height; gl.viewport(0, 0, W, H);
-  const water = k === 'boat' || k === 'galleon';
+  const water = k === 'boat' || k === 'galleon' || k === 'sub';
   // pose on the turntable / in the basin
-  const b = m.bounds, hover = k === 'drone' ? 0.32 + 0.55 + Math.sin(t * 1.4) * 0.06 : 0;
+  const b = m.bounds, hover = k === 'drone' ? 0.32 + 0.55 + Math.sin(t * 1.4) * 0.06 : k === 'sub' ? 0.6 : k === 'hover' ? 0.02 : 0;
   if (k === 'pilot' && cam.mode === 'cockpit') cam.mode = 'orbit';
+  if (k === 'moto' || k === 'hover') { /* land vehicles on the turntable */ }
   if (k === 'pilot' && (F.cfg.pose === 'cammina' || F.cfg.pose === 'corre')) { /* walking on the spot */ }
   const bob = water ? Math.sin(t * 1.1) * (k === 'galleon' ? 0.12 : 0.05) : 0;
   const still = k === 'pilot';
@@ -118,7 +125,7 @@ SR.prototype.frame = function (dt) {
   const cy = k === 'pilot' ? b[4] * 0.6 : (b[1] + b[4]) / 2 * (k === 'galleon' ? 0.55 : 1) + hover;
   let eye, tgt, fov = 40;
   if (cam.mode === 'cockpit') {
-    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : KF.GALLEON_RIG.eye;
+    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : KF.GALLEON_RIG.eye;
     eye = toWorld(E); const yaw = cam.look, pp = cam.lookP - 0.05;
     tgt = toWorld([E[0] + Math.sin(yaw) * 20, E[1] + Math.sin(pp) * 20, E[2] + Math.cos(yaw) * 20]); fov = k === 'drone' ? 95 : 70;
   } else {

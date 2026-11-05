@@ -12,7 +12,7 @@
       background:rgba(7,11,19,.35);color:#ecfcff;font:bold 3vmin monospace;display:none;align-items:center;justify-content:center;user-select:none}
   body.touch .tb{display:flex}
   body.touch.veh-drone #tdn{display:flex}
-  #tdn{display:none!important} body.touch.veh-drone #tdn{display:flex!important}
+  #tdn{display:none!important} body.touch.veh-drone #tdn,body.touch.veh-sub #tdn{display:flex!important}
   #tnx{display:none!important} body.touch.nx #tnx{display:flex!important}
   #tex{display:none!important} body.touch.ex #tex{display:flex!important}
   #fbtn{position:fixed;right:2vmin;top:2vmin;border:1px solid rgba(0,255,226,.6);background:rgba(7,11,19,.55);color:#ecfcff;font:bold 12px monospace;padding:7px 10px;border-radius:8px;cursor:pointer;z-index:5}
@@ -78,7 +78,7 @@
   // KAGE fleet: drone / boat / galleon (garage panel, races)
   const F=game.fleet, fp=document.getElementById('fleet');
   const labels=()=>{ const k=game.veh?game.veh.kind:'car'; document.body.className=document.body.className.replace(/\bveh-\w+/g,'')+' veh-'+k;
-    const L={car:['GAS','FRENO','DRIFT','N₂O'],drone:['AVANTI','INDIETRO','SU','BOOST'],boat:['GAS','RETRO','—','N₂O'],galleon:['VELE +','VELE −','FUOCO','ASSIST']}[k];
+    const L={car:['GAS','FRENO','DRIFT','N₂O'],drone:['AVANTI','INDIETRO','SU','BOOST'],boat:['GAS','RETRO','—','N₂O'],galleon:['VELE +','VELE −','FUOCO','ASSIST'],moto:['GAS','FRENO','—','BOOST'],hover:['SPINTA','RETRO','—','BOOST'],sub:['AVANTI','INDIETRO','SU','BOOST']}[k]||['GAS','FRENO','—','BOOST'];
     ['tg','tbk','th','tn'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.textContent=L[i]; }); };
   if(F){ F.buildUI(fp,(what,v)=>{ if(what==='vehicle'){ o.vehicle=v; labels(); } if(what==='quality'){ o.quality=v; try{localStorage.setItem('kageQuality',v);}catch(e){} } save(); });
     document.getElementById('fbtn').onclick=e=>{ e.stopPropagation(); F.renderUI(); fp.classList.toggle('open'); };
@@ -92,7 +92,7 @@
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
-    if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
+    if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
     if(e.code==='KeyB'&&game.audio) game.audio.toggle();
     if(e.code==='KeyL') setLang(LANG==='it'?'en':'it');
     if(game.veh){
@@ -135,12 +135,12 @@
       inp.fwd=b(keys.KeyW||keys.ArrowUp||tb.tg)-b(keys.KeyS||keys.ArrowDown||tb.tbk);
       inp.yaw=b(keys.KeyA||keys.ArrowLeft||tb.tl)-b(keys.KeyD||keys.ArrowRight||tb.tr);
       inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
-      inp.lift=k==='drone'||k==='foot'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
+      inp.lift=k==='drone'||k==='foot'||k==='sub'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
       inp.fire=k==='galleon'&&(keys.Space||tb.th); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
       // gamepad (standard mapping; drone in mode 2: left stick = altitude/yaw, right stick = pitch/roll)
       const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null;
       if(gp){ const ax=i=>Math.abs(gp.axes[i]||0)>0.12?gp.axes[i]:0, bt=i=>gp.buttons[i]&&(gp.buttons[i].pressed||gp.buttons[i].value>0.3);
-        if(k==='drone'){ inp.lift+= -ax(1); inp.yaw+= -ax(0); inp.fwd+= -ax(3); inp.strafe+= ax(2); }
+        if(k==='drone'||k==='sub'){ inp.lift+= -ax(1); inp.yaw+= -ax(0); inp.fwd+= -ax(3); inp.strafe+= ax(2); }
         else { inp.yaw+= -ax(0); inp.fwd+= (gp.buttons[7]?gp.buttons[7].value:0)-(gp.buttons[6]?gp.buttons[6].value:0)-ax(1)*0; }
         if(bt(5)) inp.boost=true; if(bt(2)) inp.fire=true;
         if(bt(3)&&!readInput.y) game.view=(game.view+1)%5; readInput.y=bt(3);

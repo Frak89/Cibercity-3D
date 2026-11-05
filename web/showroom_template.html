@@ -26,7 +26,7 @@
   #cust input{flex:1;background:#070b13;color:#ecfcff;border:1px solid var(--a);padding:1vmin;font:bold 1.6vmin monospace;text-transform:uppercase}
   #cInfo{width:100%;font-size:1.4vmin;opacity:.75}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;color:#ff6177}
-  #vsel{position:fixed;left:50%;top:2.5vmin;transform:translateX(-50%);display:flex;gap:1vmin}
+  #vsel{position:fixed;left:50%;top:2.5vmin;transform:translateX(-50%);display:flex;gap:0.8vmin;flex-wrap:wrap;justify-content:center;max-width:70vw}
   #fcust{position:fixed;left:3vmin;top:14vmin;width:min(52vmin,440px);display:none;flex-wrap:wrap;gap:1vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);padding:1.6vmin}
   #fcust.open{display:flex}
   #fcust b{width:100%;color:var(--a);letter-spacing:.2em;font-size:1.5vmin}
@@ -37,7 +37,7 @@
 <canvas id="c"></canvas>
 <div id="title"><h1>AMPY KAGE GT</h1><div>SHOWROOM · CYBERCITY 3D</div></div>
 <div id="specs"></div>
-<div id="vsel"><button data-v="car" class="on">KAGE GT</button><button data-v="drone">🚁 STRIX</button><button data-v="boat">🚤 RIPTIDE</button><button data-v="galleon">⛵ LEVIATHAN</button><button data-v="pilot">🧑‍🚀 PILOTA</button></div>
+<div id="vsel"><button data-v="car" class="on">KAGE GT</button><button data-v="moto">🏍 VOLT</button><button data-v="drone">🚁 STRIX</button><button data-v="hover">🛸 GLIDE</button><button data-v="boat">🚤 RIPTIDE</button><button data-v="sub">🤿 ABYSS</button><button data-v="galleon">⛵ LEVIATHAN</button><button data-v="pilot">🧑‍🚀 PILOTA</button></div>
 <div id="fcust"></div>
 <div id="bar">
   <button id="bTurn" class="on">⟳ RUOTA</button><button class="caronly" id="bHood">COFANO</button><button class="caronly" id="bDoors">PORTIERE</button>
@@ -105,10 +105,12 @@
   const fpanel=()=>{ if(!sr.F||!sr.F.kind) return; const k=sr.F.kind, PIL=k==='pilot', K=PIL?{title:'PILOTA KAGE',opts:KagePilot.OPTS}:KageFleet.KINDS[k]; let h='<b>'+K.title+' · PERSONALIZZA</b>';
     for(const key in K.opts) h+='<button data-o="'+key+'">'+(PIL?KagePilot.TITLES[key]:KageFleet.OPT_TITLES[key])+': '+(PIL?KagePilot.label(key,sr.F.cfg[key]):KageFleet.optLabel(k,key,sr.F.cfg[key]))+'</button>';
     if(PIL) h+='<button data-inv="1">A BORDO DEI VEICOLI: '+(sr.F.cfg.inVehicle===false?'NO':'SÌ')+'</button>';
+    if(PIL) h+='<button data-mine="1">👤 IL MIO PILOTA</button>';
     h+='<button data-rnd="1">🎲 CASUALE</button>'; fcust.innerHTML=h;
     fcust.querySelectorAll('button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const d=b.dataset;
       if(d.o){ const O=K.opts[d.o], i=O.indexOf(sr.F.cfg[d.o]); sr.F.cfg[d.o]=O[(i+1)%O.length]; }
       if(d.inv) sr.F.cfg.inVehicle=sr.F.cfg.inVehicle===false;
+      if(d.mine){ sr.F.cfg=Object.assign({},KagePilot.MINE,{pose:sr.F.cfg.pose,inVehicle:sr.F.cfg.inVehicle}); }
       if(d.rnd){ if(PIL){ const r={}; for(const key in KagePilot.OPTS){ const O=KagePilot.OPTS[key]; r[key]=O[Math.random()*O.length|0]; } r.inVehicle=sr.F.cfg.inVehicle; sr.F.cfg=r; } else sr.F.cfg=KageFleet.randomCfg(k); }
       if(PIL) KagePilot.save(sr.F.cfg); else KageFleet.saveCfg(k,sr.F.cfg); sr.rebuildFleet(); fpanel(); specs(); }); };
   const pickV=v=>{ document.querySelectorAll('#vsel button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
@@ -170,7 +172,7 @@
   addEventListener('pointermove',e=>{ if(!drag) return; const dx=(e.clientX-drag[0])/innerWidth, dy=(e.clientY-drag[1])/innerHeight; drag=[e.clientX,e.clientY];
     if(sr.cam.mode==='cockpit'){ sr.cam.look-=dx*3; sr.cam.lookP=Math.max(-0.8,Math.min(0.8,sr.cam.lookP-dy*2)); }
     else { sr.turn+=dx*4; sr.cam.pitch=Math.max(0.02,Math.min(1.2,sr.cam.pitch+dy*2)); } });
-  cv.addEventListener('wheel',e=>{ const base=sr.F&&sr.F.kind?{drone:4.6,boat:13,galleon:52,pilot:3.4}[sr.F.kind]:7.2; sr.cam.dist=Math.max(base*0.55,Math.min(base*2,sr.cam.dist*(1+e.deltaY*0.001))); });
+  cv.addEventListener('wheel',e=>{ const base=sr.F&&sr.F.kind?{drone:4.6,boat:13,galleon:52,pilot:3.4,moto:4,hover:12,sub:10}[sr.F.kind]:7.2; sr.cam.dist=Math.max(base*0.55,Math.min(base*2,sr.cam.dist*(1+e.deltaY*0.001))); });
   if(q.has('vehicle')) pickV(q.get('vehicle'));
   if(q.has('shot')){
     for(const k of ['hood','doors']) if(q.has(k)) { sr.tg[k]=1; sr.st[k==='doors'?'doorL':'hood']=1; if(k==='doors') sr.st.doorR=1; }

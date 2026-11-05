@@ -89,12 +89,18 @@ function buildGameCity(seed) {
   }
   const inner = GP - RW;
   // quay walls of the lagoon (kind 3: concrete with a neon edge), below street level
-  const wall = (x0, z0, x1, z1) => box((x0 + x1) / 2, (z0 + z1) / 2, Math.max(0.6, x1 - x0), Math.max(0.6, z1 - z0), -3.2, 0.03, 0.5, 3);
+  const wall = (x0, z0, x1, z1) => box((x0 + x1) / 2, (z0 + z1) / 2, Math.max(0.6, x1 - x0), Math.max(0.6, z1 - z0), -26, 0.03, 0.5, 3);
   wall(HARBOR.x0 - 0.3, HARBOR.z0, HARBOR.x0 + 0.3, HARBOR.z1); wall(HARBOR.x1 - 0.3, HARBOR.z0, HARBOR.x1 + 0.3, HARBOR.z1);
   wall(HARBOR.x0, HARBOR.z0 - 0.3, HARBOR.x1, HARBOR.z0 + 0.3); wall(HARBOR.x0, HARBOR.z1 - 0.3, HARBOR.x1, HARBOR.z1 + 0.3);
   for (let bz = 0; bz < GN; bz++) for (let bx = 0; bx < GN; bx++) {
-    const rects = blocks[bz * GN + bx];
+    let rects = blocks[bz * GN + bx];
     const I = islandOf(bx, bz);
+    // block (0,0) is the KAGE GARAGE: generate as usual (same random draws) but into a throwaway buffer
+    const GAR = bx === 0 && bz === 0, keepB = B, keepBB = BB.pos.length;
+    const endGar = () => { if (!GAR) return; B = keepB; for (const k of ['pos', 'center', 'uv', 'misc']) BB[k].length = keepBB / 3 * (k === 'pos' ? 3 : k === 'misc' ? 4 : 2); BB.idx.length = keepBB / 3 / 4 * 6;
+      const G = window.KageFleet ? KageFleet.GARAGE : { x0: 16, x1: 66, z0: 16, z1: 68, h: 11 }, gr = blocks[0];
+      gr.push([G.x1 - 1, G.z0, G.x1, G.z1, G.h + 0.6], [G.x0, G.z0, G.x1, G.z0 + 1, G.h + 0.6], [G.x0, G.z1 - 1, G.x1, G.z1, G.h + 0.6]); };
+    if (GAR) { B = { pos: [], center: [], norm: [], uv: [], misc: [], idx: [] }; rects = []; }
     if (I && I.water) continue;
     let ox = bx * GP + RW / 2, oz = bz * GP + RW / 2, inX = inner, inZ = inner;
     if (I) {
@@ -110,7 +116,7 @@ function buildGameCity(seed) {
       const s = R();
       box(ox + inX / 2, oz + inZ / 2, 14, 14, 0, 5, s, 1);
       rects.push([ox + inX / 2 - 7, oz + inZ / 2 - 7, ox + inX / 2 + 7, oz + inZ / 2 + 7, 5]);
-      continue;
+      endGar(); continue;
     }
     const n = R() < 0.45 ? 3 : 2, cellX = inX / n, cellZ = inZ / n;
     for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
@@ -147,6 +153,7 @@ function buildGameCity(seed) {
     const px = ox + 1.2, pz = oz + 1.2;
     box(px, pz, 0.35, 0.35, 0, 7.5, R(), 1);
     rects.push([px - 0.3, pz - 0.3, px + 0.3, pz + 0.3, 7.5]);
+    endGar();
   }
   // traffic (light trails) along every road + flying lanes above them
   const C = { lane: [], dir: [], corner: [], idx: [] }, DR = [];   // DR: flying KAGE STRIX drones (lane-instanced)
@@ -499,7 +506,7 @@ function Game(canvas, hud, opts) {
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
     post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
   if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); this.hdQ = opts.quality || 'high'; }
-  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag'); this.P.pil = prog('pilot.vert', 'vehicle.frag');
+  this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag'); this.P.pil = prog('pilot.vert', 'vehicle.frag'); this.P.seabed = prog('water.vert', 'seabed.frag');
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
   this.mesh = (attrs, idx) => { const m = { a: {}, n: idx.length }; for (const k in attrs) m.a[k] = { b: buf(attrs[k][0]), s: attrs[k][1] }; m.i = buf(idx, true); return m; };
   const city = this.city = buildGameCity(opts.seed || 2077);
@@ -569,7 +576,7 @@ Game.prototype.frame = function (dt, inp) {
   const cityPal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   const past = this.world === 'meadow';
   const eco = this.world === 'eco';
-  const pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : eco ? Object.assign({}, cityPal, KageNexus.ECO_PAL) : cityPal;
+  let pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : eco ? Object.assign({}, cityPal, KageNexus.ECO_PAL) : cityPal;
   const wx = past ? null : (CYBER_WEATHER[o.weather] || null);
   this.t += dt; const t = this.t;
   this.flash = Math.max(0, this.flash - dt * 3.5);
@@ -588,6 +595,9 @@ Game.prototype.frame = function (dt, inp) {
   if (this.nexus) this.nexus.update(dt);
   const c = this.c;
   const cv = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
+  // below the lagoon surface: teal murk, light from above, marine snow
+  const UNDER = !past && cv.e[1] < -1.25 && isWater(c.x + cv.e[0], c.z + cv.e[2]);
+  if (UNDER) pal = Object.assign({}, pal, { fog: eco ? [0.0, 0.07, 0.03] : [0.0, 0.075, 0.095], top: [0.0, 0.04, 0.05], fogDen: 0.042, sun: [0.3, 0.6, 0.65], stripes: 0 });
   this.cv = cv;
   if (this.eng && VEH) { this.audio.on = false; this.audio.feed(this.eng); this.fxO = null; }
   if (this.eng && !VEH) {
@@ -643,7 +653,8 @@ Game.prototype.frame = function (dt, inp) {
     if (u.uHarbor) gl.uniform4f(u.uHarbor, HARBOR.x0, HARBOR.z0, HARBOR.x1, HARBOR.z1);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP); if (u.uV) gl.uniformMatrix4fv(u.uV, false, V.m); if (u.uP) gl.uniformMatrix4fv(u.uP, false, Pm);
   };
-  gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  if (UNDER) gl.clearColor(pal.fog[0], pal.fog[1], pal.fog[2], 1); else gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
   const sp = P.sky; gl.useProgram(sp.p); set(sp);
   gl.uniform3fv(sp.u.uFwd, V.f); gl.uniform3fv(sp.u.uRight, V.r); gl.uniform3fv(sp.u.uUp, V.u);
@@ -651,7 +662,7 @@ Game.prototype.frame = function (dt, inp) {
   if (sp.u.uCloud) gl.uniform1f(sp.u.uCloud, past ? 0.45 : wx ? wx.cloud : 0);
   if (sp.u.uDay) gl.uniform1f(sp.u.uDay, past ? 1 : 0);
   gl.uniform3fv(sp.u.uSunDir, pal.sunDir); gl.uniform3fv(sp.u.uSunCol, pal.sun); gl.uniform1f(sp.u.uSunStripes, pal.stripes);
-  this.draw(sp, this.M.quad);
+  if (!UNDER) this.draw(sp, this.M.quad);
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
   if (past) {
     const g = P.meadow; gl.useProgram(g.p); set(g); gl.uniform3fv(g.u.uSunDir, pal.sunDir); gl.uniform3fv(g.u.uSunCol, pal.sun); this.draw(g, this.M.ground);
@@ -662,7 +673,8 @@ Game.prototype.frame = function (dt, inp) {
     if (eco) { const bu = P.building.u; gl.uniform1f(bu.uMirror, 470); gl.uniform1f(bu.uFogDen, 0.0019); gl.uniform1f(bu.uFar, 1500); for (const m of this.M.chunks) this.draw(P.building, m); gl.uniform1f(bu.uMirror, 0); set(P.building); }   // ECO: the city hangs from the sky
     gl.useProgram(P.board.p); set(P.board); this.draw(P.board, this.M.board);
     { const w = P.water; gl.useProgram(w.p); set(w); gl.uniform3f(w.u.uWaterC, HARBOR.cx, -1.2, HARBOR.cz); gl.uniform1f(w.u.uWaterRel, 0);
-      const wk = this.fleet ? this.fleet.wake(camX, camZ) : [0, 0, 0, 0]; gl.uniform4f(w.u.uWake, wk[0], wk[1], wk[2], wk[3]); this.draw(w, this.M.water); }
+      const wk = this.fleet ? this.fleet.wake(camX, camZ) : [0, 0, 0, 0]; gl.uniform4f(w.u.uWake, wk[0], wk[1], wk[2], wk[3]); if (w.u.uUnder) gl.uniform1f(w.u.uUnder, UNDER ? 1 : 0); this.draw(w, this.M.water); }
+    if (this.fleet) this.fleet.drawUnder({ set, camX, camZ, t, pal, dt, under: UNDER });
     if (this.T) { const v = P.veh, u = v.u; gl.useProgram(v.p); set(v); gl.uniform1f(u.uTraffic, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0);
       gl.uniform1f(u.uScale, 2.2); gl.uniform1f(u.uBob, 0); gl.uniform1f(u.uBlur, 0.45); gl.uniform1f(u.uFlut, 0.4); gl.uniform1f(u.uSailSide, 1); for (const m of this.T.drones) this.draw(v, m); }
     if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
@@ -716,11 +728,12 @@ Game.prototype.frame = function (dt, inp) {
   }
   if (this.fleet) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.nexus) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
-  const rainAmt = eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
+  const rainAmt = UNDER ? 0.55 : eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
-    gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, eco ? -14 : 28);   // in ECO the rain falls upwards
-    if (P.rain.u.uSnow) gl.uniform1f(P.rain.u.uSnow, wx ? wx.snow : 0); if (P.rain.u.uWind) gl.uniform1f(P.rain.u.uWind, wx ? wx.wind : 0);
+    gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, UNDER ? 2.5 : eco ? -14 : 28);   // in ECO the rain falls upwards; under water: marine snow
+    if (P.rain.u.uSnow) gl.uniform1f(P.rain.u.uSnow, UNDER ? 1 : wx ? wx.snow : 0); if (P.rain.u.uWind) gl.uniform1f(P.rain.u.uWind, UNDER ? 0 : wx ? wx.wind : 0);
+    if (P.rain.u.uRainCenter) gl.uniform1f(P.rain.u.uRainCenter, UNDER || VEH ? 1 : 0);
     this.draw(P.rain, this.M.rain);
   }
   gl.disable(gl.DEPTH_TEST); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -738,6 +751,7 @@ Game.prototype.frame = function (dt, inp) {
   gl.depthMask(true); gl.disable(gl.BLEND);
   if (VEH) this.fleet.drawHud(this.hud); else if (FOOT) this.hud.getContext('2d').clearRect(0, 0, this.hud.width, this.hud.height); else this.drawHud(inp);
   if (this.foot && !VEH) this.foot.drawHud(this.hud);
+  if (this.fleet) this.fleet.drawGarageHud(this.hud);
   if (this.nexus) this.nexus.drawHud(this.hud);
 };
 

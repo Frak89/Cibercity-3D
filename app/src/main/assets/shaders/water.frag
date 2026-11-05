@@ -3,6 +3,8 @@ varying vec3 vWP;
 uniform float uCamX;
 uniform float uCamZ;
 uniform vec4 uWake;     // player wake: x, z (frame of vWP), strength, heading
+uniform float uUnder;   // 1: seen from below the surface
+float sparkleU(vec2 w, float t){ return pow(vnoise(w * 1.3 + t * 0.6), 9.0) * 3.0; }
 void main(){
     vec2 w = vWP.xz + vec2(uCamX, uCamZ);
     float t = uTime;
@@ -26,6 +28,14 @@ void main(){
     vec3 N = normalize(vec3(-g.x, 1.0, -g.y));
     vec3 V = normalize(uEye - vWP);
     float vDist = length(vWP - uEye);
+    if (uUnder > 0.5) {
+        // from below: Snell's window of bright sky overhead, total internal reflection (dark teal) at grazing angles
+        float up = clamp(-V.y, 0.0, 1.0), win = smoothstep(0.55, 0.8, up + g.x * 0.3);
+        float lines = pow(1.0 - abs(sin(w.x * 0.5 + g.x * 9.0 + t) * sin(w.y * 0.45 + g.y * 9.0 - t * 0.8)), 8.0);
+        vec3 c = mix(uFog * 1.6 + vec3(0.0, 0.04, 0.05), mix(vec3(0.25, 0.55, 0.6), uSkyTop * 6.0 + vec3(0.2, 0.45, 0.5), 0.4) + lines * 0.35, win);
+        c += mix(uNeonA, uWinA, 0.5) * sparkleU(w, t) * win * 0.4;
+        gl_FragColor = vec4(applyFog(c, vDist * 0.9, -1.0), 1.0); return;
+    }
     vec3 R = reflect(-V, N);
     float fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
     vec3 sky = mix(uFog * 1.15 + vec3(0.01), uSkyTop * 2.0, clamp(R.y * 2.2, 0.0, 1.0));

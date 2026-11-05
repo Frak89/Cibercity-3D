@@ -30,7 +30,7 @@ final class GameCity {
     }
     /** flying KAGE STRIX drones: {ox, oy, oz, speed, dx, dz, phase, seed} */
     final List<float[]> drones = new ArrayList<>();
-    private void wall(float x0, float z0, float x1, float z1) { box((x0 + x1) / 2, (z0 + z1) / 2, Math.max(0.6f, x1 - x0), Math.max(0.6f, z1 - z0), -3.2f, 0.03f, 0.5f, 3); }
+    private void wall(float x0, float z0, float x1, float z1) { box((x0 + x1) / 2, (z0 + z1) / 2, Math.max(0.6f, x1 - x0), Math.max(0.6f, z1 - z0), -26f, 0.03f, 0.5f, 3); }
 
     static final class Chunk { final Gl.FL pos = new Gl.FL(), center = new Gl.FL(), norm = new Gl.FL(), uv = new Gl.FL(), misc = new Gl.FL(); final Gl.SL idx = new Gl.SL(); }
     final List<Chunk> chunks = new ArrayList<>();
