@@ -936,5 +936,5 @@ function bakeTraffic(m, inst, maxV) {
   }
   return out;
 }
-root.KageFleet = { GARAGE, buildGarage, buildKelp, buildRock, buildJelly, buildFish, buildMoto, buildHover, buildSub, bakeTraffic, buildEye, buildShard, buildSerpentSeg, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
+root.KageFleet = { FONT5, GARAGE, buildGarage, buildKelp, buildRock, buildJelly, buildFish, buildMoto, buildHover, buildSub, bakeTraffic, buildEye, buildShard, buildSerpentSeg, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
 })(typeof window !== 'undefined' ? window : globalThis);

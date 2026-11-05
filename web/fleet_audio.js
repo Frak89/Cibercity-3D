@@ -67,6 +67,8 @@ FleetAudio.prototype.update = function (kind, st, wind) {
   } else if (kind === 'galleon') {   // wind in the sails, the hull through the water, creaking timbers, the fusion assist when on
     saws(48, 200, th > 0.9 ? 0.03 : 0); noise(320 + sp * 20, 0.8, 0.04 + wind.speed * 0.003 + sp * 0.004);
     if (t > this.nextCreak) { this.nextCreak = t + 3 + Math.random() * 5; this.blip(90 + Math.random() * 60, 60, 0.35, 0.07, 'sawtooth'); }
+  } else if (kind === 'starship') {   // the ship's deep reactor hum; in warp a rising harmonic whine
+    const w = st.warp || 0; saws(41, 140 + th * 200, 0.035 + th * 0.03); sines(82 + w * 28, 123 + w * 42, 0.025 + (w ? 0.05 : 0), w ? 4 : 0.5, 0.3 + w * 0.2); noise(900 + w * 300, 0.7, 0.006 + (w ? 0.03 : 0));
   } else { noise(400, 1, 0.01); }
   set(this.og.gain, saw); set(this.sg.gain, sine); set(this.vibG.gain, vib); set(this.amG.gain, am);
 };

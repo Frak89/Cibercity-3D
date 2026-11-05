@@ -59,6 +59,7 @@
 <script>/*NEXUS*/</script>
 <script>/*ONFOOT*/</script>
 <script>/*XENO*/</script>
+<script>/*STAR*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -98,6 +99,8 @@
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
+    if(game.star&&game.star.key(e.code)){ e.preventDefault(); return; }
+    if(e.code==='Enter'&&game.star&&game.star.enter()) return;
     if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
     if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
@@ -138,7 +141,7 @@
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
   document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
-  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
+  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk;
     inp.steer=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0);
@@ -177,9 +180,16 @@
   if(ap&&q.has('shot')){ const T=parseFloat(q.get('t')||'3'); let s; for(let i=0;i<T*30;i++){ s=ap.step(game.c,1/30,null); NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
     game.view=parseInt(q.get('view')||'0'); game.frame(1/30,s); window.__ap={x:game.c.x,z:game.c.z,h:game.c.h,v:Math.hypot(game.c.vx,game.c.vz),dir:ap.dir}; window.__done=true; return; }
   if(q.has('shot')&&q.has('foot')&&game.foot){ const T=parseFloat(q.get('t')||'2'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); game.foot.toggle();
+    { const sq=q.get('star'), Y=game.star, f=game.foot; if(sq&&Y){ Y.badge=true; const s=Y.ship;
+        if(sq==='in'){ f.ss='in'; f.deck=parseInt(q.get('deck')||'1'); const p=(q.get('xl')||'0,12').split(',').map(Number); f.lx=p[0]; f.lz=p[1]; f.lh=parseFloat(q.get('xh')||'0'); f.v=0; Y.syncFoot(f); Y.greetT=5; }
+        else if(sq==='helm'){ f.ss='helm'; f.deck=0; f.lx=0; f.lz=11.6; if(q.get('w')==='space'){ Y.toSpace(); s.loc=q.get('loc')||'terra'; } if(q.get('warp')){ s.course=q.get('warp'); if(q.get('wi')) s.warpI=+q.get('wi'); Y.engage(); } if(q.get('cmd')==='takeoff') Y.takeoff(); if(q.get('cmd')==='land') Y.land(); }
+        else if(sq==='eva'){ f.ss='eva'; f.ex=30; f.ey=-2; f.ez=30; f.lh=-2.2; f.evx=f.evy=f.evz=0; }
+        else if(sq==='planet'){ Y.site=q.get('site')||'marte'; game.world='planet'; f.ss='planet'; f.px=4; f.pz=-8; f.h=0.4; f.py=KageStar.siteHeight(Y.site,4,-8); }
+        else if(sq==='garage'){ Y.badge=false; f.x=21.8; f.z=52.8; f.h=1.0; game.view=1; }
+        else if(sq==='beam'){ f.ss='beamout'; f.bt=0.9; f.from='city'; } } }
     { const xq=q.get('xeno'), X=game.xeno, f=game.foot; if(xq&&X){ if(xq==='in'){ const p=(q.get('xl')||'0,2').split(',').map(Number); f.xs='in'; f.lx=p[0]; f.lz=p[1]; f.h=X.ship.h+parseFloat(q.get('xh')||'0'); f.v=0; X.syncFoot(f); }
       else if(xq==='vortex') X.tt={phase:'vortex',t:0}; else if(xq==='up'){ const pd=X.toWorld(0,-4.2); f.x=pd[0]; f.z=pd[1]; f.xs='up'; f.xp=0; f.x0=f.x; f.z0=f.z; } else if(xq==='near'){ const pd=X.toWorld(0,-4.2); f.x=pd[0]+6; f.z=pd[1]-8; f.h=-0.6; } else if(xq==='epoch'){ f.x=26; f.z=27; f.h=Math.PI/2; } } }
-    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); if(game.xeno) game.xeno.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
+    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); if(game.xeno) game.xeno.update(1/30,vi); if(game.star) game.star.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
     window.__fleet={x:game.foot.x,z:game.foot.z,anim:game.foot.anim}; window.__done=true; return; }
   if(q.has('shot')&&game.veh){   // test: simulate the vehicle with a fixed input, then render one frame
     const T=parseFloat(q.get('t')||'3'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); F.autoMe=!!vi.ai;
@@ -194,7 +204,7 @@
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
-    { const ft=game.foot, xa=game.xeno?game.xeno.action():'', ca=ft&&!game.veh?(ft.active?(ft.nearCar()?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
+    { const ft=game.foot, xa=(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=ft&&!game.veh?(ft.active?(ft.nearCar()?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
       const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
       const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }

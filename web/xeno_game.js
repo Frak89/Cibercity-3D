@@ -81,7 +81,7 @@ XenoGame.prototype.spawn = function (pad) {
 
 /* ---------------- ENTER ---------------- */
 XenoGame.prototype.enter = function () {
-  const g = this.g, f = g.foot, F = g.fleet;
+  const g = this.g, f = g.foot, F = g.fleet; if (f && f.ss) return false;
   if (this.tt) return true;
   if (this.flying()) { this.leaveHelm(); return true; }
   if (!f || !f.active || g.veh) return false;
@@ -207,7 +207,7 @@ XenoGame.prototype.drawAdditive = function (ctx) {
 XenoGame.prototype.drawHud = function (hud) {
   const g = this.g, f = g.foot, ctx2 = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);
   let line = '', big = '';
-  const T = this.tt;
+  const T = this.tt; if (f && f.ss) return;
   if (T) { big = T.phase === 'vortex' ? 'VORTICE TEMPORALE' : 'KAGE EPOCH'; line = T.phase === 'vortex' ? (g.world === 'meadow' ? 'verso CYBERCITY · OGGI' : 'verso la PRATERIA DEL PASSATO') : T.phase === 'in' ? 'chiudi la porta… si parte' : 'ARRIVO'; }
   else if (f && f.active && !g.veh) {
     if (f.xs === 'in') {
@@ -232,7 +232,7 @@ XenoGame.prototype.drawHud = function (hud) {
 
 /** short label for the on-screen ACTION button ('' = nothing to do here) */
 XenoGame.prototype.action = function () {
-  const g = this.g, f = g.foot;
+  const g = this.g, f = g.foot; if (f && f.ss) return '';
   if (this.tt) return '';
   if (this.flying()) return 'LASCIA';
   if (!f || !f.active || g.veh) return '';

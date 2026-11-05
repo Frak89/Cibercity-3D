@@ -41,6 +41,8 @@ SPECS.chrono = c => [['TIPO', 'Cabina del tempo Art Déco · ' + KF.optLabel('ch
   ['DESTINAZIONI', 'Cybercity oggi ⇄ prateria del passato'], ['DOVE', 'KAGE GARAGE · INVIO per partire']];
 SPECS.alien = c => [['SPECIE', KF.optLabel('alien', 'species', c.species)], ['ALTEZZA', { grigio: '1,24 m', verde: '1,38 m', nordico: '1,96 m', scuro: '2,08 m' }[c.species]],
   ['ORIGINE', { grigio: 'sistema sconosciuto', verde: 'cintura esterna', nordico: 'ammasso delle Pleiadi (dicono)', scuro: 'nessuno lo sa' }[c.species]], ['DOVE', 'a bordo del KAGE XENO']];
+SPECS.starship = c => [['CLASSE', 'Esploratore a lungo raggio KX-01 · ' + KF.optLabel('starship', 'view', c.view)], ['LUNGHEZZA', '150 m · 5 ponti'], ['PROPULSIONE', 'due gondole warp · nucleo a plasma · fino a warp 10'],
+  ['EQUIPAGGIO', 'umani e alieni: grigi, verdi, nordici, ombre'], ['TELETRASPORTO', '6 piattaforme · BEAM IN con il badge'], ['DESTINAZIONI', 'Luna, Marte, Alpha Centauri, Proxima b, Kepler-186f, Kepler-452b, colonia Zhar’ul'], ['BASE', 'sopra le nuvole di Cybercity']];
 SPECS.pilot = c => [['RUOLO', 'Pilota collaudatore KAGE · auto, drone, mare'], ['ALTEZZA', KagePilot.label('height', c.height)], ['CORPORATURA', KagePilot.label('build', c.build)],
   ['TUTA', 'ignifuga in fibra aramidica · ' + KagePilot.label('suit', c.suit) + ' con LED ' + KagePilot.label('accent', c.accent)],
   ['CASCO', 'integrale in carbonio · visiera a realtà aumentata'], ['LICENZE', 'KAGE GT · STRIX · RIPTIDE · LEVIATHAN'], ['STATO', 'pronto al via']];
@@ -71,7 +73,7 @@ SR.prototype.setVehicle = function (kind, cfg) {
   const F = this.F; F.kind = kind; F.cfg = Object.assign({}, cfg || (kind === 'pilot' ? KagePilot.load() : KF.loadCfg(kind))); F.t = 0;
   this.rebuildFleet();
   const b = F.mesh.bounds, R = Math.max(b[3] - b[0], b[4] - b[1], b[5] - b[2]);
-  this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4, alien: 3.6, moto: 4, hover: 12, sub: 10, ufo: 36, chrono: 6 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : (kind === 'pilot' || kind === 'alien') ? 0.08 : 0.2;
+  this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4, alien: 3.6, moto: 4, hover: 12, sub: 10, ufo: 36, chrono: 6, starship: (this.F.cfg && this.F.cfg.view && this.F.cfg.view !== 'esterno') ? 30 : 190 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : (kind === 'pilot' || kind === 'alien') ? 0.08 : 0.2;
   if (this.cam.mode !== 'orbit' && this.cam.mode !== 'cockpit') this.cam.mode = 'orbit';
 };
 SR.prototype.rebuildFleet = function () {
@@ -79,6 +81,7 @@ SR.prototype.rebuildFleet = function () {
   const pc = (F.kind === 'pilot' || F.kind === 'alien') ? Object.assign({}, F.cfg, { pose: undefined }) : F.cfg, key2 = F.kind + this.quality + JSON.stringify(pc);
   if (!F.cache[key2]) F.cache[key2] = F.vmesh((F.kind === 'pilot' || F.kind === 'alien') ? KagePilot.build(pc, LOD[this.quality]) : KF.KINDS[F.kind].build(Object.assign({}, F.cfg, { lod: LOD[this.quality] || 'hi' })));
   F.mesh = F.cache[key2]; void key;
+  if (F.kind === 'starship') this.cam.dist = F.cfg.view && F.cfg.view !== 'esterno' ? 30 : 190;
 };
 /** the pilot (seated pose) for the vehicle being shown */
 SR.prototype.pilotSeat = function (kind) {
@@ -142,7 +145,7 @@ SR.prototype.frame = function (dt) {
   const W = this.canvas.width, H = this.canvas.height; gl.viewport(0, 0, W, H);
   const water = k === 'boat' || k === 'galleon' || k === 'sub';
   // pose on the turntable / in the basin
-  const b = m.bounds, hover = k === 'drone' ? 0.32 + 0.55 + Math.sin(t * 1.4) * 0.06 : k === 'sub' ? 0.6 : k === 'hover' ? 0.02 : 0;
+  const b = m.bounds, hover = k === 'drone' ? 0.32 + 0.55 + Math.sin(t * 1.4) * 0.06 : k === 'sub' ? 0.6 : k === 'hover' ? 0.02 : k === 'starship' && !(F.cfg.view && F.cfg.view !== 'esterno') ? -b[1] + 6 + Math.sin(t * 0.5) * 0.6 : k === 'ufo' ? 0.0 : 0;
   if ((k === 'pilot' || k === 'alien') && cam.mode === 'cockpit') cam.mode = 'orbit';
   if (k === 'moto' || k === 'hover') { /* land vehicles on the turntable */ }
   if ((k === 'pilot' || k === 'alien') && (F.cfg.pose === 'cammina' || F.cfg.pose === 'corre')) { /* walking on the spot */ }
@@ -167,7 +170,7 @@ SR.prototype.frame = function (dt) {
   const set = pr => {
     const u = pr.u, v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); }, f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
     gl.useProgram(pr.p);
-    f1('uTime', t % 3600); f1('uL', 1e5); f1('uFar', 900); f1('uFogDen', water ? 0.0035 : 0.004); f1('uFlash', 0); f1('uCamX', 0); f1('uCamZ', 0); f1('uWrapX', 0); f1('uZOff', 0.5);
+    f1('uTime', t % 3600); f1('uL', 1e5); f1('uFar', 900); f1('uFogDen', k === 'starship' ? 0.0011 : water ? 0.0035 : 0.004); f1('uFlash', 0); f1('uCamX', 0); f1('uCamZ', 0); f1('uWrapX', 0); f1('uZOff', 0.5);
     v3('uFog', pal.fog.map(x => x * 0.6)); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP);

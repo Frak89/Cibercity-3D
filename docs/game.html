@@ -36,7 +36,7 @@
    Translates every canvas text (HUDs) and every DOM text / placeholder, so the pages need no other change. */
 (function () {
   'use strict';
-  const PAIRS = [["W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi", "W/S forward-back · A/D turn · Q/E strafe · SPACE rise · X descend · F tractor beam · SHIFT boost · C view · ENTER leave the helm"], ["\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", "\"When to start\" (charging / docked) and the screen timeout. This app controls what Cybercity does from there on."], ["P atmosfera · M meteo · V colore · E propulsione · T capote · X scarico · Q crono · F volo (LEVITA) · B suono · H aiuto", "P atmosphere · M weather · V colour · E power unit · T roof · X exhaust · Q chrono · F flight (LEVITA) · B sound · H help · L language"], ["Ogni fascia sceglie cosa mostrare (città con la sua atmosfera, solo orologio, nero o niente) e con che luminosità. ", "Each time slot chooses what to show (city with its atmosphere, clock only, black or nothing) and how bright. "], ["W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D yaw · Q/E strafe · SPACE up · X down · SHIFT boost · C view · G fleet · ENTER race"], ["A PIEDI · W/S cammina · A/D gira · Q/E laterale · SHIFT corri · SPAZIO salta · INVIO vicino all'auto per salire", "ON FOOT · W/S walk · A/D turn · Q/E sidestep · SHIFT run · SPACE jump · ENTER near the car to get in"], ["W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara", "W thrust · S reverse · A/D rudder · SHIFT boost · drive from road to water · C view · G fleet · ENTER race"], ["Ogni tanto: giro dell'auto con configurazioni casuali e corsa in città col pilota automatico (senza suono)", "Now and then: a turnaround of the car in random configurations and an autopilot run through the city (no sound)"], ["W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D rudder · SPACE rise · X dive · SHIFT boost · C view · G fleet · ENTER race"], ["W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO regata", "W/S hoist-lower sails · A/D helm · SHIFT assist · SPACE cannons · C view · G fleet · ENTER regatta"], ["Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti", "Pick an effect and see it on the city right away; in the preview the WEATHER button cycles through all of them"], ["Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale", "2,616 cc quad-rotor Wankel (4 × 654 cc) on hydrogen · hybrid with axial electric motor"], ["Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati", "Electromagnetic drive · 4 levitating spheres with integrated axial-flux motors"], ["Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → ", "When the screensaver starts is decided by Android: Settings → Display → Screen saver → "], ["2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)", "2,400 Nm instant · 360° vectoring (the spheres roll in any direction)"], ["Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)", "Live preview: every change shows immediately (effects start more often here)"], ["Se la modalità Non disturbare (o una modalità Focus/Bedtime) è attiva, niente città", "If Do Not Disturb (or a Focus/Bedtime mode) is on, no city"], ["A BORDO DEL KAGE XENO · esplora la nave · plancia davanti, raggio dietro il nucleo", "ABOARD THE KAGE XENO · explore the ship · bridge ahead, beam behind the core"], ["Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", "Only used to read the app icons; no content is read or stored."], ["1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)", "1,020 Nm combined (rotors 640 Nm at 7,800 rpm + instant electric torque)"], ["W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara", "W throttle · S brake · A/D lean · SHIFT boost · C view · G fleet · ENTER race"], ["W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO gara", "W throttle · S reverse · A/D helm · SHIFT N₂O · C view · G fleet · ENTER race"], ["Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring", "8-speed dual clutch · e-AWD all-wheel drive with torque vectoring"], ["Droni KAGE STRIX al posto delle scie volanti, barche e galeone nel canale", "KAGE STRIX drones instead of the flying trails, boats and a galleon on the canal"], ["860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min", "860 hp hydrogen + 260 hp electric = 1120 hp (824 kW) at 10,200 rpm"], ["Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", "Source: Open-Meteo (free, no account). Updates every 30 minutes."], ["P atmosfera · M meteo · V colore auto · B suono · R riparti · H aiuto", "P atmosphere · M weather · V car colour · B sound · R restart · H help"], ["780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min", "780 hp combustion + 220 hp electric = 1000 hp (735 kW) at 8,200 rpm"], ["Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri", "Under the clock: one icon per app with notifications, no numbers"], ["Posizione non disponibile: apri Maps una volta o scrivi la città", "Location unavailable: open Maps once or type the city"], ["F = schermo intero · Spazio = cambia telecamera · P = atmosfera", "F = full screen · Space = change camera · P = atmosphere"], ["1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)", "1,390 kg · 700 bar carbon-fibre H₂ tanks (6.4 kg)"], ["Si sposta di poco ogni minuto per proteggere lo schermo OLED", "Moves slightly every minute to protect the OLED screen"], ["V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore", "4.0 L twin-turbo hybrid V8 · front axial electric motor"], ["11 km · 31 curve · pit lane con rifornimento e cambio gomme", "11 km · 31 corners · pit lane with refuelling and tyre change"], ["QUANDO È NASCOSTO (lavoro / non disturbare / fuori fascia)", "WHEN HIDDEN (work / do not disturb / outside slots)"], ["Se stacchi il caricatore il salvaschermo si chiude subito", "Unplugging the charger closes the screensaver immediately"], ["INDIRIZZO PERDUTO RICOMPOSTO · PALETTE ECO SBLOCCATA (P)", "LOST ADDRESS RESTORED · ECO PALETTE UNLOCKED (P)"], ["Spento = fuori fascia usa atmosfera e luminosità globali", "Off = outside the slots the global atmosphere and brightness are used"], ["reattore a fusione compatto da 2 MW · eliche retrattili", "2 MW compact fusion reactor · retractable propellers"], ["0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s", "0–100 km/h 2.4 s · 0–200 km/h 6.9 s · 0–300 km/h 17.8 s"], ["0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s", "0–100 km/h 2.3 s · 0–200 km/h 6.5 s · 0–300 km/h 16.4 s"], ["0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s", "0–100 km/h 1.8 s · 0–200 km/h 5.2 s · 0–300 km/h 12.9 s"], ["Icona, temperatura e condizione (con meteo automatico)", "Icon, temperature and condition (with automatic weather)"], ["Sfere Ø 670 mm con battistrada in elastomero a grafene", "Ø 670 mm spheres with graphene elastomer tread"], ["28 kWh a stato solido · ronzio elettrostatico di serie", "28 kWh solid-state · electrostatic hum as standard"], ["VOLO LIBERO · F raggio traente sopra strade e persone", "FREE FLIGHT · F tractor beam over streets and people"], ["Vince la prima fascia attiva che corrisponde all'ora.", "The first active slot matching the time wins."], ["18 kWh allo stato solido · boost a supercondensatori", "18 kWh solid-state · supercapacitor boost"], ["RISOLUZIONE MODELLI (KAGE GT, DRONE, BARCA, GALEONE)", "MODEL RESOLUTION (KAGE GT, DRONE, BOAT, GALLEON)"], ["In questo orario il salvaschermo non mostra la città", "During these hours the screensaver doesn't show the city"], ["100–0 km/h in 29 m · dischi carboceramici 410/390 mm", "100–0 km/h in 29 m · 410/390 mm carbon-ceramic discs"], ["Deportanza 520 kg a 250 km/h · ala posteriore attiva", "520 kg downforce at 250 km/h · active rear wing"], ["6,2 kWh · boost elettrico 18 s · ricarica in frenata", "6.2 kWh · 18 s electric boost · regenerative braking"], ["QUANDO ROVESCI IL TELEFONO (schermo verso il basso)", "WHEN YOU TURN THE PHONE OVER (screen down)"], ["KAGE GARAGE · tocca GARAGE per scegliere il veicolo", "KAGE GARAGE · tap GARAGE to pick a vehicle"], ["integrale in carbonio · visiera a realtà aumentata", "full-face carbon · augmented-reality visor"], ["1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)", "1,150 Nm combined (800 Nm from 3,200–6,500 rpm)"], ["plancia, nucleo, mappa stellare, capsule di stasi", "bridge, core, star map, stasis pods"], ["Presa diretta · controllo di campo per ogni sfera", "Direct drive · field control per sphere"], ["18 cannoni a luce (stordiscono, non distruggono)", "18 light cannons (they stun, they do not destroy)"], ["PORTALE APERTO · attraversalo per tornare a casa", "PORTAL OPEN · cross it to go home"], ["PORTALE APERTO · attraversalo per entrare in ECO", "PORTAL OPEN · cross it to enter ECO"], ["4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico", "4 × 320 kW = 1280 kW (1740 hp) · no exhaust"], ["gimbal 8K · LiDAR a 360° · radar anticollisione", "8K gimbal · 360° LiDAR · collision radar"], ["KAGE GARAGE · premi G per scegliere il veicolo", "KAGE GARAGE · press G to pick a vehicle"], ["Scie luminose di auto e spinner su più livelli", "Light trails of cars and spinners on several levels"], ["KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"], ["Salvaschermo 3D · città cyberpunk procedurale", "3D screensaver · procedural cyberpunk city"], ["L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m", "L 4.70 m · W 2.06 m · H 1.24 m · wheelbase 2.87 m"], ["380 km/h (boost di campo) · 290 km/h di serie", "380 km/h (field boost) · 290 km/h standard"], ["Pilota collaudatore KAGE · auto, drone, mare", "KAGE test pilot · cars, drones, sea"], ["Posizione approssimativa, solo per il meteo", "Approximate location, only for the weather"], ["1.420 kg · rapporto peso/potenza 1,42 kg/CV", "1,420 kg · power-to-weight 1.42 kg/hp"], ["cuscino d'aria a 0,5 m · gonna in neoprene", "0.5 m air cushion · neoprene skirt"], ["FASCE ORARIE · QUALE SALVASCHERMO E QUANDO", "TIME SLOTS · WHICH SCREENSAVER AND WHEN"], ["🛠 SHOWROOM FLOTTA · DRONE, BARCA, GALEONE", "🛠 FLEET SHOWROOM · DRONE, BOAT, GALLEON"], ["Anteprima dal vivo · tocca per nascondere", "Live preview · tap to hide"], ["W/↑ accelera · S/↓ frena · A D/← → sterza", "W/↑ throttle · S/↓ brake · A D/← → steer"], ["345 km/h (con N₂O) · 260 km/h senza boost", "345 km/h (with N₂O) · 260 km/h without boost"], ["352 km/h (con N₂O) · 268 km/h senza boost", "352 km/h (with N₂O) · 268 km/h without boost"], ["5,0 kWh · allo scarico solo vapore acqueo", "5.0 kWh · only water vapour from the exhaust"], ["Drone da corsa e da ripresa · classe 2 m", "Racing and filming drone · 2 m class"], ["Galeone a tre alberi · rifacimento cyber", "Three-masted galleon · cyber rebuild"], ["Fuori dalle fasce: non mostrare la città", "Outside the slots: don't show the city"], ["METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE", "WEATHER · FOG, RAIN, SNOW, STORM"], ["RITARDO DOPO LA MESSA IN CARICA / AVVIO", "DELAY AFTER PLUGGING IN / START"], ["SPAZIO derapata · SHIFT nitro · C vista", "SPACE drift · SHIFT nitro · C view"], ["due corone di ingranaggi controrotanti", "two counter-rotating gear crowns"], ["220 kWh · ricarica rapida in 30 minuti", "220 kWh · 30-minute fast charge"], ["GIRO LIBERO · premi INVIO per una gara", "FREE ROAM · press ENTER for a race"], ["KAGE GT · CORSA IN CITTÀ (SENZA SUONO)", "KAGE GT · CITY RUN (NO SOUND)"], ["1.480 kg · altezza di levitazione 4 cm", "1,480 kg · 4 cm hover height"], ["AZIONE · KAGE EPOCH: viaggia nel tempo", "ACTION · KAGE EPOCH: travel in time"], ["INVIO · KAGE EPOCH: viaggia nel tempo", "ENTER · KAGE EPOCH: travel in time"], ["Cybercity oggi ⇄ prateria del passato", "Cybercity today ⇄ meadow of the past"], ["grigio, piccolo verde, nordico, ombra", "grey, little green, Nordic, shadow"], ["Rispetta il Non disturbare di Android", "Respect Android's Do Not Disturb"], ["DURATA ANIMAZIONE (0 = sempre accesa)", "ANIMATION LENGTH (0 = always on)"], ["🔊 tocca / premi un tasto per il suono", "🔊 tap / press a key for sound"], ["LE STRADE CAMBIANO QUANDO NON GUARDI", "THE STREETS CHANGE WHEN YOU ARE NOT LOOKING"], ["L 10,0 m · B 2,7 m · pescaggio 0,6 m", "L 10.0 m · beam 2.7 m · draft 0.6 m"], ["KAGE XENO · mettiti sotto il raggio", "KAGE XENO · stand under the beam"], ["Hovercraft anfibio · strada e acqua", "Amphibious hovercraft · road and water"], ["12 nodi a vela · 21 nodi con assist", "12 knots under sail · 21 knots with assist"], ["AUTO (ciclo di tutte le telecamere)", "AUTO (cycle all cameras)"], ["AZIONE · fatti prelevare dal raggio", "ACTION · let the beam take you up"], ["INVIO · fatti prelevare dal raggio", "ENTER · let the beam take you up"], ["2 propulsori elettrici orientabili", "2 vectoring electric thrusters"], ["34 m di scafo · 44 m col bompresso", "34 m hull · 44 m with the bowsprit"], ["PARTENZA DA FERMO · TIENI IL FRENO", "STANDING START · WAIT FOR THE LIGHTS"], ["DURATA DI OGNI INQUADRATURA (AUTO)", "LENGTH OF EACH SHOT (AUTO)"], ["265/30 R21 ant. · 325/25 R22 post.", "265/30 R21 front · 325/25 R22 rear"], ["motore assiale da 160 kW · 300 Nm", "160 kW axial-flux motor · 300 Nm"], ["ORARIO DI LAVORO · NON DISTURBARE", "WORK HOURS · DO NOT DISTURB"], ["AZIONE · ai comandi del KAGE XENO", "ACTION · take the KAGE XENO's helm"], ["INVIO · ai comandi del KAGE XENO", "ENTER · take the KAGE XENO's helm"], ["2 fuoribordo elettrici da 330 kW", "twin 330 kW electric outboards"], ["128 km/h sulle ali · 155 con N₂O", "128 km/h on the foils · 155 with N₂O"], ["KAGE GT · GIRO DELL'AUTO CASUALE", "KAGE GT · RANDOM TURNAROUND"], ["SERBATOIO VUOTO · RIENTRA AI BOX", "TANK EMPTY · RETURN TO THE PITS"], ["Imposta una città o la posizione", "Set a city or the location"], ["Animazione continua, senza pause", "Continuous animation, no pauses"], ["SFUMATURA CROMATICA IN MOVIMENTO", "MOVING COLOUR GRADIENT"], ["KAGE GARAGE · INVIO per partire", "KAGE GARAGE · ENTER to depart"], ["fino a 90 m · persone e veicoli", "up to 90 m · people and vehicles"], ["DODICI FRAMMENTI · UN INDIRIZZO", "TWELVE SHARDS · ONE ADDRESS"], ["COMPOSIZIONE INDIRIZZO · BLOCCO", "DIALLING ADDRESS · LOCK"], ["TELEFONO ROVESCIATO · NOTIFICHE", "PHONE FACE DOWN · NOTIFICATIONS"], ["SPENTO (usa la pioggia manuale)", "OFF (use manual rain)"], ["SPEGNI (schermo nero, 3D fermo)", "TURN OFF (black screen, 3D paused)"], ["ammasso delle Pleiadi (dicono)", "the Pleiades cluster (so they say)"], ["24 kWh · ricarica in 25 minuti", "24 kWh · 25-minute charge"], ["🌀 KAGE NEXUS · PORTALE PER ECO", "🌀 KAGE NEXUS · PORTAL TO ECO"], ["🌀 VAI AL PORTALE (N = componi)", "🌀 GO TO THE PORTAL (N = dial)"], ["Veicoli KAGE nello screensaver", "KAGE vehicles in the screensaver"], ["CONCEDI ACCESSO ALLE NOTIFICHE", "GRANT NOTIFICATION ACCESS"], ["FREQUENZA EFFETTI (ogni circa)", "EFFECT FREQUENCY (about every)"], ["LUMINOSITÀ IN PAUSA / NASCOSTO", "BRIGHTNESS PAUSED / HIDDEN"], ["22.000 giri/min (motori-sfera)", "22,000 rpm (sphere motors)"], ["verso la PRATERIA DEL PASSATO", "to the MEADOW OF THE PAST"], ["nucleo a plasma · antigravità", "plasma core · antigravity"], ["QUESTA CITTÀ SI RICORDA DI TE", "THIS CITY REMEMBERS YOU"], [" · FERMATI NEL BOX ILLUMINATO", " · STOP IN THE GLOWING BOX"], ["PIT LANE · LIMITATORE 80 KM/H", "PIT LANE · 80 KM/H LIMITER"], ["USA LA POSIZIONE DEL TELEFONO", "USE THE PHONE'S LOCATION"], ["PERSONALIZZATA (usa la barra)", "CUSTOM (use the slider)"], ["130 km/h · 210 km/h in boost", "130 km/h · 210 km/h with boost"], ["Scene KAGE GT nel ciclo AUTO", "KAGE GT scenes in the AUTO cycle"], ["Scrivi la città per il meteo", "Type the city for the weather"], ["🏎 KAGE CIRCUIT · PISTA 11 KM", "🏎 KAGE CIRCUIT · 11 KM TRACK"], ["🏁 KAGE CIRCUIT · PISTA 11 KM", "🏁 KAGE CIRCUIT · 11 KM TRACK"], ["Sottomarino da esplorazione", "Exploration submarine"], ["ignifuga in fibra aramidica", "fire-proof aramid fibre"], ["NESSUNA POSIZIONE IMPOSTATA", "NO LOCATION SET"], ["LUMINOSITÀ CITTÀ / OROLOGIO", "CITY / CLOCK BRIGHTNESS"], ["LUMINOSITÀ DEL SALVASCHERMO", "SCREENSAVER BRIGHTNESS"], ["Cybercity 3D — salvaschermo", "Cybercity 3D — screensaver"], ["2 eliche intubate da 1,4 m", "2 ducted fans, 1.4 m"], ["32 km/h · 50 km/h in boost", "32 km/h · 50 km/h with boost"], ["4 motori brushless da 9 kW", "4 brushless motors, 9 kW each"], ["6 motori brushless da 8 kW", "6 brushless motors, 8 kW each"], ["8 motori coassiali da 7 kW", "8 coaxial motors, 7 kW each"], ["RISOLUZIONE MODELLI: BASSA", "MODEL RESOLUTION: LOW"], ["Meteo non ancora scaricato", "Weather not downloaded yet"], ["AZIONE · scendi col raggio", "ACTION · ride the beam down"], ["INVIO · scendi col raggio", "ENTER · ride the beam down"], ["chiudi la porta… si parte", "close the door… here we go"], ["Cabina del tempo Art Déco", "Art Deco time cabin"], ["1 elica intubata da 2,2 m", "1 ducted fan, 2.2 m"], ["fari da 20.000 lm · sonar", "20,000 lm lights · sonar"], ["Motoscafo offshore · 10 m", "Offshore powerboat · 10 m"], [" (usa la pioggia manuale)", " (use manual rain)"], ["Lavoro / non disturbare: ", "Work / do not disturb: "], [" (fuori fascia: nascosto)", " (outside slots: hidden)"], ["CRONO · PRONTO A 300 KM/H", "CHRONO · READY AT 300 KM/H"], ["INCLINAZIONE DEL TELEFONO", "PHONE TILT"], ["IMPOSTA COME SALVASCHERMO", "SET AS SCREENSAVER"], ["PAUSA PRIMA CHE RICOMPAIA", "PAUSE BEFORE IT RETURNS"], ["AZIONE · scendi dall'auto", "ACTION · get out of the car"], ["pozzetto aperto, 2 posti", "open cockpit, 2 seats"], ["INVIO · scendi dall'auto", "ENTER · get out of the car"], ["elica intubata da 520 kW", "520 kW ducted fan"], ["ECO · UNIVERSO PARALLELO", "ECO · PARALLEL UNIVERSE"], ["KAGE GT · CORSA IN CITTÀ", "KAGE GT · CITY RUN"], ["AUTOMATICO (meteo reale)", "AUTOMATIC (real weather)"], ["3ª CIFRA (decine minuti)", "3rd DIGIT (tens of minutes)"], ["210 km/h · 430 in boost", "210 km/h · 430 with boost"], ["38 minuti in volo misto", "38 minutes of mixed flight"], ["25 kg nel vano ventrale", "25 kg in the belly bay"], ["⟲ TORNA SUBITO IN CITTÀ", "⟲ BACK TO THE CITY NOW"], ["🚁 DRONE · GARE IN CITTÀ", "🚁 DRONE · CITY RACES"], ["SERENO (nessun effetto)", "CLEAR (no effect)"], ["4ª CIFRA (unità minuti)", "4th DIGIT (minutes)"], ["EFFETTI GRAFICI CASUALI", "RANDOM GRAPHIC EFFECTS"], ["↺ RIPRENDI GARA SALVATA", "↺ RESUME SAVED RACE"], ["CAPOTE: APERTA (SPIDER)", "ROOF: OPEN (SPIDER)"], ["Solo quando è in carica", "Only while charging"], ["verso CYBERCITY · OGGI", "to CYBERCITY · TODAY"], ["95 km/h · 130 in boost", "95 km/h · 130 with boost"], ["1.200 m (laguna: 24 m)", "1,200 m (lagoon: 24 m)"], ["SIAMO SEMPRE STATI QUI", "WE HAVE ALWAYS BEEN HERE"], ["112 km/h · 140 con N₂O", "112 km/h · 140 with N₂O"], ["Meteo sotto l'orologio", "Weather under the clock"], ["GLITCH (strappi + RGB)", "GLITCH (tears + RGB)"], ["CRONO · TIENI 300 KM/H", "CHRONO · HOLD 300 KM/H"], ["⏳ PRATERIA DEL PASSATO", "⏳ MEADOW OF THE PAST"], ["CARBOCERAMICA · GIALLO", "CARBON-CERAMIC · YELLOW"], ["SCRITTA PERSONALIZZATA", "CUSTOM LETTERING"], ["a bordo del KAGE XENO", "aboard the KAGE XENO"], ["TI STAVAMO ASPETTANDO", "WE WERE WAITING FOR YOU"], ["9 m · pescaggio 3,0 m", "9 m · draft 3.0 m"], ["24 + 6 droni di bordo", "24 + 6 onboard drones"], ["NON MOSTRARE (chiudi)", "DON'T SHOW (close)"], ["Pioggia (senza meteo)", "Rain (without weather)"], ["1ª CIFRA (decine ore)", "1st DIGIT (tens of hours)"], ["COLORE PER OGNI CIFRA", "COLOUR PER DIGIT"], ["WebGL non disponibile", "WebGL not available"], ["ON (salto a 300 km/h)", "ON (jump at 300 km/h)"], ["luminosità di sistema", "system brightness"], ["ABERRAZIONE CROMATICA", "CHROMATIC ABERRATION"], ["AZIONE · sali in auto", "ACTION · get in the car"], ["GRAN GIRO DEL CENTRO", "GRAND DOWNTOWN LOOP"], ["APPARECCHIO ACUSTICO", "HEARING AID"], ["INVIO · sali in auto", "ENTER · get in the car"], ["VELE NEON A PANNELLI", "NEON PANEL SAILS"], ["SPENTO (usa pioggia)", "OFF (use rain)"], [" fasce orarie attive", " active time slots"], ["2ª CIFRA (unità ore)", "2nd DIGIT (hours)"], ["SFUMATURA · COLORE A", "GRADIENT · COLOUR A"], ["SFUMATURA · COLORE B", "GRADIENT · COLOUR B"], ["FERMO (anti burn-in)", "STILL (anti burn-in)"], ["RIMBALZO (stile DVD)", "BOUNCE (DVD style)"], ["CARBURANTE / ENERGIA", "FUEL / ENERGY"], ["AUTO HD NON CARICATA", "HD CAR NOT LOADED"], ["Auto HD non caricata", "HD car not loaded"], ["ACCIAIO · PINZE NEON", "STEEL · NEON CALIPERS"], ["INSEGUIMENTO LONTANO", "FAR CHASE"], ["QUALITÀ DI RENDERING", "RENDERING QUALITY"], ["FREQUENZA FOTOGRAMMI", "FRAME RATE"], ["KAGE XENO · INTERNO", "KAGE XENO · INTERIOR"], ["sistema sconosciuto", "unknown system"], ["Superbike elettrica", "Electric superbike"], ["0–100 km/h in 2,6 s", "0–100 km/h in 2.6 s"], ["ABISSI DELLA LAGUNA", "LAGOON DEPTHS"], ["A BORDO DEI VEICOLI", "ON BOARD THE VEHICLES"], ["IL FARO NON È VUOTO", "THE LIGHTHOUSE IS NOT EMPTY"], ["idrogetto da 600 kW", "600 kW water jet"], ["TU · KAGE LEVIATHAN", "YOU · KAGE LEVIATHAN"], ["RISOLUZIONE MODELLI", "MODEL RESOLUTION"], ["Risoluzione modelli", "Model resolution"], ["IN BASSO A SINISTRA", "BOTTOM LEFT"], ["🏁 SHOWROOM (garage)", "🏁 SHOWROOM (garage)"], ["DRONE A BASSA QUOTA", "LOW DRONE"], ["VELOCITÀ DEI COLORI", "COLOUR SPEED"], ["CHIUDI SALVASCHERMO", "CLOSE SCREENSAVER"], ["LUCE E METEO REALI", "REAL LIGHT AND WEATHER"], ["INDIRIZZO COMPLETO", "ADDRESS COMPLETE"], ["CHI GUIDA, ADESSO?", "WHO IS DRIVING NOW?"], ["CIRCUITO DEI VIALI", "AVENUES CIRCUIT"], ["⛵ GALEONE · REGATA", "⛵ GALLEON · REGATTA"], ["Aggiorno il meteo…", "Updating the weather…"], ["IN BASSO AL CENTRO", "BOTTOM CENTRE"], ["IN ALTO A SINISTRA", "TOP LEFT"], ["▶ GIOCA · NEON RUN", "▶ PLAY · NEON RUN"], ["WANKEL 4 ROTORI H₂", "QUAD-ROTOR WANKEL H₂"], ["VELOCITÀ MOVIMENTO", "MOVEMENT SPEED"], ["30 FPS (risparmio)", "30 FPS (saver)"], ["PIANTA DELLA CITTÀ", "CITY LAYOUT"], ["telecamera globale", "global camera"], ["luminosità globale", "global brightness"], ["💡 RIFLETTORI: OFF", "💡 SPOTLIGHTS: OFF"], ["⚡ A TUTTA POTENZA", "⚡ FULL POWER"], ["VORTICE TEMPORALE", "TIME VORTEX"], ["2 bracci robotici", "2 robotic arms"], ["L 8,6 m · B 4,6 m", "L 8.6 m · W 4.6 m"], ["RUOTE SENZA MOZZO", "HUBLESS WHEELS"], ["CASUAL · MAGLIONE", "CASUAL · SWEATER"], ["TU · KAGE RIPTIDE", "YOU · KAGE RIPTIDE"], ["GIRO DELLA LAGUNA", "LAGOON LAP"], ["INVIO = rivincita", "ENTER = rematch"], ["Città non trovata", "City not found"], [" min dopo l'avvio", " min after start"], ["IN ALTO AL CENTRO", "TOP CENTRE"], ["TU · KAGE 2789 GT", "YOU · KAGE 2789 GT"], ["RISULTATI SALVATI", "SAVED RESULTS"], ["PERSONALIZZAZIONE", "CUSTOMISATION"], ["↺ RIPARTI DAL VIA", "↺ RESTART"], ["V8 BITURBO IBRIDO", "TWIN-TURBO HYBRID V8"], ["▶ ANTEPRIMA METEO", "▶ WEATHER PREVIEW"], ["+ AGGIUNGI FASCIA", "+ ADD SLOT"], ["GRAFICA (GLOBALE)", "GRAPHICS (GLOBAL)"], ["atmosfera globale", "global atmosphere"], ["💡 RIFLETTORI: ON", "💡 SPOTLIGHTS: ON"], ["STRADE SCIVOLOSE", "SLIPPERY STREETS"], ["MANI SUI FIANCHI", "HANDS ON HIPS"], ["BRACCIA CONSERTE", "ARMS CROSSED"], ["NON SEI IL PRIMO", "YOU ARE NOT THE FIRST"], ["🚤 BARCA · LAGUNA", "🚤 BOAT · LAGOON"], ["COME L'ATMOSFERA", "LIKE THE ATMOSPHERE"], ["CRONO · RICARICA", "CHRONO · RECHARGING"], ["NEON RUN · PAUSA", "NEON RUN · PAUSE"], ["LEVITA ELETTRICA", "LEVITA ELECTRIC"], ["VELOCITÀ DI VOLO", "FLIGHT SPEED"], ["Orario di lavoro", "Work hours"], ["GIORNI DI LAVORO", "WORK DAYS"], ["DURANTE LA PAUSA", "DURING THE PAUSE"], ["ORARIO DI LAVORO", "WORK HOURS"], ["BILANCIATA (85%)", "BALANCED (85%)"], ["Traffico volante", "Flying traffic"], ["DECODIFICA CIFRE", "DIGIT DECODE"], ["RAGGIO TRAENTE…", "TRACTOR BEAM…"], ["cintura esterna", "outer belt"], ["chiusa, 4 posti", "closed, 4 seats"], ["POZZETTO APERTO", "OPEN COCKPIT"], ["BRACCI ROBOTICI", "ROBOTIC ARMS"], ["👤 IL MIO PILOTA", "👤 MY PILOT"], ["il più vicino a", "nearest at"], ["TU · KAGE STRIX", "YOU · KAGE STRIX"], ["ANELLO DEL FARO", "LIGHTHOUSE RING"], ["REGATA DEL FARO", "LIGHTHOUSE REGATTA"], ["ASSIST. FUSIONE", "FUSION ASSIST"], ["EFFETTI CASUALI", "RANDOM EFFECTS"], ["10.500 giri/min", "10,500 rpm"], ["APERTA (SPIDER)", "OPEN (SPIDER)"], ["DOPPIA STRISCIA", "TWIN STRIPES"], ["Mostra orologio", "Show clock"], ["COME IL SISTEMA", "LIKE THE SYSTEM"], ["Icone notifiche", "Notification icons"], ["60 FPS (fluido)", "60 FPS (smooth)"], ["Orologio glitch", "Glitch clock"], ["SFARFALLIO NEON", "NEON FLICKER"], ["RAGGIO TRAENTE", "TRACTOR BEAM"], ["25 m · 3 ponti", "25 m · 3 decks"], ["DISCO CLASSICO", "CLASSIC DISC"], ["ANELLO ROTANTE", "SPINNING RING"], ["PROFONDITÀ MAX", "MAX DEPTH"], ["CERCHI A RAZZE", "SPOKED RIMS"], ["CARENATA SPORT", "SPORT FAIRING"], ["1 ELICA GRANDE", "1 LARGE FAN"], ["COLORE CAPELLI", "HAIR COLOUR"], ["GUARDA IN ALTO", "LOOK UP"], ["TORNA INDIETRO", "GO BACK"], ["CANNONI PRONTI", "CANNONS READY"], ["CANNONI A LUCE", "LIGHT CANNONS"], ["BATTERIA BOOST", "BOOST BATTERY"], ["COLORE ACCENTI", "ACCENT COLOUR"], ["ELICA INTUBATA", "DUCTED FAN"], ["VELE CLASSICHE", "CLASSIC SAILS"], ["BASSA (veloce)", "LOW (fast)"], ["CORSA IN CITTÀ", "CITY RUN"], ["In carica e no", "Charging or not"], ["Solo in carica", "Only while charging"], ["9.000 giri/min", "9,000 rpm"], ["🔧 SERVIZIO BOX", "🔧 PIT SERVICE"], ["BLU ANODIZZATO", "ANODISED BLUE"], ["🎨 PERSONALIZZA", "🎨 CUSTOMISE"], ["SCHEDA TECNICA", "SPECIFICATIONS"], ["VOLO SUL VIALE", "AVENUE FLIGHT"], ["PISTA ASCIUTTA", "DRY TRACK"], ["PISTA ALLAGATA", "FLOODED TRACK"], ["PROGRAMMAZIONE", "SCHEDULE"], ["PERSONALIZZATA", "CUSTOM"], ["NON DISTURBARE", "DO NOT DISTURB"], ["tutti i giorni", "every day"], ["BATTERIA (60%)", "BATTERY (60%)"], ["MASSIMA (100%)", "MAXIMUM (100%)"], ["RAGGIO ATTIVO", "BEAM ON"], ["Disco volante", "Flying saucer"], ["nessuno lo sa", "nobody knows"], ["GRANDE CUPOLA", "GREAT DOME"], ["PICCOLO VERDE", "LITTLE GREEN"], ["LED integrati", "integrated LEDs"], ["SOSTENTAMENTO", "LIFT"], ["LAGUNA VELOCE", "FAST LAGOON"], ["CABINA CHIUSA", "CLOSED CABIN"], ["🤿 SOTTOMARINO", "🤿 SUBMARINE"], ["IL MIO PILOTA", "MY PILOT"], ["pronto al via", "ready to go"], ["CASTANO SCURO", "DARK BROWN"], ["BOX · SQUADRA", "PIT · CREW"], ["GIRO MIGLIORE", "BEST LAP"], ["SFIDA A TEMPO", "TIME ATTACK"], ["COLORE CERCHI", "RIM COLOUR"], ["COLORE LIVREA", "LIVERY COLOUR"], ["SOPRA I TETTI", "ABOVE THE ROOFTOPS"], ["PISTA BAGNATA", "WET TRACK"], ["EFFETTO METEO", "WEATHER EFFECT"], ["BAGLIORE NEON", "NEON GLOW"], ["CICLO E AVVIO", "CYCLE AND START"], ["Fascia attiva", "Slot active"], ["COSA MOSTRARE", "WHAT TO SHOW"], ["FASCIA ORARIA", "TIME SLOT"], ["SOLO OROLOGIO", "CLOCK ONLY"], ["nessun giorno", "no days"], ["Scanlines CRT", "CRT scanlines"], ["PIXEL SOTTILE", "THIN PIXEL"], ["NEON CONTORNO", "NEON OUTLINE"], ["LED A PUNTINI", "DOT LED"], ["ACCELERAZIONE", "ACCELERATION"], ["🔊 SUONO: OFF", "🔊 SOUND: OFF"], ["Impostazioni", "Settings"], ["BRONZO SCURO", "DARK BRONZE"], ["DESTINAZIONI", "DESTINATIONS"], ["ATTREZZATURA", "EQUIPMENT"], ["SOPRACCIGLIA", "EYEBROWS"], ["CARICO UTILE", "PAYLOAD"], ["DISLOCAMENTO", "DISPLACEMENT"], ["MIGLIOR GIRO", "BEST LAP"], ["X8 COASSIALE", "X8 COAXIAL"], ["2 FUORIBORDO", "TWIN OUTBOARD"], ["↺ NUOVA GARA", "↺ NEW RACE"], ["PULSANTI ◀ ▶", "BUTTONS ◀ ▶"], ["🔥 SU DI GIRI", "🔥 REV IT"], ["MODULO CRONO", "CHRONO MODULE"], ["SUONO MOTORE", "ENGINE SOUND"], ["INSEGUIMENTO", "CHASE"], ["BIANCO PERLA", "PEARL WHITE"], ["IMPOSTAZIONI", "SETTINGS"], ["AGGIORNA ORA", "UPDATE NOW"], ["VELOCITÀ MAX", "TOP SPEED"], ["CAMPO VISIVO", "FIELD OF VIEW"], ["SCHERMO NERO", "BLACK SCREEN"], ["FUORI FASCIA", "OUTSIDE SLOTS"], ["COLORE UNICO", "SINGLE COLOUR"], ["DERIVA LENTA", "SLOW DRIFT"], ["AUTO (ciclo)", "AUTO (cycle)"], ["TRASMISSIONE", "TRANSMISSION"], ["AERODINAMICA", "AERODYNAMICS"], ["PIOGGERELLA", "DRIZZLE"], ["🔊 SUONO: ON", "🔊 SOUND: ON"], ["TRASPARENTE", "CLEAR"], ["SOTTOMARINO", "SUBMARINE"], ["PILOTA KAGE", "KAGE PILOT"], ["CORPORATURA", "BUILD"], ["PRONUNCIATO", "PROMINENT"], ["RISOLUZIONE", "RESOLUTION"], ["GIRO LIBERO", "FREE ROAM"], ["FLOTTA KAGE", "KAGE FLEET"], ["VELE SOLARI", "SOLAR SAILS"], ["LEGNO SCURO", "DARK WOOD"], ["GIRO VELOCE", "FASTEST LAP"], ["ORO · ROSSO", "GOLD · RED"], ["COLORE AUTO", "CAR COLOUR"], ["ROSSO CORSA", "RACING RED"], ["PUNTI DRIFT", "DRIFT POINTS"], ["PISTA UMIDA", "DAMP TRACK"], ["PROPULSIONE", "POWER UNIT"], ["PIATTAFORMA", "PLATFORM"], ["SATURAZIONE", "SATURATION"], ["CREPUSCOLO", "TWILIGHT"], ["MECCANISMO", "MECHANISM"], ["VISITATORI", "VISITORS"], ["PROFONDITÀ", "DEPTH"], ["CARENATURA", "FAIRING"], ["PENSIEROSO", "THOUGHTFUL"], ["🧑‍🚀 PILOTA", "🧑‍🚀 PILOT"], ["CARNAGIONE", "SKIN TONE"], ["VIOLA NEON", "NEON VIOLET"], ["ORA LOCALE", "LOCAL TIME"], ["EQUIPAGGIO", "CREW"], ["PORTO NEON", "NEON HARBOUR"], ["IN PLANATA", "PLANING"], ["PROTEZIONI", "GUARDS"], ["COLORE LED", "LED COLOUR"], ["CATAMARANO", "CATAMARAN"], ["PARAELICHE", "PROP GUARDS"], ["MOTORE OFF", "ENGINE OFF"], ["CARBURANTE", "FUEL"], ["CINEMATICA", "CINEMATIC"], ["CLASSIFICA", "STANDINGS"], ["FRENO A M.", "HANDBRAKE"], ["luminosità", "brightness"], ["LUMINOSITÀ", "BRIGHTNESS"], ["Bilanciata", "Balanced"], ["Telecamera", "Camera"], ["CONDENSATO", "CONDENSED"], ["7 SEGMENTI", "7 SEGMENTS"], ["ARCOBALENO", "RAINBOW"], ["PULSAZIONE", "PULSE"], ["TELECAMERA", "CAMERA"], ["DIMENSIONE", "SIZE"], ["REGIME MAX", "REDLINE"], ["DIMENSIONI", "DIMENSIONS"], ["PNEUMATICI", "TYRES"], ["▶ RIPRENDI", "▶ RESUME"], ["PRELEVATI", "ABDUCTED"], ["IN STRADA", "ON ROAD"], ["BATISCAFO", "BATHYSCAPHE"], ["MUSCOLOSO", "MUSCULAR"], ["STEMPIATI", "RECEDING"], ["INDOSSATO", "ON"], ["OLIVASTRA", "OLIVE"], ["SQUADRATO", "SQUARE"], ["ALLUNGATO", "LONG"], ["ACCENNATA", "STUBBLE"], ["SQUADRATI", "SQUARE"], ["FRAMMENTI", "SHARDS"], ["FRAMMENTO", "SHARD"], ["AUTONOMIA", "ENDURANCE"], ["disarmato", "unarmed"], ["LUNGHEZZA", "LENGTH"], ["ALTISSIMA", "ULTRA"], ["ARMAMENTO", "ARMAMENT"], ["IDROGETTO", "WATER JET"], ["GIRO AUTO", "TURNAROUND"], ["MOTORE ON", "ENGINE ON"], ["DALL'ALTO", "TOP DOWN"], ["NERO NEON", "NEON BLACK"], ["AVVERSARI", "OPPONENTS"], ["SERBATOIO", "TANK"], ["ANTEPRIMA", "PREVIEW"], ["DUE PUNTI", "COLON"], ["Atmosfera", "Atmosphere"], ["AL CENTRO", "CENTRE"], ["MERCOLEDÌ", "WEDNESDAY"], ["ATMOSFERA", "ATMOSPHERE"], ["MOVIMENTO", "MOVEMENT"], ["POSIZIONE", "POSITION"], ["TEMPORALE", "STORM"], ["VARIABILE", "VARIABLE"], ["ABITACOLO", "COCKPIT"], ["ELABORATO", "SPORT"], ["▶ GUIDALA", "▶ DRIVE IT"], ["TRAMONTO", "SUNSET"], ["NUVOLOSO", "CLOUDY"], ["CARRELLO", "LANDING GEAR"], ["DIAMETRO", "DIAMETER"], ["👽 ALIENI", "👽 ALIENS"], ["1.900 kg", "1,900 kg"], ["IN ACQUA", "ON WATER"], ["IN SELLA", "IN THE SADDLE"], ["OCCHIALI", "GLASSES"], ["ATLETICO", "ATHLETIC"], ["BLU NEON", "NEON BLUE"], ["PIZZETTO", "GOATEE"], ["NOCCIOLA", "HAZEL"], ["IN PIEDI", "STANDING"], ["VELATURA", "SAIL PLAN"], ["VELOCITÀ", "SPEED"], ["SUI FOIL", "ON FOILS"], ["in gara…", "racing…"], ["ALISCAFO", "HYDROFOIL"], ["INDIETRO", "BACK"], ["FORGED Y", "FORGED Y"], ["PARAURTI", "BUMPER"], ["MODALITÀ", "MODE"], ["MIGLIORE", "BEST"], ["ADERENZA", "GRIP"], ["Velocità", "Speed"], ["CITTÀ 3D", "3D CITY"], ["Batteria", "Battery"], ["DOMENICA", "SUNDAY"], ["OROLOGIO", "CLOCK"], ["PRATERIA", "MEADOW"], ["PORTIERE", "DOORS"], ["LATERALE", "SIDE STRIPE"], ["BATTERIA", "BATTERY"], ["A BORDO", "ON BOARD"], ["METALLO", "METAL"], ["NORDICO", "NORDIC"], ["ORIGINE", "ORIGIN"], ["PALLIDA", "PALE"], ["PLATINO", "PLATINUM"], ["⏳ EPOCH", "⏳ EPOCH"], ["ENERGIA", "ENERGY"], ["NORMALI", "NORMAL"], ["SOTTILI", "THIN"], ["POLLICE", "THUMBS UP"], ["CAMMINA", "WALK"], ["con LED", "with LED"], ["LICENZE", "LICENCES"], ["ALTEZZA", "HEIGHT"], ["CAPELLI", "HAIR"], ["ROBUSTO", "STOCKY"], ["AMBRATA", "AMBER"], ["PICCOLO", "SMALL"], ["CASTANO", "BROWN"], ["MARRONI", "BROWN"], ["AZZURRI", "BLUE"], ["SENSORI", "SENSORS"], ["CASUALE", "RANDOM"], ["GALEONE", "GALLEON"], ["ARGENTO", "SILVER"], ["ARANCIO", "ORANGE"], ["CANNONI", "CANNONS"], ["LONTANA", "FAR"], ["PLANCIA", "BRIDGE"], ["PLANATA", "GLIDE"], ["ATTUALE", "CURRENT"], ["Massima", "Maximum"], ["Qualità", "Quality"], ["FLUTTUA", "FLOAT"], ["GIRO 3D", "3D SPIN"], ["MARTEDÌ", "TUESDAY"], ["GIOVEDÌ", "THURSDAY"], ["VENERDÌ", "FRIDAY"], ["NESSUNO", "NONE"], ["NESSUNA", "NONE"], ["ANNULLA", "CANCEL"], ["ELIMINA", "DELETE"], ["GLOBALE", "GLOBAL"], ["PIOGGIA", "RAIN"], ["INTERNI", "INTERIOR"], ["⟳ RUOTA", "⟳ ROTATE"], ["SCARICO", "EXHAUST"], ["SCRITTA", "LETTERING"], ["APPLICA", "APPLY"], ["POTENZA", "POWER"], ["FRENATA", "BRAKING"], ["ASFALTO", "ASPHALT"], ["CORDOLO", "KERB"], ["COLORE:", "COLOUR:"], ["SERENO", "CLEAR"], ["LASCIA", "LEAVE"], ["SCENDI", "GET OUT"], ["RAGGIO", "BEAM"], ["SPINTA", "THRUST"], ["VELE +", "SAILS +"], ["VELE −", "SAILS −"], ["ARRIVO", "ARRIVAL"], ["OTTONE", "BRASS"], ["SPECIE", "SPECIES"], ["TUNICA", "TUNIC"], ["GRIGIO", "GREY"], ["14 ore", "14 hours"], ["CABINA", "CABIN"], ["SILURO", "TORPEDO"], ["GIALLO", "YELLOW"], ["🏍 MOTO", "🏍 MOTORBIKE"], ["SALUTO", "WAVE"], ["INDICA", "POINT"], ["ESULTA", "CHEER"], ["SNELLO", "SLIM"], ["CHIARA", "FAIR"], ["ROSATA", "ROSY"], ["RASATI", "BUZZ CUT"], ["CIUFFO", "QUIFF"], ["LUNGHI", "LONG HAIR"], ["CRESTA", "MOHAWK"], ["BIONDO", "BLOND"], ["VISORE", "VISOR"], ["BAGLIO", "BEAM"], ["FLOTTA", "FLEET"], ["TELAIO", "FRAME"], ["SCOCCA", "SHELL"], ["ELICHE", "PROPELLERS"], ["PRONTI", "READY"], ["AVANTI", "FWD"], ["🔧 VAI!", "🔧 GO!"], ["PILOTA", "DRIVER"], ["ULTIMO", "LAST"], ["RECORD", "RECORD"], ["ORBITA", "ORBIT"], ["LUNEDÌ", "MONDAY"], ["SABATO", "SATURDAY"], ["COLORI", "COLOURS"], ["FASCIA", "SLOT"], ["MOSTRA", "SHOW"], ["IGNORA", "IGNORE"], ["SPENTO", "OFF"], ["NEBBIA", "FOG"], ["GIORNO", "DAY"], ["ORARIO", "TIME"], ["NIENTE", "NONE"], ["COFANO", "BONNET"], ["MOTORE", "ENGINE"], ["STERZO", "STEERING"], ["COLORE", "COLOUR"], ["CAPOTE", "ROOF"], ["CHIUSA", "CLOSED"], ["CERCHI", "RIMS"], ["LIVREA", "LIVERY"], ["COPPIA", "TORQUE"], ["✕ ESCI", "✕ EXIT"], ["GHIAIA", "GRAVEL"], ["BIANCO", "WHITE"], ["CHIUDI", "CLOSE"], ["NOTTE", "NIGHT"], ["SALTA", "JUMP"], ["CORRI", "RUN"], ["OMBRA", "SHADOW"], ["VETRI", "GLASS"], ["UMANO", "HUMAN"], ["PIEGA", "LEAN"], ["RUOTE", "WHEELS"], ["GONNA", "SKIRT"], ["FOLTE", "THICK"], ["CORRE", "RUN"], ["RUOLO", "ROLE"], ["STATO", "STATUS"], ["CASCO", "HELMET"], ["BARBA", "BEARD"], ["OCCHI", "EYES"], ["TOLTO", "OFF"], ["SCURA", "DARK"], ["EBANO", "EBONY"], ["OVALE", "OVAL"], ["TONDO", "ROUND"], ["MEDIO", "MEDIUM"], ["CORTI", "SHORT"], ["RICCI", "CURLY"], ["CALVO", "BALD"], ["CORTA", "SHORT"], ["PIENA", "FULL"], ["BAFFI", "MOUSTACHE"], ["VERDI", "GREEN"], ["GRIGI", "GREY"], ["TONDI", "ROUND"], ["POSTI", "SEATS"], ["BARCA", "BOAT"], ["SCAFO", "HULL"], ["AMBRA", "AMBER"], ["VERDE", "GREEN"], ["VENTO", "WIND"], ["BORDO", "LEG"], ["RETRO", "REVERSE"], ["FUOCO", "FIRE"], ["BASSA", "LOW"], ["Parte", "Starts"], ["USURA", "WEAR"], ["Meteo", "Weather"], ["STILE", "STYLE"], ["TUTTI", "ALL"], ["TINTA", "HUE"], ["CITTÀ", "CITY"], ["CERCA", "SEARCH"], ["SALVA", "SAVE"], ["DALLE", "FROM"], ["GOMME", "TYRES"], ["PIENO", "FULL"], ["TIENI", "KEEP"], ["METEO", "WEATHER"], ["SFIDA", "CHALLENGE"], ["TEMPO", "TIME"], ["▶ VIA", "▶ GO"], ["FRENO", "BRAKE"], ["VISTA", "VIEW"], ["SERIE", "STOCK"], ["FRENI", "BRAKES"], ["TARGA", "PLATE"], ["ROSSO", "RED"], ["CIANO", "CYAN"], ["VIOLA", "PURPLE"], ["ALBA", "DAWN"], ["VOLA", "FLY"], ["SALI", "GET IN"], ["DOVE", "WHERE"], ["RAME", "COPPER"], ["FUMÉ", "SMOKED"], ["TUTA", "SUIT"], ["VISO", "FACE"], ["NASO", "NOSE"], ["POSA", "POSE"], ["CODA", "PONYTAIL"], ["TIPO", "TYPE"], ["PALE", "BLADES"], ["VELE", "SAILS"], ["RESA", "EFFICIENCY"], ["NODI", "KNOTS"], ["VIA!", "GO!"], ["GARE", "RACES"], ["GIRI", "LAPS"], ["ALTA", "HIGH"], ["ONDA", "WAVE"], ["ALLE", "TO"], ["SERA", "EVENING"], ["NEVE", "SNOW"], ["GIRO", "LAP"], ["GARA", "RACE"], ["giri", "laps"], ["LUCI", "LIGHTS"], ["VOLO", "FLIGHT"], ["PESO", "WEIGHT"], ["ERBA", "GRASS"], ["NERO", "BLACK"], ["BLU", "BLUE"], ["GIÙ", "DOWN"], ["PIT", "PIT"], ["ORO", "GOLD"], ["SU", "UP"], ["SÌ", "YES"]];
+  const PAIRS = [["W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi", "W/S forward-back · A/D turn · Q/E strafe · SPACE rise · X descend · F tractor beam · SHIFT boost · C view · ENTER leave the helm"], ["W/S impulso · A/D virata · SPAZIO/X quota · 1-9 / 0 warp · J ingrana · T decolla · L atterra · N rotta · C vista · INVIO alzati", "W/S impulse · A/D yaw · SPACE/X altitude · 1-9 / 0 warp · J engage · T take off · L land · N course · C view · ENTER stand up"], ["\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", "\"When to start\" (charging / docked) and the screen timeout. This app controls what Cybercity does from there on."], ["P atmosfera · M meteo · V colore · E propulsione · T capote · X scarico · Q crono · F volo (LEVITA) · B suono · H aiuto", "P atmosphere · M weather · V colour · E power unit · T roof · X exhaust · Q chrono · F flight (LEVITA) · B sound · H help · L language"], ["Ogni fascia sceglie cosa mostrare (città con la sua atmosfera, solo orologio, nero o niente) e con che luminosità. ", "Each time slot chooses what to show (city with its atmosphere, clock only, black or nothing) and how bright. "], ["W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D yaw · Q/E strafe · SPACE up · X down · SHIFT boost · C view · G fleet · ENTER race"], ["A PIEDI · W/S cammina · A/D gira · Q/E laterale · SHIFT corri · SPAZIO salta · INVIO vicino all'auto per salire", "ON FOOT · W/S walk · A/D turn · Q/E sidestep · SHIFT run · SPACE jump · ENTER near the car to get in"], ["W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara", "W thrust · S reverse · A/D rudder · SHIFT boost · drive from road to water · C view · G fleet · ENTER race"], ["Ogni tanto: giro dell'auto con configurazioni casuali e corsa in città col pilota automatico (senza suono)", "Now and then: a turnaround of the car in random configurations and an autopilot run through the city (no sound)"], ["W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D rudder · SPACE rise · X dive · SHIFT boost · C view · G fleet · ENTER race"], ["W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO regata", "W/S hoist-lower sails · A/D helm · SHIFT assist · SPACE cannons · C view · G fleet · ENTER regatta"], ["Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti", "Pick an effect and see it on the city right away; in the preview the WEATHER button cycles through all of them"], ["Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale", "2,616 cc quad-rotor Wankel (4 × 654 cc) on hydrogen · hybrid with axial electric motor"], ["Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati", "Electromagnetic drive · 4 levitating spheres with integrated axial-flux motors"], ["Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → ", "When the screensaver starts is decided by Android: Settings → Display → Screen saver → "], ["2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)", "2,400 Nm instant · 360° vectoring (the spheres roll in any direction)"], ["Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)", "Live preview: every change shows immediately (effects start more often here)"], ["Se la modalità Non disturbare (o una modalità Focus/Bedtime) è attiva, niente città", "If Do Not Disturb (or a Focus/Bedtime mode) is on, no city"], ["A BORDO DEL KAGE XENO · esplora la nave · plancia davanti, raggio dietro il nucleo", "ABOARD THE KAGE XENO · explore the ship · bridge ahead, beam behind the core"], ["Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", "Only used to read the app icons; no content is read or stored."], ["Luna, Marte, Alpha Centauri, Proxima b, Kepler-186f, Kepler-452b, colonia Zhar’ul", "Moon, Mars, Alpha Centauri, Proxima b, Kepler-186f, Kepler-452b, Zhar’ul colony"], ["1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)", "1,020 Nm combined (rotors 640 Nm at 7,800 rpm + instant electric torque)"], ["W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara", "W throttle · S brake · A/D lean · SHIFT boost · C view · G fleet · ENTER race"], ["AI COMANDI · W/S impulso · A/D virata · SPAZIO/X quota · 1-9 · 0 = WARP 10", "AT THE HELM · W/S impulse · A/D yaw · SPACE/X altitude · 1-9 · 0 = WARP 10"], ["W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO gara", "W throttle · S reverse · A/D helm · SHIFT N₂O · C view · G fleet · ENTER race"], ["Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring", "8-speed dual clutch · e-AWD all-wheel drive with torque vectoring"], ["Droni KAGE STRIX al posto delle scie volanti, barche e galeone nel canale", "KAGE STRIX drones instead of the flying trails, boats and a galleon on the canal"], ["860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min", "860 hp hydrogen + 260 hp electric = 1120 hp (824 kW) at 10,200 rpm"], ["Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", "Source: Open-Meteo (free, no account). Updates every 30 minutes."], ["P atmosfera · M meteo · V colore auto · B suono · R riparti · H aiuto", "P atmosphere · M weather · V car colour · B sound · R restart · H help"], ["780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min", "780 hp combustion + 220 hp electric = 1000 hp (735 kW) at 8,200 rpm"], ["Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri", "Under the clock: one icon per app with notifications, no numbers"], ["ATTIVITÀ EXTRAVEICOLARE · W/S/Q/E propulsori · SPAZIO/X su e giù", "EXTRAVEHICULAR ACTIVITY · W/S/Q/E thrusters · SPACE/X up and down"], ["Posizione non disponibile: apri Maps una volta o scrivi la città", "Location unavailable: open Maps once or type the city"], ["F = schermo intero · Spazio = cambia telecamera · P = atmosfera", "F = full screen · Space = change camera · P = atmosphere"], ["1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)", "1,390 kg · 700 bar carbon-fibre H₂ tanks (6.4 kg)"], ["WARP 10 · VELOCITÀ INFINITA: SEI OVUNQUE NELLO STESSO ISTANTE", "WARP 10 · INFINITE SPEED: YOU ARE EVERYWHERE AT ONCE"], ["Si sposta di poco ogni minuto per proteggere lo schermo OLED", "Moves slightly every minute to protect the OLED screen"], ["V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore", "4.0 L twin-turbo hybrid V8 · front axial electric motor"], ["EVA · tuta spaziale · torna al portello verde per rientrare", "EVA · space suit · go back to the green hatch to come in"], ["11 km · 31 curve · pit lane con rifornimento e cambio gomme", "11 km · 31 corners · pit lane with refuelling and tyre change"], ["QUANDO È NASCOSTO (lavoro / non disturbare / fuori fascia)", "WHEN HIDDEN (work / do not disturb / outside slots)"], ["Esopianeta roccioso · 4,24 anni luce · rotazione sincrona", "Rocky exoplanet · 4.24 light years · tidally locked"], ["Se stacchi il caricatore il salvaschermo si chiude subito", "Unplugging the charger closes the screensaver immediately"], ["INDIRIZZO PERDUTO RICOMPOSTO · PALETTE ECO SBLOCCATA (P)", "LOST ADDRESS RESTORED · ECO PALETTE UNLOCKED (P)"], ["Spento = fuori fascia usa atmosfera e luminosità globali", "Off = outside the slots the global atmosphere and brightness are used"], ["reattore a fusione compatto da 2 MW · eliche retrattili", "2 MW compact fusion reactor · retractable propellers"], ["0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s", "0–100 km/h 2.4 s · 0–200 km/h 6.9 s · 0–300 km/h 17.8 s"], ["0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s", "0–100 km/h 2.3 s · 0–200 km/h 6.5 s · 0–300 km/h 16.4 s"], ["0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s", "0–100 km/h 1.8 s · 0–200 km/h 5.2 s · 0–300 km/h 12.9 s"], ["Icona, temperatura e condizione (con meteo automatico)", "Icon, temperature and condition (with automatic weather)"], ["Sfere Ø 670 mm con battistrada in elastomero a grafene", "Ø 670 mm spheres with graphene elastomer tread"], ["28 kWh a stato solido · ronzio elettrostatico di serie", "28 kWh solid-state · electrostatic hum as standard"], ["VOLO LIBERO · F raggio traente sopra strade e persone", "FREE FLIGHT · F tractor beam over streets and people"], ["Vince la prima fascia attiva che corrisponde all'ora.", "The first active slot matching the time wins."], ["18 kWh allo stato solido · boost a supercondensatori", "18 kWh solid-state · supercapacitor boost"], ["RISOLUZIONE MODELLI (KAGE GT, DRONE, BARCA, GALEONE)", "MODEL RESOLUTION (KAGE GT, DRONE, BOAT, GALLEON)"], ["In questo orario il salvaschermo non mostra la città", "During these hours the screensaver doesn't show the city"], ["100–0 km/h in 29 m · dischi carboceramici 410/390 mm", "100–0 km/h in 29 m · 410/390 mm carbon-ceramic discs"], ["Deportanza 520 kg a 250 km/h · ala posteriore attiva", "520 kg downforce at 250 km/h · active rear wing"], ["6,2 kWh · boost elettrico 18 s · ricarica in frenata", "6.2 kWh · 18 s electric boost · regenerative braking"], ["PRIMA PRENDI IL BADGE DAL MODELLINO NEL KAGE GARAGE", "FIRST TAKE THE BADGE FROM THE MODEL IN THE KAGE GARAGE"], ["Colonia di quattro specie · 37 anni luce (fittizia)", "Colony of four species · 37 light years (fictional)"], ["due gondole warp · nucleo a plasma · fino a warp 10", "two warp nacelles · plasma core · up to warp 10"], ["QUANDO ROVESCI IL TELEFONO (schermo verso il basso)", "WHEN YOU TURN THE PHONE OVER (screen down)"], ["KAGE GARAGE · tocca GARAGE per scegliere il veicolo", "KAGE GARAGE · tap GARAGE to pick a vehicle"], ["PRIMA DECOLLA: IL WARP SI ATTIVA SOLO NELLO SPAZIO", "TAKE OFF FIRST: WARP ONLY ENGAGES IN SPACE"], ["integrale in carbonio · visiera a realtà aumentata", "full-face carbon · augmented-reality visor"], ["1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)", "1,150 Nm combined (800 Nm from 3,200–6,500 rpm)"], ["AZIONE · cartigli dell’Astrolab: scegli il pianeta", "ACTION · Astrolab cartouches: choose the planet"], ["INVIO · cartigli dell’Astrolab: scegli il pianeta", "ENTER · Astrolab cartouches: choose the planet"], ["plancia, nucleo, mappa stellare, capsule di stasi", "bridge, core, star map, stasis pods"], ["Presa diretta · controllo di campo per ogni sfera", "Direct drive · field control per sphere"], ["18 cannoni a luce (stordiscono, non distruggono)", "18 light cannons (they stun, they do not destroy)"], ["PORTALE APERTO · attraversalo per tornare a casa", "PORTAL OPEN · cross it to go home"], ["PORTALE APERTO · attraversalo per entrare in ECO", "PORTAL OPEN · cross it to enter ECO"], ["4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico", "4 × 320 kW = 1280 kW (1740 hp) · no exhaust"], ["Esopianeta nella zona abitabile · 582 anni luce", "Exoplanet in the habitable zone · 582 light years"], ["gimbal 8K · LiDAR a 360° · radar anticollisione", "8K gimbal · 360° LiDAR · collision radar"], ["KAGE GARAGE · premi G per scegliere il veicolo", "KAGE GARAGE · press G to pick a vehicle"], ["Scie luminose di auto e spinner su più livelli", "Light trails of cars and spinners on several levels"], ["IMPOSTA UNA ROTTA NELL’ASTROLAB O CON «ROTTA»", "SET A COURSE IN THE ASTROLAB OR WITH «COURSE»"], ["Pianeta natale · orbita bassa sopra Cybercity", "Home planet · low orbit above Cybercity"], ["KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"], ["Salvaschermo 3D · città cyberpunk procedurale", "3D screensaver · procedural cyberpunk city"], ["L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m", "L 4.70 m · W 2.06 m · H 1.24 m · wheelbase 2.87 m"], ["380 km/h (boost di campo) · 290 km/h di serie", "380 km/h (field boost) · 290 km/h standard"], ["BADGE KAGE ODYSSEY INDOSSATO · premi BEAM IN", "KAGE ODYSSEY BADGE ON · press BEAM IN"], ["umani e alieni: grigi, verdi, nordici, ombre", "humans and aliens: greys, greens, Nordics, shadows"], ["Pilota collaudatore KAGE · auto, drone, mare", "KAGE test pilot · cars, drones, sea"], ["Posizione approssimativa, solo per il meteo", "Approximate location, only for the weather"], ["1.420 kg · rapporto peso/potenza 1,42 kg/CV", "1,420 kg · power-to-weight 1.42 kg/hp"], ["AZIONE · prendi il badge della KAGE ODYSSEY", "ACTION · take the KAGE ODYSSEY badge"], ["QUI IL TELETRASPORTO NON RAGGIUNGE LA NAVE", "THE TRANSPORTER CAN'T REACH THE SHIP FROM HERE"], ["INVIO · prendi il badge della KAGE ODYSSEY", "ENTER · take the KAGE ODYSSEY badge"], ["cuscino d'aria a 0,5 m · gonna in neoprene", "0.5 m air cushion · neoprene skirt"], ["FASCE ORARIE · QUALE SALVASCHERMO E QUANDO", "TIME SLOTS · WHICH SCREENSAVER AND WHEN"], ["USCITA DALLA CURVATURA · ROTTA INTERROTTA", "DROPPED OUT OF WARP · COURSE ABORTED"], ["🛠 SHOWROOM FLOTTA · DRONE, BARCA, GALEONE", "🛠 FLEET SHOWROOM · DRONE, BOAT, GALLEON"], ["Anteprima dal vivo · tocca per nascondere", "Live preview · tap to hide"], ["W/↑ accelera · S/↓ frena · A D/← → sterza", "W/↑ throttle · S/↓ brake · A D/← → steer"], ["345 km/h (con N₂O) · 260 km/h senza boost", "345 km/h (with N₂O) · 260 km/h without boost"], ["352 km/h (con N₂O) · 268 km/h senza boost", "352 km/h (with N₂O) · 268 km/h without boost"], ["5,0 kWh · allo scarico solo vapore acqueo", "5.0 kWh · only water vapour from the exhaust"], ["Drone da corsa e da ripresa · classe 2 m", "Racing and filming drone · 2 m class"], ["Galeone a tre alberi · rifacimento cyber", "Three-masted galleon · cyber rebuild"], ["Fuori dalle fasce: non mostrare la città", "Outside the slots: don't show the city"], ["METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE", "WEATHER · FOG, RAIN, SNOW, STORM"], ["esplora · ✦ BEAM IN per tornare a bordo", "explore · ✦ BEAM IN to return aboard"], ["RITARDO DOPO LA MESSA IN CARICA / AVVIO", "DELAY AFTER PLUGGING IN / START"], ["SPAZIO derapata · SHIFT nitro · C vista", "SPACE drift · SHIFT nitro · C view"], ["LA NAVE È LONTANA: È IN ORBITA ALTROVE", "THE SHIP IS FAR AWAY, IN ORBIT ELSEWHERE"], ["«Cugino della Terra» · 1.400 anni luce", "«Earth's cousin» · 1,400 light years"], ["due corone di ingranaggi controrotanti", "two counter-rotating gear crowns"], ["220 kWh · ricarica rapida in 30 minuti", "220 kWh · 30-minute fast charge"], ["GIRO LIBERO · premi INVIO per una gara", "FREE ROAM · press ENTER for a race"], ["KAGE GT · CORSA IN CITTÀ (SENZA SUONO)", "KAGE GT · CITY RUN (NO SOUND)"], ["1.480 kg · altezza di levitazione 4 cm", "1,480 kg · 4 cm hover height"], ["AZIONE · siediti al posto del capitano", "ACTION · take the captain's chair"], ["AZIONE · KAGE EPOCH: viaggia nel tempo", "ACTION · KAGE EPOCH: travel in time"], ["INVIO · siediti al posto del capitano", "ENTER · take the captain's chair"], ["INVIO · KAGE EPOCH: viaggia nel tempo", "ENTER · KAGE EPOCH: travel in time"], ["Cybercity oggi ⇄ prateria del passato", "Cybercity today ⇄ meadow of the past"], ["grigio, piccolo verde, nordico, ombra", "grey, little green, Nordic, shadow"], ["Rispetta il Non disturbare di Android", "Respect Android's Do Not Disturb"], ["DURATA ANIMAZIONE (0 = sempre accesa)", "ANIMATION LENGTH (0 = always on)"], ["🔊 tocca / premi un tasto per il suono", "🔊 tap / press a key for sound"], ["Stella doppia (A+B) · 4,37 anni luce", "Binary star (A+B) · 4.37 light years"], ["6 piattaforme · BEAM IN con il badge", "6 pads · BEAM IN with the badge"], ["LE STRADE CAMBIANO QUANDO NON GUARDI", "THE STREETS CHANGE WHEN YOU ARE NOT LOOKING"], ["L 10,0 m · B 2,7 m · pescaggio 0,6 m", "L 10.0 m · beam 2.7 m · draft 0.6 m"], ["KAGE XENO · mettiti sotto il raggio", "KAGE XENO · stand under the beam"], ["Hovercraft anfibio · strada e acqua", "Amphibious hovercraft · road and water"], ["12 nodi a vela · 21 nodi con assist", "12 knots under sail · 21 knots with assist"], ["AUTO (ciclo di tutte le telecamere)", "AUTO (cycle all cameras)"], ["AZIONE · ascensore: scegli il ponte", "ACTION · lift: choose the deck"], ["AZIONE · fatti prelevare dal raggio", "ACTION · let the beam take you up"], ["È UNA STELLA: SI PUÒ SOLO ORBITARE", "IS A STAR: YOU CAN ONLY ORBIT IT"], ["INVIO · ascensore: scegli il ponte", "ENTER · lift: choose the deck"], ["ASTROLAB · CARTIGLI DI NAVIGAZIONE", "ASTROLAB · NAVIGATION CARTOUCHES"], ["Pianeta roccioso · 1,5 UA dal Sole", "Rocky planet · 1.5 AU from the Sun"], ["INVIO · fatti prelevare dal raggio", "ENTER · let the beam take you up"], ["2 propulsori elettrici orientabili", "2 vectoring electric thrusters"], ["34 m di scafo · 44 m col bompresso", "34 m hull · 44 m with the bowsprit"], ["PARTENZA DA FERMO · TIENI IL FRENO", "STANDING START · WAIT FOR THE LIGHTS"], ["DURATA DI OGNI INQUADRATURA (AUTO)", "LENGTH OF EACH SHOT (AUTO)"], ["265/30 R21 ant. · 325/25 R22 post.", "265/30 R21 front · 325/25 R22 rear"], ["motore assiale da 160 kW · 300 Nm", "160 kW axial-flux motor · 300 Nm"], ["ORARIO DI LAVORO · NON DISTURBARE", "WORK HOURS · DO NOT DISTURB"], ["AZIONE · ai comandi del KAGE XENO", "ACTION · take the KAGE XENO's helm"], ["Esploratore a lungo raggio KX-01", "KX-01 long-range explorer"], ["INVIO · ai comandi del KAGE XENO", "ENTER · take the KAGE XENO's helm"], ["2 fuoribordo elettrici da 330 kW", "twin 330 kW electric outboards"], ["128 km/h sulle ali · 155 con N₂O", "128 km/h on the foils · 155 with N₂O"], ["KAGE GT · GIRO DELL'AUTO CASUALE", "KAGE GT · RANDOM TURNAROUND"], ["SERBATOIO VUOTO · RIENTRA AI BOX", "TANK EMPTY · RETURN TO THE PITS"], ["Imposta una città o la posizione", "Set a city or the location"], ["Animazione continua, senza pause", "Continuous animation, no pauses"], ["SFUMATURA CROMATICA IN MOVIMENTO", "MOVING COLOUR GRADIENT"], ["AZIONE · esci nello spazio (EVA)", "ACTION · step out into space (EVA)"], ["INVIO · esci nello spazio (EVA)", "ENTER · step out into space (EVA)"], ["Satellite naturale · 384.400 km", "Natural satellite · 384,400 km"], ["KAGE GARAGE · INVIO per partire", "KAGE GARAGE · ENTER to depart"], ["fino a 90 m · persone e veicoli", "up to 90 m · people and vehicles"], ["DODICI FRAMMENTI · UN INDIRIZZO", "TWELVE SHARDS · ONE ADDRESS"], ["COMPOSIZIONE INDIRIZZO · BLOCCO", "DIALLING ADDRESS · LOCK"], ["TELEFONO ROVESCIATO · NOTIFICHE", "PHONE FACE DOWN · NOTIFICATIONS"], ["SPENTO (usa la pioggia manuale)", "OFF (use manual rain)"], ["SPEGNI (schermo nero, 3D fermo)", "TURN OFF (black screen, 3D paused)"], ["ammasso delle Pleiadi (dicono)", "the Pleiades cluster (so they say)"], ["24 kWh · ricarica in 25 minuti", "24 kWh · 25-minute charge"], ["🌀 KAGE NEXUS · PORTALE PER ECO", "🌀 KAGE NEXUS · PORTAL TO ECO"], ["🌀 VAI AL PORTALE (N = componi)", "🌀 GO TO THE PORTAL (N = dial)"], ["Veicoli KAGE nello screensaver", "KAGE vehicles in the screensaver"], ["CONCEDI ACCESSO ALLE NOTIFICHE", "GRANT NOTIFICATION ACCESS"], ["FREQUENZA EFFETTI (ogni circa)", "EFFECT FREQUENCY (about every)"], ["LUMINOSITÀ IN PAUSA / NASCOSTO", "BRIGHTNESS PAUSED / HIDDEN"], ["22.000 giri/min (motori-sfera)", "22,000 rpm (sphere motors)"], ["AZIONE · teletrasporto: scendi", "ACTION · transporter: beam down"], ["ATTENDI: LA NAVE È IN MANOVRA", "WAIT: THE SHIP IS MANOEUVRING"], ["INVIO · teletrasporto: scendi", "ENTER · transporter: beam down"], ["verso la PRATERIA DEL PASSATO", "to the MEADOW OF THE PAST"], ["nucleo a plasma · antigravità", "plasma core · antigravity"], ["QUESTA CITTÀ SI RICORDA DI TE", "THIS CITY REMEMBERS YOU"], [" · FERMATI NEL BOX ILLUMINATO", " · STOP IN THE GLOWING BOX"], ["PIT LANE · LIMITATORE 80 KM/H", "PIT LANE · 80 KM/H LIMITER"], ["USA LA POSIZIONE DEL TELEFONO", "USE THE PHONE'S LOCATION"], ["PERSONALIZZATA (usa la barra)", "CUSTOM (use the slider)"], ["SOPRA LE NUVOLE DI CYBERCITY", "ABOVE THE CLOUDS OF CYBERCITY"], ["sopra le nuvole di Cybercity", "above the clouds of Cybercity"], ["130 km/h · 210 km/h in boost", "130 km/h · 210 km/h with boost"], ["Scene KAGE GT nel ciclo AUTO", "KAGE GT scenes in the AUTO cycle"], ["Scrivi la città per il meteo", "Type the city for the weather"], ["🏎 KAGE CIRCUIT · PISTA 11 KM", "🏎 KAGE CIRCUIT · 11 KM TRACK"], ["🏁 KAGE CIRCUIT · PISTA 11 KM", "🏁 KAGE CIRCUIT · 11 KM TRACK"], ["Sottomarino da esplorazione", "Exploration submarine"], ["ignifuga in fibra aramidica", "fire-proof aramid fibre"], ["NESSUNA POSIZIONE IMPOSTATA", "NO LOCATION SET"], ["LUMINOSITÀ CITTÀ / OROLOGIO", "CITY / CLOCK BRIGHTNESS"], ["LUMINOSITÀ DEL SALVASCHERMO", "SCREENSAVER BRIGHTNESS"], ["Cybercity 3D — salvaschermo", "Cybercity 3D — screensaver"], ["BADGE RIMESSO AL SUO POSTO", "BADGE PUT BACK"], ["PONTE 4 · MENSA E PORTELLO", "DECK 4 · MESS HALL AND AIRLOCK"], ["2 eliche intubate da 1,4 m", "2 ducted fans, 1.4 m"], ["32 km/h · 50 km/h in boost", "32 km/h · 50 km/h with boost"], ["4 motori brushless da 9 kW", "4 brushless motors, 9 kW each"], ["6 motori brushless da 8 kW", "6 brushless motors, 8 kW each"], ["8 motori coassiali da 7 kW", "8 coaxial motors, 7 kW each"], ["RISOLUZIONE MODELLI: BASSA", "MODEL RESOLUTION: LOW"], ["Meteo non ancora scaricato", "Weather not downloaded yet"], ["AZIONE · scendi col raggio", "ACTION · ride the beam down"], ["DECOLLO · VERSO LO SPAZIO", "LIFT-OFF · TO SPACE"], ["INVIO · scendi col raggio", "ENTER · ride the beam down"], ["chiudi la porta… si parte", "close the door… here we go"], ["Cabina del tempo Art Déco", "Art Deco time cabin"], ["1 elica intubata da 2,2 m", "1 ducted fan, 2.2 m"], ["fari da 20.000 lm · sonar", "20,000 lm lights · sonar"], ["Motoscafo offshore · 10 m", "Offshore powerboat · 10 m"], [" (usa la pioggia manuale)", " (use manual rain)"], ["Lavoro / non disturbare: ", "Work / do not disturb: "], [" (fuori fascia: nascosto)", " (outside slots: hidden)"], ["CRONO · PRONTO A 300 KM/H", "CHRONO · READY AT 300 KM/H"], ["INCLINAZIONE DEL TELEFONO", "PHONE TILT"], ["IMPOSTA COME SALVASCHERMO", "SET AS SCREENSAVER"], ["PAUSA PRIMA CHE RICOMPAIA", "PAUSE BEFORE IT RETURNS"], ["AZIONE · rimetti il badge", "ACTION · put the badge back"], ["AZIONE · scendi dall'auto", "ACTION · get out of the car"], ["NIENTE SU CUI SCENDERE: ", "NOTHING TO BEAM DOWN TO: "], ["INVIO · rimetti il badge", "ENTER · put the badge back"], ["pozzetto aperto, 2 posti", "open cockpit, 2 seats"], ["INVIO · scendi dall'auto", "ENTER · get out of the car"], ["elica intubata da 520 kW", "520 kW ducted fan"], ["ECO · UNIVERSO PARALLELO", "ECO · PARALLEL UNIVERSE"], ["KAGE GT · CORSA IN CITTÀ", "KAGE GT · CITY RUN"], ["AUTOMATICO (meteo reale)", "AUTOMATIC (real weather)"], ["3ª CIFRA (decine minuti)", "3rd DIGIT (tens of minutes)"], ["AZIONE · rientra a bordo", "ACTION · come back aboard"], ["TELETRASPORTO IN CORSO…", "TRANSPORTER ENGAGED…"], ["INVIO · rientra a bordo", "ENTER · come back aboard"], ["PONTE 2 · TELETRASPORTO", "DECK 2 · TRANSPORTER"], ["210 km/h · 430 in boost", "210 km/h · 430 with boost"], ["38 minuti in volo misto", "38 minutes of mixed flight"], ["25 kg nel vano ventrale", "25 kg in the belly bay"], ["⟲ TORNA SUBITO IN CITTÀ", "⟲ BACK TO THE CITY NOW"], ["🚁 DRONE · GARE IN CITTÀ", "🚁 DRONE · CITY RACES"], ["SERENO (nessun effetto)", "CLEAR (no effect)"], ["4ª CIFRA (unità minuti)", "4th DIGIT (minutes)"], ["EFFETTI GRAFICI CASUALI", "RANDOM GRAPHIC EFFECTS"], ["↺ RIPRENDI GARA SALVATA", "↺ RESUME SAVED RACE"], ["CAPOTE: APERTA (SPIDER)", "ROOF: OPEN (SPIDER)"], ["Solo quando è in carica", "Only while charging"], ["USCITA DALLA CURVATURA", "DROPPED OUT OF WARP"], ["COLONIA ALIENA ZHAR’UL", "ZHAR’UL ALIEN COLONY"], ["KAGE ODYSSEY · PLANCIA", "KAGE ODYSSEY · BRIDGE"], ["verso CYBERCITY · OGGI", "to CYBERCITY · TODAY"], ["95 km/h · 130 in boost", "95 km/h · 130 with boost"], ["1.200 m (laguna: 24 m)", "1,200 m (lagoon: 24 m)"], ["SIAMO SEMPRE STATI QUI", "WE HAVE ALWAYS BEEN HERE"], ["112 km/h · 140 con N₂O", "112 km/h · 140 with N₂O"], ["Meteo sotto l'orologio", "Weather under the clock"], ["GLITCH (strappi + RGB)", "GLITCH (tears + RGB)"], ["CRONO · TIENI 300 KM/H", "CHRONO · HOLD 300 KM/H"], ["⏳ PRATERIA DEL PASSATO", "⏳ MEADOW OF THE PAST"], ["CARBOCERAMICA · GIALLO", "CARBON-CERAMIC · YELLOW"], ["SCRITTA PERSONALIZZATA", "CUSTOM LETTERING"], ["INGRESSO IN ATMOSFERA", "ATMOSPHERIC ENTRY"], ["a bordo del KAGE XENO", "aboard the KAGE XENO"], ["TI STAVAMO ASPETTANDO", "WE WERE WAITING FOR YOU"], ["9 m · pescaggio 3,0 m", "9 m · draft 3.0 m"], ["24 + 6 droni di bordo", "24 + 6 onboard drones"], ["NON MOSTRARE (chiudi)", "DON'T SHOW (close)"], ["Pioggia (senza meteo)", "Rain (without weather)"], ["1ª CIFRA (decine ore)", "1st DIGIT (tens of hours)"], ["COLORE PER OGNI CIFRA", "COLOUR PER DIGIT"], ["WebGL non disponibile", "WebGL not available"], ["ON (salto a 300 km/h)", "ON (jump at 300 km/h)"], ["luminosità di sistema", "system brightness"], ["ABERRAZIONE CROMATICA", "CHROMATIC ABERRATION"], ["AZIONE · sali in auto", "ACTION · get in the car"], ["RIMATERIALIZZAZIONE…", "REMATERIALISING…"], ["PONTE 5 · INGEGNERIA", "DECK 5 · ENGINEERING"], ["GRAN GIRO DEL CENTRO", "GRAND DOWNTOWN LOOP"], ["APPARECCHIO ACUSTICO", "HEARING AID"], ["INVIO · sali in auto", "ENTER · get in the car"], ["VELE NEON A PANNELLI", "NEON PANEL SAILS"], ["SPENTO (usa pioggia)", "OFF (use rain)"], [" fasce orarie attive", " active time slots"], ["2ª CIFRA (unità ore)", "2nd DIGIT (hours)"], ["SFUMATURA · COLORE A", "GRADIENT · COLOUR A"], ["SFUMATURA · COLORE B", "GRADIENT · COLOUR B"], ["FERMO (anti burn-in)", "STILL (anti burn-in)"], ["RIMBALZO (stile DVD)", "BOUNCE (DVD style)"], ["CARBURANTE / ENERGIA", "FUEL / ENERGY"], ["AUTO HD NON CARICATA", "HD CAR NOT LOADED"], ["Auto HD non caricata", "HD car not loaded"], ["ACCIAIO · PINZE NEON", "STEEL · NEON CALIPERS"], ["INSEGUIMENTO LONTANO", "FAR CHASE"], ["QUALITÀ DI RENDERING", "RENDERING QUALITY"], ["FREQUENZA FOTOGRAMMI", "FRAME RATE"], ["SEI SOPRA CYBERCITY", "YOU ARE ABOVE CYBERCITY"], ["KAGE XENO · INTERNO", "KAGE XENO · INTERIOR"], ["sistema sconosciuto", "unknown system"], ["Superbike elettrica", "Electric superbike"], ["0–100 km/h in 2,6 s", "0–100 km/h in 2.6 s"], ["ABISSI DELLA LAGUNA", "LAGOON DEPTHS"], ["A BORDO DEI VEICOLI", "ON BOARD THE VEHICLES"], ["IL FARO NON È VUOTO", "THE LIGHTHOUSE IS NOT EMPTY"], ["idrogetto da 600 kW", "600 kW water jet"], ["TU · KAGE LEVIATHAN", "YOU · KAGE LEVIATHAN"], ["RISOLUZIONE MODELLI", "MODEL RESOLUTION"], ["Risoluzione modelli", "Model resolution"], ["IN BASSO A SINISTRA", "BOTTOM LEFT"], ["🏁 SHOWROOM (garage)", "🏁 SHOWROOM (garage)"], ["DRONE A BASSA QUOTA", "LOW DRONE"], ["VELOCITÀ DEI COLORI", "COLOUR SPEED"], ["CHIUDI SALVASCHERMO", "CLOSE SCREENSAVER"], ["PONTE 3 · ASTROLAB", "DECK 3 · ASTROLAB"], ["LUCE E METEO REALI", "REAL LIGHT AND WEATHER"], ["INDIRIZZO COMPLETO", "ADDRESS COMPLETE"], ["CHI GUIDA, ADESSO?", "WHO IS DRIVING NOW?"], ["CIRCUITO DEI VIALI", "AVENUES CIRCUIT"], ["⛵ GALEONE · REGATA", "⛵ GALLEON · REGATTA"], ["Aggiorno il meteo…", "Updating the weather…"], ["IN BASSO AL CENTRO", "BOTTOM CENTRE"], ["IN ALTO A SINISTRA", "TOP LEFT"], ["▶ GIOCA · NEON RUN", "▶ PLAY · NEON RUN"], ["WANKEL 4 ROTORI H₂", "QUAD-ROTOR WANKEL H₂"], ["VELOCITÀ MOVIMENTO", "MOVEMENT SPEED"], ["30 FPS (risparmio)", "30 FPS (saver)"], ["PIANTA DELLA CITTÀ", "CITY LAYOUT"], ["telecamera globale", "global camera"], ["luminosità globale", "global brightness"], ["SEI GIÀ ATTERRATO", "YOU HAVE ALREADY LANDED"], ["SEI GIÀ IN ORBITA", "YOU ARE ALREADY IN ORBIT"], ["ASCENSORE · PONTI", "LIFT · DECKS"], ["TERRA · CYBERCITY", "EARTH · CYBERCITY"], ["PONTE 1 · PLANCIA", "DECK 1 · BRIDGE"], ["💡 RIFLETTORI: OFF", "💡 SPOTLIGHTS: OFF"], ["⚡ A TUTTA POTENZA", "⚡ FULL POWER"], ["VORTICE TEMPORALE", "TIME VORTEX"], ["2 bracci robotici", "2 robotic arms"], ["L 8,6 m · B 4,6 m", "L 8.6 m · W 4.6 m"], ["RUOTE SENZA MOZZO", "HUBLESS WHEELS"], ["CASUAL · MAGLIONE", "CASUAL · SWEATER"], ["TU · KAGE RIPTIDE", "YOU · KAGE RIPTIDE"], ["GIRO DELLA LAGUNA", "LAGOON LAP"], ["INVIO = rivincita", "ENTER = rematch"], ["Città non trovata", "City not found"], [" min dopo l'avvio", " min after start"], ["IN ALTO AL CENTRO", "TOP CENTRE"], ["TU · KAGE 2789 GT", "YOU · KAGE 2789 GT"], ["RISULTATI SALVATI", "SAVED RESULTS"], ["PERSONALIZZAZIONE", "CUSTOMISATION"], ["↺ RIPARTI DAL VIA", "↺ RESTART"], ["V8 BITURBO IBRIDO", "TWIN-TURBO HYBRID V8"], ["▶ ANTEPRIMA METEO", "▶ WEATHER PREVIEW"], ["+ AGGIUNGI FASCIA", "+ ADD SLOT"], ["GRAFICA (GLOBALE)", "GRAPHICS (GLOBAL)"], ["atmosfera globale", "global atmosphere"], ["💡 RIFLETTORI: ON", "💡 SPOTLIGHTS: ON"], ["STRADE SCIVOLOSE", "SLIPPERY STREETS"], ["MANI SUI FIANCHI", "HANDS ON HIPS"], ["BRACCIA CONSERTE", "ARMS CROSSED"], ["NON SEI IL PRIMO", "YOU ARE NOT THE FIRST"], ["🚤 BARCA · LAGUNA", "🚤 BOAT · LAGOON"], ["COME L'ATMOSFERA", "LIKE THE ATMOSPHERE"], ["CRONO · RICARICA", "CHRONO · RECHARGING"], ["NEON RUN · PAUSA", "NEON RUN · PAUSE"], ["LEVITA ELETTRICA", "LEVITA ELECTRIC"], ["VELOCITÀ DI VOLO", "FLIGHT SPEED"], ["Orario di lavoro", "Work hours"], ["GIORNI DI LAVORO", "WORK DAYS"], ["DURANTE LA PAUSA", "DURING THE PAUSE"], ["ORARIO DI LAVORO", "WORK HOURS"], ["BILANCIATA (85%)", "BALANCED (85%)"], ["Traffico volante", "Flying traffic"], ["DECODIFICA CIFRE", "DIGIT DECODE"], ["SOPRA CYBERCITY", "ABOVE CYBERCITY"], ["ROTTA IMPOSTATA", "COURSE SET"], ["■ ESCI DAL WARP", "■ DROP OUT OF WARP"], ["150 m · 5 ponti", "150 m · 5 decks"], ["RAGGIO TRAENTE…", "TRACTOR BEAM…"], ["cintura esterna", "outer belt"], ["chiusa, 4 posti", "closed, 4 seats"], ["POZZETTO APERTO", "OPEN COCKPIT"], ["BRACCI ROBOTICI", "ROBOTIC ARMS"], ["👤 IL MIO PILOTA", "👤 MY PILOT"], ["il più vicino a", "nearest at"], ["TU · KAGE STRIX", "YOU · KAGE STRIX"], ["ANELLO DEL FARO", "LIGHTHOUSE RING"], ["REGATA DEL FARO", "LIGHTHOUSE REGATTA"], ["ASSIST. FUSIONE", "FUSION ASSIST"], ["EFFETTI CASUALI", "RANDOM EFFECTS"], ["10.500 giri/min", "10,500 rpm"], ["APERTA (SPIDER)", "OPEN (SPIDER)"], ["DOPPIA STRISCIA", "TWIN STRIPES"], ["Mostra orologio", "Show clock"], ["COME IL SISTEMA", "LIKE THE SYSTEM"], ["Icone notifiche", "Notification icons"], ["60 FPS (fluido)", "60 FPS (smooth)"], ["Orologio glitch", "Glitch clock"], ["SFARFALLIO NEON", "NEON FLICKER"], ["RAGGIO TRAENTE", "TRACTOR BEAM"], ["25 m · 3 ponti", "25 m · 3 decks"], ["DISCO CLASSICO", "CLASSIC DISC"], ["ANELLO ROTANTE", "SPINNING RING"], ["PROFONDITÀ MAX", "MAX DEPTH"], ["CERCHI A RAZZE", "SPOKED RIMS"], ["CARENATA SPORT", "SPORT FAIRING"], ["1 ELICA GRANDE", "1 LARGE FAN"], ["COLORE CAPELLI", "HAIR COLOUR"], ["GUARDA IN ALTO", "LOOK UP"], ["TORNA INDIETRO", "GO BACK"], ["CANNONI PRONTI", "CANNONS READY"], ["CANNONI A LUCE", "LIGHT CANNONS"], ["BATTERIA BOOST", "BOOST BATTERY"], ["COLORE ACCENTI", "ACCENT COLOUR"], ["ELICA INTUBATA", "DUCTED FAN"], ["VELE CLASSICHE", "CLASSIC SAILS"], ["BASSA (veloce)", "LOW (fast)"], ["CORSA IN CITTÀ", "CITY RUN"], ["In carica e no", "Charging or not"], ["Solo in carica", "Only while charging"], ["9.000 giri/min", "9,000 rpm"], ["🔧 SERVIZIO BOX", "🔧 PIT SERVICE"], ["BLU ANODIZZATO", "ANODISED BLUE"], ["🎨 PERSONALIZZA", "🎨 CUSTOMISE"], ["SCHEDA TECNICA", "SPECIFICATIONS"], ["VOLO SUL VIALE", "AVENUE FLIGHT"], ["PISTA ASCIUTTA", "DRY TRACK"], ["PISTA ALLAGATA", "FLOODED TRACK"], ["PROGRAMMAZIONE", "SCHEDULE"], ["PERSONALIZZATA", "CUSTOM"], ["NON DISTURBARE", "DO NOT DISTURB"], ["tutti i giorni", "every day"], ["BATTERIA (60%)", "BATTERY (60%)"], ["MASSIMA (100%)", "MAXIMUM (100%)"], ["nessuna rotta", "no course"], ["TELETRASPORTO", "TRANSPORTER"], ["RAGGIO ATTIVO", "BEAM ON"], ["Disco volante", "Flying saucer"], ["nessuno lo sa", "nobody knows"], ["GRANDE CUPOLA", "GREAT DOME"], ["PICCOLO VERDE", "LITTLE GREEN"], ["LED integrati", "integrated LEDs"], ["SOSTENTAMENTO", "LIFT"], ["LAGUNA VELOCE", "FAST LAGOON"], ["CABINA CHIUSA", "CLOSED CABIN"], ["🤿 SOTTOMARINO", "🤿 SUBMARINE"], ["IL MIO PILOTA", "MY PILOT"], ["pronto al via", "ready to go"], ["CASTANO SCURO", "DARK BROWN"], ["BOX · SQUADRA", "PIT · CREW"], ["GIRO MIGLIORE", "BEST LAP"], ["SFIDA A TEMPO", "TIME ATTACK"], ["COLORE CERCHI", "RIM COLOUR"], ["COLORE LIVREA", "LIVERY COLOUR"], ["SOPRA I TETTI", "ABOVE THE ROOFTOPS"], ["PISTA BAGNATA", "WET TRACK"], ["EFFETTO METEO", "WEATHER EFFECT"], ["BAGLIORE NEON", "NEON GLOW"], ["CICLO E AVVIO", "CYCLE AND START"], ["Fascia attiva", "Slot active"], ["COSA MOSTRARE", "WHAT TO SHOW"], ["FASCIA ORARIA", "TIME SLOT"], ["SOLO OROLOGIO", "CLOCK ONLY"], ["nessun giorno", "no days"], ["Scanlines CRT", "CRT scanlines"], ["PIXEL SOTTILE", "THIN PIXEL"], ["NEON CONTORNO", "NEON OUTLINE"], ["LED A PUNTINI", "DOT LED"], ["ACCELERAZIONE", "ACCELERATION"], ["È UNA STELLA", "IS A STAR"], ["IN CURVATURA", "AT WARP"], ["FATTORE WARP", "WARP FACTOR"], ["fattore warp", "warp factor"], ["GONDOLE WARP", "WARP NACELLES"], ["🔊 SUONO: OFF", "🔊 SOUND: OFF"], ["Impostazioni", "Settings"], ["BRONZO SCURO", "DARK BRONZE"], ["DESTINAZIONI", "DESTINATIONS"], ["ATTREZZATURA", "EQUIPMENT"], ["SOPRACCIGLIA", "EYEBROWS"], ["CARICO UTILE", "PAYLOAD"], ["DISLOCAMENTO", "DISPLACEMENT"], ["MIGLIOR GIRO", "BEST LAP"], ["X8 COASSIALE", "X8 COAXIAL"], ["2 FUORIBORDO", "TWIN OUTBOARD"], ["↺ NUOVA GARA", "↺ NEW RACE"], ["PULSANTI ◀ ▶", "BUTTONS ◀ ▶"], ["🔥 SU DI GIRI", "🔥 REV IT"], ["MODULO CRONO", "CHRONO MODULE"], ["SUONO MOTORE", "ENGINE SOUND"], ["INSEGUIMENTO", "CHASE"], ["BIANCO PERLA", "PEARL WHITE"], ["IMPOSTAZIONI", "SETTINGS"], ["AGGIORNA ORA", "UPDATE NOW"], ["VELOCITÀ MAX", "TOP SPEED"], ["CAMPO VISIVO", "FIELD OF VIEW"], ["SCHERMO NERO", "BLACK SCREEN"], ["FUORI FASCIA", "OUTSIDE SLOTS"], ["COLORE UNICO", "SINGLE COLOUR"], ["DERIVA LENTA", "SLOW DRIFT"], ["AUTO (ciclo)", "AUTO (cycle)"], ["TRASMISSIONE", "TRANSMISSION"], ["AERODINAMICA", "AERODYNAMICS"], ["PIOGGERELLA", "DRIZZLE"], ["🔊 SUONO: ON", "🔊 SOUND: ON"], ["TRASPARENTE", "CLEAR"], ["SOTTOMARINO", "SUBMARINE"], ["PILOTA KAGE", "KAGE PILOT"], ["CORPORATURA", "BUILD"], ["PRONUNCIATO", "PROMINENT"], ["RISOLUZIONE", "RESOLUTION"], ["GIRO LIBERO", "FREE ROAM"], ["FLOTTA KAGE", "KAGE FLEET"], ["VELE SOLARI", "SOLAR SAILS"], ["LEGNO SCURO", "DARK WOOD"], ["GIRO VELOCE", "FASTEST LAP"], ["ORO · ROSSO", "GOLD · RED"], ["COLORE AUTO", "CAR COLOUR"], ["ROSSO CORSA", "RACING RED"], ["PUNTI DRIFT", "DRIFT POINTS"], ["PISTA UMIDA", "DAMP TRACK"], ["PROPULSIONE", "POWER UNIT"], ["PIATTAFORMA", "PLATFORM"], ["SATURAZIONE", "SATURATION"], ["TELETRASP.", "TRANSPORT"], ["ISTANTANEA", "INSTANT"], ["CREPUSCOLO", "TWILIGHT"], ["MECCANISMO", "MECHANISM"], ["VISITATORI", "VISITORS"], ["PROFONDITÀ", "DEPTH"], ["CARENATURA", "FAIRING"], ["PENSIEROSO", "THOUGHTFUL"], ["🧑‍🚀 PILOTA", "🧑‍🚀 PILOT"], ["CARNAGIONE", "SKIN TONE"], ["VIOLA NEON", "NEON VIOLET"], ["ORA LOCALE", "LOCAL TIME"], ["EQUIPAGGIO", "CREW"], ["PORTO NEON", "NEON HARBOUR"], ["IN PLANATA", "PLANING"], ["PROTEZIONI", "GUARDS"], ["COLORE LED", "LED COLOUR"], ["CATAMARANO", "CATAMARAN"], ["PARAELICHE", "PROP GUARDS"], ["MOTORE OFF", "ENGINE OFF"], ["CARBURANTE", "FUEL"], ["CINEMATICA", "CINEMATIC"], ["CLASSIFICA", "STANDINGS"], ["FRENO A M.", "HANDBRAKE"], ["luminosità", "brightness"], ["LUMINOSITÀ", "BRIGHTNESS"], ["Bilanciata", "Balanced"], ["Telecamera", "Camera"], ["CONDENSATO", "CONDENSED"], ["7 SEGMENTI", "7 SEGMENTS"], ["ARCOBALENO", "RAINBOW"], ["PULSAZIONE", "PULSE"], ["TELECAMERA", "CAMERA"], ["DIMENSIONE", "SIZE"], ["REGIME MAX", "REDLINE"], ["DIMENSIONI", "DIMENSIONS"], ["PNEUMATICI", "TYRES"], ["▶ RIPRENDI", "▶ RESUME"], ["IN ORBITA", "IN ORBIT"], ["ATTERRATI", "LANDED"], ["⚡ INGRANA", "⚡ ENGAGE"], ["⇧ DECOLLA", "⇧ TAKE OFF"], ["⇩ ATTERRA", "⇩ LAND"], ["Posizione", "Position"], ["anni luce", "light years"], ["🚀 ODYSSEY", "🚀 ODYSSEY"], ["LUNGHEZZA", "LENGTH"], ["PRELEVATI", "ABDUCTED"], ["IN STRADA", "ON ROAD"], ["BATISCAFO", "BATHYSCAPHE"], ["MUSCOLOSO", "MUSCULAR"], ["STEMPIATI", "RECEDING"], ["INDOSSATO", "ON"], ["OLIVASTRA", "OLIVE"], ["SQUADRATO", "SQUARE"], ["ALLUNGATO", "LONG"], ["ACCENNATA", "STUBBLE"], ["SQUADRATI", "SQUARE"], ["FRAMMENTI", "SHARDS"], ["FRAMMENTO", "SHARD"], ["AUTONOMIA", "ENDURANCE"], ["disarmato", "unarmed"], ["ALTISSIMA", "ULTRA"], ["ARMAMENTO", "ARMAMENT"], ["IDROGETTO", "WATER JET"], ["GIRO AUTO", "TURNAROUND"], ["MOTORE ON", "ENGINE ON"], ["DALL'ALTO", "TOP DOWN"], ["NERO NEON", "NEON BLACK"], ["AVVERSARI", "OPPONENTS"], ["SERBATOIO", "TANK"], ["ANTEPRIMA", "PREVIEW"], ["DUE PUNTI", "COLON"], ["Atmosfera", "Atmosphere"], ["AL CENTRO", "CENTRE"], ["MERCOLEDÌ", "WEDNESDAY"], ["ATMOSFERA", "ATMOSPHERE"], ["MOVIMENTO", "MOVEMENT"], ["POSIZIONE", "POSITION"], ["TEMPORALE", "STORM"], ["VARIABILE", "VARIABLE"], ["ABITACOLO", "COCKPIT"], ["ELABORATO", "SPORT"], ["▶ GUIDALA", "▶ DRIVE IT"], ["INGRANA!", "ENGAGE!"], ["✕ CHIUDI", "✕ CLOSE"], ["TRAMONTO", "SUNSET"], ["NUVOLOSO", "CLOUDY"], ["CARRELLO", "LANDING GEAR"], ["DIAMETRO", "DIAMETER"], ["👽 ALIENI", "👽 ALIENS"], ["1.900 kg", "1,900 kg"], ["IN ACQUA", "ON WATER"], ["IN SELLA", "IN THE SADDLE"], ["OCCHIALI", "GLASSES"], ["ATLETICO", "ATHLETIC"], ["BLU NEON", "NEON BLUE"], ["PIZZETTO", "GOATEE"], ["NOCCIOLA", "HAZEL"], ["IN PIEDI", "STANDING"], ["VELATURA", "SAIL PLAN"], ["VELOCITÀ", "SPEED"], ["SUI FOIL", "ON FOILS"], ["in gara…", "racing…"], ["ALISCAFO", "HYDROFOIL"], ["INDIETRO", "BACK"], ["FORGED Y", "FORGED Y"], ["PARAURTI", "BUMPER"], ["MODALITÀ", "MODE"], ["MIGLIORE", "BEST"], ["ADERENZA", "GRIP"], ["Velocità", "Speed"], ["CITTÀ 3D", "3D CITY"], ["Batteria", "Battery"], ["DOMENICA", "SUNDAY"], ["OROLOGIO", "CLOCK"], ["PRATERIA", "MEADOW"], ["PORTIERE", "DOORS"], ["LATERALE", "SIDE STRIPE"], ["BATTERIA", "BATTERY"], ["IMPULSO", "IMPULSE"], ["🧭 ROTTA", "🧭 COURSE"], ["MANCANO", "REMAINING"], ["gravità", "gravity"], ["COMANDO", "HELM"], ["RIENTRA", "COME IN"], ["ESTERNO", "EXTERIOR"], ["GRAFITE", "GRAPHITE"], ["A BORDO", "ON BOARD"], ["METALLO", "METAL"], ["NORDICO", "NORDIC"], ["ORIGINE", "ORIGIN"], ["PALLIDA", "PALE"], ["PLATINO", "PLATINUM"], ["⏳ EPOCH", "⏳ EPOCH"], ["ENERGIA", "ENERGY"], ["NORMALI", "NORMAL"], ["SOTTILI", "THIN"], ["POLLICE", "THUMBS UP"], ["CAMMINA", "WALK"], ["con LED", "with LED"], ["LICENZE", "LICENCES"], ["ALTEZZA", "HEIGHT"], ["CAPELLI", "HAIR"], ["ROBUSTO", "STOCKY"], ["AMBRATA", "AMBER"], ["PICCOLO", "SMALL"], ["CASTANO", "BROWN"], ["MARRONI", "BROWN"], ["AZZURRI", "BLUE"], ["SENSORI", "SENSORS"], ["CASUALE", "RANDOM"], ["GALEONE", "GALLEON"], ["ARGENTO", "SILVER"], ["ARANCIO", "ORANGE"], ["CANNONI", "CANNONS"], ["LONTANA", "FAR"], ["PLANCIA", "BRIDGE"], ["PLANATA", "GLIDE"], ["ATTUALE", "CURRENT"], ["Massima", "Maximum"], ["Qualità", "Quality"], ["FLUTTUA", "FLOAT"], ["GIRO 3D", "3D SPIN"], ["MARTEDÌ", "TUESDAY"], ["GIOVEDÌ", "THURSDAY"], ["VENERDÌ", "FRIDAY"], ["NESSUNO", "NONE"], ["NESSUNA", "NONE"], ["ANNULLA", "CANCEL"], ["ELIMINA", "DELETE"], ["GLOBALE", "GLOBAL"], ["PIOGGIA", "RAIN"], ["INTERNI", "INTERIOR"], ["⟳ RUOTA", "⟳ ROTATE"], ["SCARICO", "EXHAUST"], ["SCRITTA", "LETTERING"], ["APPLICA", "APPLY"], ["POTENZA", "POWER"], ["FRENATA", "BRAKING"], ["ASFALTO", "ASPHALT"], ["CORDOLO", "KERB"], ["COLORE:", "COLOUR:"], ["giorni", "days"], ["ALZATI", "STAND UP"], ["AVORIO", "IVORY"], ["CLASSE", "CLASS"], ["SERENO", "CLEAR"], ["LASCIA", "LEAVE"], ["SCENDI", "GET OUT"], ["RAGGIO", "BEAM"], ["SPINTA", "THRUST"], ["VELE +", "SAILS +"], ["VELE −", "SAILS −"], ["ARRIVO", "ARRIVAL"], ["OTTONE", "BRASS"], ["SPECIE", "SPECIES"], ["TUNICA", "TUNIC"], ["GRIGIO", "GREY"], ["14 ore", "14 hours"], ["CABINA", "CABIN"], ["SILURO", "TORPEDO"], ["GIALLO", "YELLOW"], ["🏍 MOTO", "🏍 MOTORBIKE"], ["SALUTO", "WAVE"], ["INDICA", "POINT"], ["ESULTA", "CHEER"], ["SNELLO", "SLIM"], ["CHIARA", "FAIR"], ["ROSATA", "ROSY"], ["RASATI", "BUZZ CUT"], ["CIUFFO", "QUIFF"], ["LUNGHI", "LONG HAIR"], ["CRESTA", "MOHAWK"], ["BIONDO", "BLOND"], ["VISORE", "VISOR"], ["BAGLIO", "BEAM"], ["FLOTTA", "FLEET"], ["TELAIO", "FRAME"], ["SCOCCA", "SHELL"], ["ELICHE", "PROPELLERS"], ["PRONTI", "READY"], ["AVANTI", "FWD"], ["🔧 VAI!", "🔧 GO!"], ["PILOTA", "DRIVER"], ["ULTIMO", "LAST"], ["RECORD", "RECORD"], ["ORBITA", "ORBIT"], ["LUNEDÌ", "MONDAY"], ["SABATO", "SATURDAY"], ["COLORI", "COLOURS"], ["FASCIA", "SLOT"], ["MOSTRA", "SHOW"], ["IGNORA", "IGNORE"], ["SPENTO", "OFF"], ["NEBBIA", "FOG"], ["GIORNO", "DAY"], ["ORARIO", "TIME"], ["NIENTE", "NONE"], ["COFANO", "BONNET"], ["MOTORE", "ENGINE"], ["STERZO", "STEERING"], ["COLORE", "COLOUR"], ["CAPOTE", "ROOF"], ["CHIUSA", "CLOSED"], ["CERCHI", "RIMS"], ["LIVREA", "LIVERY"], ["COPPIA", "TORQUE"], ["✕ ESCI", "✕ EXIT"], ["GHIAIA", "GRAVEL"], ["BIANCO", "WHITE"], ["CHIUDI", "CLOSE"], ["ROTTA", "COURSE"], ["VERSO", "TO"], ["reale", "real"], ["MARTE", "MARS"], ["PONTI", "DECKS"], ["PERLA", "PEARL"], ["VISTA", "VIEW"], ["NOTTE", "NIGHT"], ["SALTA", "JUMP"], ["CORRI", "RUN"], ["OMBRA", "SHADOW"], ["VETRI", "GLASS"], ["UMANO", "HUMAN"], ["PIEGA", "LEAN"], ["RUOTE", "WHEELS"], ["GONNA", "SKIRT"], ["FOLTE", "THICK"], ["CORRE", "RUN"], ["RUOLO", "ROLE"], ["STATO", "STATUS"], ["CASCO", "HELMET"], ["BARBA", "BEARD"], ["OCCHI", "EYES"], ["TOLTO", "OFF"], ["SCURA", "DARK"], ["EBANO", "EBONY"], ["OVALE", "OVAL"], ["TONDO", "ROUND"], ["MEDIO", "MEDIUM"], ["CORTI", "SHORT"], ["RICCI", "CURLY"], ["CALVO", "BALD"], ["CORTA", "SHORT"], ["PIENA", "FULL"], ["BAFFI", "MOUSTACHE"], ["VERDI", "GREEN"], ["GRIGI", "GREY"], ["TONDI", "ROUND"], ["POSTI", "SEATS"], ["BARCA", "BOAT"], ["SCAFO", "HULL"], ["AMBRA", "AMBER"], ["VERDE", "GREEN"], ["VENTO", "WIND"], ["BORDO", "LEG"], ["RETRO", "REVERSE"], ["FUOCO", "FIRE"], ["BASSA", "LOW"], ["Parte", "Starts"], ["USURA", "WEAR"], ["Meteo", "Weather"], ["STILE", "STYLE"], ["TUTTI", "ALL"], ["TINTA", "HUE"], ["CITTÀ", "CITY"], ["CERCA", "SEARCH"], ["SALVA", "SAVE"], ["DALLE", "FROM"], ["GOMME", "TYRES"], ["PIENO", "FULL"], ["TIENI", "KEEP"], ["METEO", "WEATHER"], ["SFIDA", "CHALLENGE"], ["TEMPO", "TIME"], ["▶ VIA", "▶ GO"], ["FRENO", "BRAKE"], ["SERIE", "STOCK"], ["FRENI", "BRAKES"], ["TARGA", "PLATE"], ["ROSSO", "RED"], ["CIANO", "CYAN"], ["VIOLA", "PURPLE"], ["anni", "years"], ["LUNA", "MOON"], ["BASE", "HOME"], ["ALBA", "DAWN"], ["VOLA", "FLY"], ["SALI", "GET IN"], ["DOVE", "WHERE"], ["RAME", "COPPER"], ["FUMÉ", "SMOKED"], ["TUTA", "SUIT"], ["VISO", "FACE"], ["NASO", "NOSE"], ["POSA", "POSE"], ["CODA", "PONYTAIL"], ["TIPO", "TYPE"], ["PALE", "BLADES"], ["VELE", "SAILS"], ["RESA", "EFFICIENCY"], ["NODI", "KNOTS"], ["VIA!", "GO!"], ["GARE", "RACES"], ["GIRI", "LAPS"], ["ALTA", "HIGH"], ["ONDA", "WAVE"], ["ALLE", "TO"], ["SERA", "EVENING"], ["NEVE", "SNOW"], ["GIRO", "LAP"], ["GARA", "RACE"], ["giri", "laps"], ["LUCI", "LIGHTS"], ["VOLO", "FLIGHT"], ["PESO", "WEIGHT"], ["ERBA", "GRASS"], ["NERO", "BLACK"], ["ore", "hours"], ["BLU", "BLUE"], ["GIÙ", "DOWN"], ["PIT", "PIT"], ["ORO", "GOLD"], ["SU", "UP"], ["SÌ", "YES"]];
   const map = new Map(PAIRS), LET = 'A-Za-z\u00C0-\u00FF';
   const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), isL = c => /[A-Za-z\u00C0-\u00FF]/.test(c);
   const re = new RegExp(PAIRS.map(([k]) => (isL(k[0]) ? '(?<![' + LET + '])' : '') + esc(k) + (isL(k[k.length - 1]) ? '(?![' + LET + '])' : '')).join('|'), 'g');
@@ -1033,7 +1033,7 @@ function bakeTraffic(m, inst, maxV) {
   }
   return out;
 }
-root.KageFleet = { GARAGE, buildGarage, buildKelp, buildRock, buildJelly, buildFish, buildMoto, buildHover, buildSub, bakeTraffic, buildEye, buildShard, buildSerpentSeg, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
+root.KageFleet = { FONT5, GARAGE, buildGarage, buildKelp, buildRock, buildJelly, buildFish, buildMoto, buildHover, buildSub, bakeTraffic, buildEye, buildShard, buildSerpentSeg, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* KAGE fleet sounds (Web Audio, all synthesised): one voice per vehicle kind.
@@ -1105,6 +1105,8 @@ FleetAudio.prototype.update = function (kind, st, wind) {
   } else if (kind === 'galleon') {   // wind in the sails, the hull through the water, creaking timbers, the fusion assist when on
     saws(48, 200, th > 0.9 ? 0.03 : 0); noise(320 + sp * 20, 0.8, 0.04 + wind.speed * 0.003 + sp * 0.004);
     if (t > this.nextCreak) { this.nextCreak = t + 3 + Math.random() * 5; this.blip(90 + Math.random() * 60, 60, 0.35, 0.07, 'sawtooth'); }
+  } else if (kind === 'starship') {   // the ship's deep reactor hum; in warp a rising harmonic whine
+    const w = st.warp || 0; saws(41, 140 + th * 200, 0.035 + th * 0.03); sines(82 + w * 28, 123 + w * 42, 0.025 + (w ? 0.05 : 0), w ? 4 : 0.5, 0.3 + w * 0.2); noise(900 + w * 300, 0.7, 0.006 + (w ? 0.03 : 0));
   } else { noise(400, 1, 0.01); }
   set(this.og.gain, saw); set(this.sg.gain, sine); set(this.vibG.gain, vib); set(this.amG.gain, am);
 };
@@ -1437,6 +1439,322 @@ KF.KINDS.alien = { build: (o, lod) => root.KagePilot.build(o, lod || (o && o.lod
   names: { species: { grigio: 'GRIGIO', verde: 'PICCOLO VERDE', nordico: 'NORDICO', scuro: 'OMBRA' } }, def: { species: 'grigio', pose: 'in piedi' }, rig: {}, title: 'VISITATORI', extra: true };
 Object.assign(KF.OPT_TITLES, { legs: 'CARRELLO', metal: 'METALLO', glass: 'VETRI', species: 'SPECIE', pose: 'POSA' });
 root.KageXeno = { buildUfo, buildUfoInterior, buildBeam, buildChrono, buildVortex, lathe, UFO_RIG, CHRONO_RIG, UFO_DEF, CHRONO_DEF };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* KAGE ODYSSEY (KX-01): an original deep-space starship — long lens-shaped command hull, engineering hull, two warp nacelles —
+ * with five walkable decks, the garage miniature, the crew badge, planets, star systems and landing sites.
+ * Same vertex layout as web/vehicles.js; every primitive has a part name for the OBJ export. Local metres, +Y up, +Z bow. */
+(function (root) {
+'use strict';
+const KF = root.KageFleet, KX = root.KageXeno, MB = KF.MB, T = KF.T, RX = KF.RX, RY = KF.RY, RZ = KF.RZ, M = KF.M, PI = Math.PI, TAU = PI * 2;
+const mat = (c, e, slot, mode, a) => ({ c, e: e || 0, slot: slot || 0, mode: mode || 0, a: a || [0, 0, 0] });
+const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const Q = lod => lod === 'lo' ? 0.5 : lod === 'ultra' ? 2 : 1;
+const FONT = { K: '10001100101010011000101001001010001', A: '01110100011000111111100011000110001', G: '01111100001000010111100011000101111', E: '11111100001000011110100001000011111',
+  O: '01110100011000110001100011000101110', D: '11110100011000110001100011000111110', Y: '10001100010101000100001000010000100', S: '01111100001000001110000010000111110',
+  X: '10001100010101000100010101000110001', '-': '00000000000000011111000000000000000', '0': '01110100111010110101101011100101110', '1': '00100011000010000100001000010001110', ' ': '0'.repeat(35) };
+function text(mb, str, x0, y0, z0, px, m, dir) {   // pixel letters on a plane facing +x (dir 1) or -x (dir -1), reading along z
+  [...str].forEach((ch, i) => { const g = FONT[ch] || FONT[' '];
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 5; c++) if (g[r * 5 + c] === '1') mb.box(x0, y0 + (6 - r) * px, z0 - dir * (i * 6 + c) * px, 0.06, px * 0.9, px * 0.9, m); });
+}
+
+/* ---------------- options ---------------- */
+const SHIP_OPTS = { hull: ['perla', 'grafite', 'avorio'], accent: ['oro', 'argento', 'nero'], warp: ['ciano', 'viola', 'ambra'], view: ['esterno', 'ponte', 'teletrasporto', 'astrolab', 'mensa', 'ingegneria'] };
+const SHIP_NAMES = { hull: { perla: 'PERLA', grafite: 'GRAFITE', avorio: 'AVORIO' }, view: { esterno: 'ESTERNO', ponte: 'PONTE 1 · PLANCIA', teletrasporto: 'PONTE 2 · TELETRASPORTO', astrolab: 'PONTE 3 · ASTROLAB', mensa: 'PONTE 4 · MENSA E PORTELLO', ingegneria: 'PONTE 5 · INGEGNERIA' } };
+const SHIP_DEF = { hull: 'perla', accent: 'oro', warp: 'ciano', view: 'esterno' };
+const HULLC = { perla: [0.78, 0.8, 0.84], grafite: [0.24, 0.25, 0.28], avorio: [0.86, 0.82, 0.72] };
+const WARPC = { ciano: [0.2, 0.85, 1], viola: [0.65, 0.35, 1], ambra: [1, 0.6, 0.15] };
+/** decks: floor height, room box, title; the lift is at (0, LIFT_Z) on every deck */
+const LIFT_Z = 4;
+const DECKS = [
+  { id: 'ponte', n: 1, y: 6.6, title: 'PONTE 1 · PLANCIA', round: 10, cz: 14 },
+  { id: 'teletrasporto', n: 2, y: 2.8, title: 'PONTE 2 · TELETRASPORTO', box: [-12, 12, 1, 25] },
+  { id: 'astrolab', n: 3, y: -0.8, title: 'PONTE 3 · ASTROLAB', box: [-12, 12, 1, 25] },
+  { id: 'mensa', n: 4, y: -4.4, title: 'PONTE 4 · MENSA E PORTELLO', box: [-12, 12, 1, 25] },
+  { id: 'ingegneria', n: 5, y: -9.2, title: 'PONTE 5 · INGEGNERIA', box: [-10, 10, 1, 25] }];
+const RIG = { len: 150, pads: [[0, 21], [-1.6, 20.1], [1.6, 20.1], [-1.6, 22.2], [1.6, 22.2], [0, 23.2]], helm: [0, 12.5], chair: [0, 11.6], astro: [0, 13], airlock: [12, 20], core: [0, 15], H: 3.4 };
+
+/* ---------------- exterior ---------------- */
+function buildStarship(o, lod) {
+  o = Object.assign({}, SHIP_DEF, o || {}); lod = lod || o.lod;
+  const mb = new MB(), q = Q(lod), N = k => Math.max(8, Math.round(k * q));
+  const hc = HULLC[o.hull] || HULLC.perla, P = mat(hc, 0, 1), Pd = mat(hc.map(v => v * 0.72), 0, 1), A = mat(KF.COLORS[o.accent] || KF.COLORS.oro, 0, 2), dark = mat([0.05, 0.055, 0.065]);
+  const wc = WARPC[o.warp] || WARPC.ciano, W = mat(wc, 1.4, 3), Wm = mat([1, 0.3, 0.75], 1.5, 3), win = mat([1, 0.9, 0.7], 1.1, 3), G = mat([0.06, 0.09, 0.12], 0, 4);
+  // command hull: a long lens, pointed bow, wide round stern (sections along z, superellipse ex 2.4)
+  mb.part = 'scafo_comando';
+  const sec = z => { const t = (z + 40) / 105; const w = 30 * Math.pow(Math.sin(PI * clamp(t, 0, 1) * 0.92 + 0.08), 0.8) * (1 - 0.35 * sstep(0.55, 1, t)), h = 6.6 * Math.pow(Math.sin(PI * clamp(t, 0, 1)), 0.55); return [w, h]; };
+  const rows = [], nz = N(30), na = N(40);
+  for (let j = 0; j <= nz; j++) { const z = lerp(-40, 65, j / nz), [w, h] = sec(z), row = [];
+    for (let k = 0; k <= na; k++) { const a = k / na * TAU, s = Math.sin(a), c = Math.cos(a), e = 2 / 2.6;
+      row.push([Math.sign(s) * Math.pow(Math.abs(s), e) * w, Math.sign(c) * Math.pow(Math.abs(c), e) * h * (c > 0 ? 1 : 0.75), z]); }
+    rows.push(row); }
+  mb.grid(rows, P, false);
+  // panel lines + rows of lit windows along the rim
+  mb.part = 'finestrini';
+  for (let j = 2; j < nz - 1; j += 1) { const z = lerp(-40, 65, j / nz), [w, h] = sec(z); if (w < 6) continue;
+    for (const sx of [-1, 1]) for (const yy of [0.15, -0.25]) mb.box(sx * (w - 0.05), yy * h, z, 0.12, 0.35, 1.4, win); }
+  mb.part = 'linee_pannelli';
+  for (const z of [-20, 0, 20, 40]) { const [w, h] = sec(z); mb.box(0, h + 0.03, z, w * 1.6, 0.06, 0.25, Pd); }
+  mb.box(0, 6.62, 10, 0.3, 0.1, 90, A);
+  // bridge dome + sensor ring
+  mb.part = 'cupola_plancia';
+  mb.push(T(0, 6.2, 14)); KX.lathe(mb, [[10.6, 0], [10.4, 0.9], [9.2, 2.2], [6.5, 3.4], [3, 4.0], [0.01, 4.15]], N(40), (j) => j === 1 ? G : P, true); mb.pop();
+  mb.push(T(0, 7.15, 14)); mb.torus(10.45, 0.12, N(48), 6, W); mb.pop();
+  // registry: KAGE ODYSSEY · KX-01 on both flanks of the dome base and on the top
+  mb.part = 'scritte';
+  for (const s of [-1, 1]) { const zt = s > 0 ? 8 : 8 - 13 * 6 * 0.34 * -1; const zz = s > 0 ? 34 : 34 - 13 * 6 * 0.34;
+    text(mb, 'KX-01 ODYSSEY', s * (sec(zz + (s > 0 ? -9 : 9))[0] * 0.995 + 0.04), -0.6, s > 0 ? 30 : 30 - 13 * 6 * 0.2, 0.2, mat(hc.map(v => v * 0.35), 0, 2), s); void zt; }
+  // neck + engineering hull with the deflector dish
+  mb.part = 'collo';
+  mb.box(0, -7.5, -6, 6, 6, 18, Pd, [0.7, 0.8]);
+  mb.part = 'scafo_ingegneria';
+  const er = []; for (let j = 0; j <= N(20); j++) { const t = j / N(20), z = lerp(-48, 18, t), r = 7.2 * Math.pow(Math.sin(PI * clamp(t * 0.95 + 0.05, 0, 1)), 0.45) * (1 - 0.2 * t);
+    const row = []; for (let k = 0; k <= N(28); k++) { const a = k / N(28) * TAU; row.push([Math.sin(a) * r, -11 + Math.cos(a) * r * 0.85, z]); } er.push(row); }
+  mb.grid(er, P, false);
+  mb.part = 'deflettore';
+  mb.push(M(T(0, -11, 17.3), RX(PI / 2))); mb.cyl(-0.4, 0.5, 4.2, 3.6, N(32), A); mb.disc(3.5, N(32), 0.52, mat(wc.map(v => v * 0.7 + 0.25), 1.6, 3)); mb.torus(3.0, 0.15, N(32), 6, mat([1, 0.75, 0.3], 1.4, 3)); mb.pop();
+  mb.part = 'hangar_navette';
+  mb.box(0, -11, -48.5, 7, 4.5, 0.4, mat([0.9, 0.85, 0.6], 0.6, 3)); mb.box(0, -11, -48.3, 8, 5.5, 0.3, dark);
+  // pylons and warp nacelles (glowing coils along the inner faces, magenta intake caps, cyan trailing grilles)
+  for (const s of [-1, 1]) {
+    mb.part = 'piloni';
+    mb.push(T(s * 16, -3, -24)); mb.push(RZ(-s * 0.55)); mb.box(0, 0, 0, 2.2, 22, 9, P, [0.6, 1]); mb.pop(); mb.pop();
+    mb.part = s > 0 ? 'gondola_warp_sinistra' : 'gondola_warp_destra';
+    const nx = s * 27, ny = 6, nrow = []; for (let j = 0; j <= N(18); j++) { const t = j / N(18), z = lerp(-62, 2, t), r = 3.6 * (t < 0.08 ? Math.sqrt(t / 0.08) : t > 0.9 ? 0.6 + 0.4 * Math.cos((t - 0.9) / 0.1 * PI / 2) : 1);
+      const row = []; for (let k = 0; k <= N(24); k++) { const a = k / N(24) * TAU; row.push([nx + Math.sin(a) * r, ny + Math.cos(a) * r, z]); } nrow.push(row); }
+    mb.grid(nrow, P, false);
+    mb.part = 'bobine_warp';
+    for (let i = 0; i < 9; i++) { const z = -54 + i * 5.6; mb.box(nx - s * 3.55, ny, z, 0.3, 2.6, 4.2, W); }
+    mb.push(T(nx, ny, -62.3)); mb.push(RX(PI / 2)); mb.disc(2.6, N(24), 0, mat(wc, 1.2, 3)); mb.pop(); mb.pop();
+    mb.part = 'collettori';
+    mb.ellipsoid(nx, ny, 2.2, 3.0, 3.0, 2.6, N(20), N(12), Wm);
+    mb.box(nx, ny + 3.7, -30, 0.5, 0.3, 50, A);
+  }
+  // running lights (strobe) at the wing tips and nacelle ends
+  mb.part = 'luci_navigazione';
+  for (const s of [-1, 1]) { mb.ellipsoid(s * 29.5, 0, 22, 0.35, 0.35, 0.35, 8, 6, mat(s > 0 ? [1, 0.1, 0.1] : [0.1, 1, 0.3], 1.8, 3, 7, [0, s > 0 ? 0 : 0.5, 0])); mb.ellipsoid(s * 27, 9.8, -60, 0.3, 0.3, 0.3, 8, 6, mat([1, 1, 1], 2, 3, 7, [0, 0.25, 0])); }
+  // airlock (starboard side of deck 4) — EVA exit
+  mb.part = 'portello_eva';
+  mb.box(23.5, -3.2, 20, 0.4, 3, 2.4, A); mb.box(23.7, -3.2, 20, 0.2, 2.4, 1.8, mat([0.2, 1, 0.5], 0.9, 3));
+  const m = mb.finish(); m.kind = 'starship'; return m;
+}
+
+/* ---------------- decks (walkable interiors; cut = cutaway for the showroom: no ceiling, no near wall) ---------------- */
+function buildDeck(id, o, lod) {
+  o = Object.assign({}, SHIP_DEF, o || {}); lod = lod || o.lod;
+  const D = DECKS.find(d => d.id === id) || DECKS[0], mb = new MB(), q = Q(lod), N = k => Math.max(8, Math.round(k * q)), cut = !!o.cut, y = cut ? 0 : D.y, H = RIG.H;
+  const wc = WARPC[o.warp] || WARPC.ciano, wall = mat([0.72, 0.74, 0.78]), wallD = mat([0.42, 0.44, 0.48]), floorC = [0.2, 0.21, 0.24], trim = mat(KF.COLORS[o.accent] || KF.COLORS.oro, 0, 2);
+  const L = mat(wc, 1.1, 3), soft = mat(wc.map(v => v * 0.5 + 0.35), 0.6, 3), panel = mat([1, 0.62, 0.2], 0.9, 3), panelB = mat([0.45, 0.7, 1], 0.9, 3), seat = mat([0.12, 0.13, 0.16]), dark = mat([0.06, 0.065, 0.075]);
+  const glassC = mat([0.08, 0.12, 0.16], 0, 4);
+  const consoleAt = (x, z, h, w, c) => { mb.push(M(T(x, y, z), RY(h))); mb.box(0, 0.5, 0, w, 1.0, 0.7, wallD, [1, 0.8]); mb.box(0, 1.03, -0.05, w * 0.95, 0.04, 0.55, c || panel); mb.pop(); };
+  const chairAt = (x, z, h) => { mb.push(M(T(x, y, z), RY(h))); mb.cyl(0, 0.42, 0.1, 0.08, N(10), dark); mb.box(0, 0.48, 0, 0.6, 0.1, 0.6, seat); mb.box(0, 0.95, -0.28, 0.6, 0.85, 0.1, seat, [0.9, 1]); mb.pop(); };
+  // lift alcove (same place on every deck)
+  const lift = () => { mb.part = 'ascensore'; mb.push(T(0, y, LIFT_Z)); mb.cyl(0, 0.06, 1.3, 1.3, N(24), dark); mb.disc(1.1, N(24), 0.065, soft); for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + PI / 4; mb.box(Math.sin(a) * 1.45, H / 2, Math.cos(a) * 1.45, 0.12, H, 0.12, trim); } mb.torus(1.45, 0.05, N(24), 6, L); mb.push(T(0, H - 0.12, 0)); mb.torus(1.45, 0.05, N(24), 6, L); mb.pop(); mb.pop(); };
+  if (D.round) {
+    // PONTE 1: round bridge with the wide front window, captain's chair, helm and ops, side stations
+    const R0 = D.round, cz = D.cz;
+    mb.part = 'pavimento';
+    mb.push(T(0, y, cz)); mb.disc(R0, N(48), 0, mat(floorC)); mb.torus(R0 * 0.55, 0.06, N(48), 6, soft); mb.pop();
+    mb.part = 'pareti';
+    mb.push(T(0, y, cz)); KX.lathe(mb, [[R0, 0], [R0, 1.0], [R0, 2.6], [R0 * 0.92, H]], N(48), (j) => j === 1 ? glassC : wall, false, 0, TAU, (j, a) => j === 1 && Math.cos(a) > 0.45); mb.pop();
+    if (!cut) { mb.part = 'soffitto'; mb.push(T(0, y + H, cz)); KX.lathe(mb, [[R0 * 0.92, 0], [R0 * 0.6, 0.7], [0.01, 0.9]], N(40), wall, false); mb.torus(R0 * 0.5, 0.08, N(40), 6, L); mb.pop(); }
+    mb.part = 'strisce_led'; mb.push(T(0, y + 0.08, cz)); mb.torus(R0 - 0.15, 0.04, N(48), 6, L); mb.pop();
+    mb.part = 'sedile_capitano'; chairAt(0, RIG.chair[1], 0); mb.box(0.42, y + 0.65, RIG.chair[1], 0.12, 0.1, 0.5, trim); mb.box(-0.42, y + 0.65, RIG.chair[1], 0.12, 0.1, 0.5, trim);
+    mb.part = 'console_timone'; consoleAt(-1.6, cz + 2.8, 0, 1.8, panel); consoleAt(1.6, cz + 2.8, 0, 1.8, panelB); chairAt(-1.6, cz + 2.0, 0); chairAt(1.6, cz + 2.0, 0);
+    mb.part = 'stazioni'; for (const s of [-1, 1]) for (const a of [0.9, 1.6, 2.3]) { const h = s * a; consoleAt(Math.sin(h) * (R0 - 1), cz + Math.cos(h) * (R0 - 1), h + PI, 2.2, s > 0 ? panelB : panel); }
+    mb.part = 'ringhiera'; mb.push(T(0, y + 0.95, cz - 1.5)); KX.lathe(mb, [[4.2, 0], [4.2, 0.08]], N(40), trim, false, -2.2, 2.2); mb.pop();
+    lift();
+  } else {
+    const [x0, x1, z0, z1] = D.box, cx = (x0 + x1) / 2, czz = (z0 + z1) / 2, Wd = x1 - x0, Dd = z1 - z0;
+    mb.part = 'pavimento';
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) mb.box(x0 + (i + 0.5) * Wd / 6, y - 0.05, z0 + (j + 0.5) * Dd / 6, Wd / 6 - 0.05, 0.1, Dd / 6 - 0.05, mat(floorC.map(v => v * ((i + j) % 2 ? 1 : 0.88))));
+    mb.part = 'pareti';
+    const winSide = D.id === 'mensa';
+    for (const s of [-1, 1]) { const x = s > 0 ? x1 : x0;
+      if (winSide) { mb.box(x, y + 0.5, czz, 0.3, 1.0, Dd, wall); mb.box(x, y + H - 0.4, czz, 0.3, 0.8, Dd, wall); for (let k = 0; k <= 4; k++) mb.box(x, y + 1.6, z0 + k * Dd / 4, 0.3, 1.2, 0.4, wall); }
+      else if (!(cut && s < 0)) mb.box(x, y + H / 2, czz, 0.3, H, Dd, wall);
+      mb.box(x - s * 0.2, y + 0.1, czz, 0.06, 0.06, Dd, L); }
+    mb.box(cx, y + H / 2, z1, Wd, H, 0.3, wall);
+    if (!cut) mb.box(cx, y + H / 2, z0, Wd, H, 0.3, wall);
+    if (!cut) { mb.part = 'soffitto'; mb.box(cx, y + H, czz, Wd, 0.2, Dd, wall); for (let k = 0; k < 4; k++) mb.box(cx, y + H - 0.12, z0 + 3 + k * (Dd - 6) / 3, Wd - 3, 0.05, 0.35, mat([0.95, 0.97, 1], 1.2, 3)); }
+    mb.part = 'colonne'; for (const s of [-1, 1]) for (let k = 1; k < 4; k++) mb.box(cx + s * (Wd / 2 - 0.4), y + H / 2, z0 + k * Dd / 4, 0.5, H, 0.5, wallD);
+    if (D.id === 'teletrasporto') {
+      mb.part = 'pedana_teletrasporto';
+      mb.push(T(0, y, 21.6)); mb.cyl(0, 0.3, 3.6, 3.8, N(40), wallD); mb.pop();
+      for (const p of RIG.pads) { mb.push(T(p[0], y + 0.3, p[1])); mb.cyl(0, 0.04, 0.62, 0.62, N(20), dark); mb.disc(0.55, N(20), 0.045, mat([0.85, 0.95, 1], 0.9, 3)); mb.pop();
+        if (!cut) { mb.push(T(p[0], y + H - 0.1, p[1])); mb.cyl(-0.1, 0, 0.62, 0.62, N(20), dark); mb.disc(0.55, N(20), -0.11, mat([0.85, 0.95, 1], 0.7, 3)); mb.pop(); } }
+      mb.part = 'console_teletrasporto'; consoleAt(0, 15.2, PI, 2.6, panel); for (let k = 0; k < 3; k++) mb.box(-0.7 + k * 0.7, y + 1.06, 15.2, 0.15, 0.02, 0.4, mat([1, 0.3, 0.3], 1.2, 3));
+      mb.part = 'stemma'; mb.push(T(0, y + 2.2, z1 - 0.18)); hexBadge(mb, 0.9, trim, L); mb.pop();
+    } else if (D.id === 'astrolab') {
+      mb.part = 'globo_stellare';
+      mb.push(T(0, y, RIG.astro[1])); mb.cyl(0, 0.9, 1.6, 1.9, N(32), wallD); mb.torus(1.7, 0.05, N(32), 6, L); mb.pop();
+      let s9 = 7; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647;
+      for (let k = 0; k < 260; k++) { const u = rnd() * TAU, v = Math.acos(rnd() * 2 - 1), r = 2.4 * Math.cbrt(rnd()), arm = Math.sin(u * 2 + r * 2) * 0.4;
+        mb.ellipsoid(Math.sin(v) * Math.cos(u) * r, y + 2.6 + Math.cos(v) * r * 0.35 + arm * 0.2, RIG.astro[1] + Math.sin(v) * Math.sin(u) * r, 0.03, 0.03, 0.03, 4, 3, mat(k % 9 ? [0.75, 0.9, 1] : [1, 0.7, 0.3], 1.6, 3, 1, [0, RIG.astro[1], 0])); }
+      mb.part = 'cartigli_pianeti';
+      const cards = DEST_ORDER.map(k => DEST[k]);
+      cards.forEach((d, i) => { const s = i % 2 ? 1 : -1, z = 5 + Math.floor(i / 2) * 4.8, x = s * (Wd / 2 - 0.25);
+        mb.box(x, y + 1.9, z, 0.08, 1.8, 3.6, mat([0.05, 0.07, 0.1], 0.2, 3)); mb.box(x, y + 1.9, z, 0.09, 1.86, 0.06, trim); mb.box(x, y + 2.83, z, 0.09, 0.05, 3.66, trim);
+        mb.ellipsoid(x - s * 0.06, y + 2.05, z, 0.05, 0.6, 0.6, N(14), N(10), mat(d.col[0], 0.7, 3)); mb.box(x - s * 0.06, y + 1.3, z, 0.04, 0.12, 2.6, mat(d.col[1], 0.9, 3)); });
+      mb.part = 'console_navigazione'; consoleAt(0, RIG.astro[1] - 3.2, 0, 2.8, panelB);
+    } else if (D.id === 'mensa') {
+      mb.part = 'tavoli';
+      for (const [tx, tz] of [[-6, 8], [-6, 15], [6, 8], [6, 15], [0, 21]]) { mb.push(T(tx, y, tz)); mb.cyl(0, 0.72, 0.1, 0.1, N(10), dark); mb.cyl(0.72, 0.78, 1.0, 1.0, N(24), mat([0.85, 0.86, 0.9])); mb.torus(1.0, 0.03, N(24), 4, L); mb.pop();
+        for (let c = 0; c < 4; c++) { const a = c / 4 * TAU + PI / 4; chairAt(tx + Math.sin(a) * 1.5, tz + Math.cos(a) * 1.5, a + PI); } }
+      mb.part = 'bancone'; mb.box(-9.5, y + 0.55, 22, 4, 1.1, 1.2, wallD); mb.box(-9.5, y + 1.12, 22, 4.1, 0.05, 1.3, trim);
+      mb.part = 'portello_eva'; mb.box(x1 - 0.1, y + 1.3, RIG.airlock[1], 0.35, 2.6, 2.0, trim); mb.box(x1 - 0.2, y + 1.3, RIG.airlock[1], 0.3, 2.2, 1.6, mat([0.2, 1, 0.5], 0.8, 3));
+    } else if (D.id === 'ingegneria') {
+      mb.part = 'nucleo_warp';
+      mb.push(T(RIG.core[0], y, RIG.core[1])); mb.cyl(0, 0.6, 2.4, 2.2, N(32), wallD); mb.cyl(0.6, H, 1.2, 1.2, N(32), glassC, false); mb.cyl(0.6, H, 0.7, 0.7, N(24), mat(wc, 1.8, 3), false);
+      for (let k = 0; k < 6; k++) { mb.push(T(0, 0.9 + k * 0.42, 0)); mb.torus(1.25, 0.08, N(32), 6, mat(wc.map(v => v * 0.6 + 0.4), 1.4, 3, k % 2 ? 1 : 2, [RIG.core[0], RIG.core[1], 0])); mb.pop(); }
+      mb.pop();
+      mb.part = 'condotti_plasma'; for (const s of [-1, 1]) { mb.box(s * 5, y + H - 0.4, RIG.core[1], 7.5, 0.5, 0.5, mat(wc, 1.0, 3)); mb.box(s * 8.5, y + H / 2, RIG.core[1], 0.6, H, 0.6, mat(wc, 0.9, 3)); }
+      mb.part = 'console_ingegneria'; consoleAt(-5, 8, 0.4, 2.2, panel); consoleAt(5, 8, -0.4, 2.2, panelB); consoleAt(0, 22, PI, 3, panel);
+    }
+    lift();
+  }
+  const m = mb.finish(); m.kind = 'deck'; m.deck = D; return m;
+}
+/** the crew badge: an original hexagonal KAGE emblem with a forward chevron */
+function hexBadge(mb, s, rim, glow) {
+  const h = [];
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + PI / 6; h.push([Math.cos(a) * s, Math.sin(a) * s, 0]); }
+  mb.poly(h.map(p => [p[0], p[1], 0.02]).reverse(), rim);
+  mb.poly([[0, 0.55 * s, 0.05], [-0.42 * s, -0.4 * s, 0.05], [0, -0.15 * s, 0.05]], glow); mb.poly([[0, 0.55 * s, 0.05], [0, -0.15 * s, 0.05], [0.42 * s, -0.4 * s, 0.05]], glow);
+}
+function buildBadge() { const mb = new MB(); mb.part = 'badge'; hexBadge(mb, 0.028, mat([0.85, 0.65, 0.2], 0.1, 2), mat([0, 1, 0.9], 1.3, 3)); const m = mb.finish(); m.kind = 'badge'; return m; }
+/** garage display: pedestal + glass, the miniature on top, the badge on its own little stand */
+function buildDisplay() {
+  const mb = new MB(); mb.part = 'piedistallo';
+  mb.push(T(0, 0, 0)); mb.cyl(0, 1.0, 0.9, 0.75, 24, mat([0.08, 0.085, 0.1])); mb.cyl(1.0, 1.05, 0.8, 0.8, 24, mat([0, 1, 0.9], 1, 3)); mb.pop();
+  mb.part = 'supporto_badge'; mb.push(T(0.55, 1.05, 0.45)); mb.cyl(0, 0.12, 0.08, 0.06, 10, mat([0.7, 0.6, 0.3], 0, 2)); mb.pop();
+  mb.part = 'targhetta'; mb.box(0, 0.6, 0.78, 0.9, 0.22, 0.03, mat([0.85, 0.65, 0.2], 0.3, 2));
+  const m = mb.finish(); m.kind = 'display'; return m;
+}
+
+/* ---------------- destinations: real stars and planets (approx. positions in light years) + one fictional colony ---------------- */
+const DEST = {
+  terra: { name: 'TERRA · CYBERCITY', type: 'Pianeta natale · orbita bassa sopra Cybercity', pos: [0, 0, 0], col: [[0.15, 0.4, 0.85], [0.2, 0.8, 0.4]], R: 1500, land: 'city', g: 1, temp: '15 °C' },
+  luna: { name: 'LUNA', type: 'Satellite naturale · 384.400 km', pos: [4.06e-8, 0, 0], col: [[0.62, 0.62, 0.64], [0.85, 0.85, 0.9]], R: 900, land: 'luna', g: 0.17, temp: '−20 °C' },
+  marte: { name: 'MARTE', type: 'Pianeta roccioso · 1,5 UA dal Sole', pos: [0, 1.6e-5, 0], col: [[0.8, 0.35, 0.15], [1, 0.6, 0.3]], R: 1100, land: 'marte', g: 0.38, temp: '−60 °C' },
+  alpha: { name: 'ALPHA CENTAURI A', type: 'Stella doppia (A+B) · 4,37 anni luce', pos: [-1.64, -1.37, -3.84], col: [[1, 0.9, 0.55], [1, 0.75, 0.35]], R: 900, star: true, temp: '5.800 K' },
+  proxima: { name: 'PROXIMA CENTAURI b', type: 'Esopianeta roccioso · 4,24 anni luce · rotazione sincrona', pos: [-1.55, -1.18, -3.77], col: [[0.55, 0.28, 0.2], [1, 0.35, 0.2]], R: 1150, land: 'proxima', g: 1.1, temp: '−40 °C' },
+  colonia: { name: 'COLONIA ALIENA ZHAR’UL', type: 'Colonia di quattro specie · 37 anni luce (fittizia)', pos: [14, 22, -26], col: [[0.45, 0.2, 0.7], [0.3, 1, 0.8]], R: 1250, land: 'colonia', g: 0.8, temp: '22 °C' },
+  kepler186: { name: 'KEPLER-186f', type: 'Esopianeta nella zona abitabile · 582 anni luce', pos: [-200, 330, 420], col: [[0.5, 0.3, 0.25], [0.9, 0.4, 0.35]], R: 1300, land: 'kepler186', g: 1.2, temp: '−10 °C' },
+  kepler452: { name: 'KEPLER-452b', type: '«Cugino della Terra» · 1.400 anni luce', pos: [-480, 820, 1020], col: [[0.3, 0.55, 0.35], [0.95, 0.85, 0.45]], R: 1600, land: 'kepler452', g: 2, temp: '25 °C' } };
+const DEST_ORDER = ['terra', 'luna', 'marte', 'alpha', 'proxima', 'colonia', 'kepler186', 'kepler452'];
+const dist = (a, b) => { const p = DEST[a].pos, q = DEST[b].pos; return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+/** warp factor → multiples of c (TNG-style scale; warp 10 = infinite) */
+const WARP_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 9.5, 9.9, 9.99, 9.9999, 10];
+function warpC(w) { if (w >= 10) return Infinity; if (w <= 9) return Math.pow(w, 10 / 3); const t = { 9.5: 2000, 9.9: 3053, 9.99: 7912, 9.9999: 199516 }; return t[w] || 1516 + (w - 9) * 4000; }
+
+/** planet sphere with baked day/night shading toward sunDir */
+function buildPlanet(id, lod) {
+  const d = DEST[id], mb = new MB(), q = Q(lod), su = Math.round(64 * q), sv = Math.round(36 * q), R = 1;
+  let s9 = id.length * 977; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647;
+  const blobs = []; for (let k = 0; k < 22; k++) { const u = rnd() * TAU, v = Math.acos(rnd() * 2 - 1); blobs.push([Math.sin(v) * Math.cos(u), Math.cos(v), Math.sin(v) * Math.sin(u), 0.25 + rnd() * 0.4]); }
+  const field = (x, y, z) => { let f = 0; for (const b of blobs) { const dd = (x - b[0]) ** 2 + (y - b[1]) ** 2 + (z - b[2]) ** 2; f += Math.exp(-dd / (b[3] * b[3])); } return f + 0.15 * Math.sin(x * 9 + y * 7) * Math.sin(z * 8); };
+  const sun = [0.6, 0.35, 0.72], g = [];
+  mb.part = 'pianeta';
+  for (let j = 0; j <= sv; j++) { const v = j / sv * PI, row = []; for (let k = 0; k <= su; k++) { const u = k / su * TAU, x = Math.sin(v) * Math.cos(u), y = Math.cos(v), z = Math.sin(v) * Math.sin(u);
+      const f = field(x, y, z), land = f > 0.55, lit = Math.max(0.04, x * sun[0] + y * sun[1] + z * sun[2] + 0.15);
+      let c = d.star ? d.col[0] : land ? d.col[1] : d.col[0];
+      if (id === 'terra' || id === 'kepler452') { const cloud = Math.sin(u * 5 + v * 7) * Math.sin(u * 11 - v * 3) > 0.45; if (cloud) c = [0.95, 0.96, 1]; if (Math.abs(y) > 0.88) c = [0.95, 0.97, 1]; }
+      if (id === 'marte' && Math.abs(y) > 0.9) c = [0.95, 0.92, 0.9];
+      if (id === 'luna') c = c.map(w => w * (0.75 + 0.25 * Math.sin(f * 20)));
+      if (id === 'proxima' && x * sun[0] + y * sun[1] + z * sun[2] < -0.2) c = [0.75, 0.82, 0.9];
+      const e = d.star ? 1.6 : Math.max(0, 0.9 * lit);
+      row.push(mb.v([x * R, y * R, z * R], mat(c, e, 3))); }
+    g.push(row); }
+  for (let j = 0; j < sv; j++) for (let k = 0; k < su; k++) { mb.tri(g[j][k], g[j + 1][k + 1], g[j + 1][k]); mb.tri(g[j][k], g[j][k + 1], g[j + 1][k + 1]); }
+  if (id === 'colonia') { mb.part = 'anelli'; mb.push(RX(0.35)); mb.torus(1.7, 0.18, su, 4, mat([0.6, 0.4, 0.9], 0.4, 3)); mb.pop(); }
+  const m = mb.finish(); m.kind = 'planet'; return m;
+}
+/** star field shell (glow) and warp streaks */
+function buildStars() {
+  const mb = new MB(); let s9 = 4242; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647; mb.part = 'stelle';
+  for (let k = 0; k < 1400; k++) { const u = rnd() * TAU, v = Math.acos(rnd() * 2 - 1), r = 4200, s = 3 + rnd() * 6, c = rnd() < 0.15 ? [1, 0.8, 0.6] : rnd() < 0.2 ? [0.7, 0.8, 1] : [1, 1, 1];
+    mb.ellipsoid(Math.sin(v) * Math.cos(u) * r, Math.cos(v) * r, Math.sin(v) * Math.sin(u) * r, s, s, s, 4, 2, mat(c, 0.6 + rnd() * 1.2, 3)); }
+  return mb.finish();
+}
+function buildStreaks() {
+  const mb = new MB(); let s9 = 99; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647; mb.part = 'scie_warp';
+  for (let k = 0; k < 420; k++) { const a = rnd() * TAU, r = 40 + rnd() * 380, z = (rnd() - 0.5) * 1600, L = 60 + rnd() * 260, c = rnd() < 0.3 ? [0.6, 0.8, 1] : [1, 1, 1];
+    mb.box(Math.cos(a) * r, Math.sin(a) * r, z, 0.6, 0.6, L, mat(c, 1.2, 3)); }
+  return mb.finish();
+}
+/** cloud deck under the ship (above Cybercity) */
+function buildClouds() {
+  const mb = new MB(); let s9 = 5150; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647; mb.part = 'nuvole';
+  for (let k = 0; k < 260; k++) { const x = (rnd() - 0.5) * 1260, z = (rnd() - 0.5) * 1260, r = 40 + rnd() * 90;
+    mb.ellipsoid(x, rnd() * 25, z, r, 12 + rnd() * 14, r * (0.6 + rnd() * 0.6), 10, 5, mat([0.92, 0.93, 0.97], 0.55, 3)); }
+  return mb.finish();
+}
+
+/* ---------------- landing sites: terrain + props (all at the origin, ±300 m) ---------------- */
+const SITES = {
+  luna: { ground: [[0.42, 0.42, 0.44], [0.62, 0.62, 0.64]], amp: 9, fog: [0, 0, 0.005], top: [0, 0, 0], sun: [1, 1, 0.95], day: 0, fogDen: 0.0006, sky: 'terra' },
+  marte: { ground: [[0.55, 0.22, 0.1], [0.78, 0.42, 0.22]], amp: 22, fog: [0.78, 0.55, 0.38], top: [0.55, 0.36, 0.26], sun: [1, 0.85, 0.7], day: 1, fogDen: 0.0035 },
+  proxima: { ground: [[0.25, 0.14, 0.12], [0.62, 0.66, 0.72]], amp: 16, fog: [0.32, 0.1, 0.08], top: [0.08, 0.01, 0.02], sun: [1, 0.35, 0.2], day: 0.25, fogDen: 0.003 },
+  colonia: { ground: [[0.25, 0.12, 0.35], [0.2, 0.75, 0.6]], amp: 12, fog: [0.42, 0.22, 0.55], top: [0.12, 0.05, 0.25], sun: [0.8, 1, 0.9], day: 0.6, fogDen: 0.0028 },
+  kepler186: { ground: [[0.42, 0.12, 0.1], [0.25, 0.2, 0.18]], amp: 18, fog: [0.62, 0.35, 0.3], top: [0.32, 0.18, 0.2], sun: [1, 0.6, 0.45], day: 0.7, fogDen: 0.0032 },
+  kepler452: { ground: [[0.3, 0.5, 0.2], [0.75, 0.65, 0.4]], amp: 14, fog: [0.7, 0.8, 0.85], top: [0.3, 0.5, 0.85], sun: [1, 0.97, 0.85], day: 1, fogDen: 0.0028, water: true } };
+function siteHeight(id, x, z) {
+  const S0 = SITES[id]; if (!S0) return 0;
+  const n = Math.sin(x * 0.011 + 1.3) * Math.cos(z * 0.013 - 0.4) + 0.5 * Math.sin(x * 0.027 - z * 0.021) + 0.25 * Math.sin(x * 0.07 + z * 0.05);
+  const flat = 1 - Math.exp(-(x * x + z * z) / (2 * 45 * 45));      // a flat landing area in the middle
+  let h = n * S0.amp * flat;
+  if (id === 'luna' || id === 'marte') { for (const [cx, cz, r] of [[120, -80, 40], [-150, 60, 60], [60, 170, 30]]) { const d = Math.hypot(x - cx, z - cz) / r; if (d < 1.3) h += d < 1 ? -10 * (1 - d * d) : 4 * Math.sin((d - 1) / 0.3 * PI); } }
+  return h;
+}
+function buildSite(id, lod) {
+  const S0 = SITES[id], mb = new MB(), q = Q(lod), n = Math.round(80 * q), half = 300, step = half * 2 / n;
+  let s9 = id.length * 131; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647;
+  mb.part = 'terreno';
+  const rows = []; for (let j = 0; j <= n; j++) { const z = -half + j * step, row = []; for (let i = 0; i <= n; i++) { const x = -half + i * step, h = siteHeight(id, x, z);
+      const t = clamp(0.5 + h / (S0.amp * 2) + 0.15 * Math.sin(x * 0.3) * Math.sin(z * 0.27), 0, 1); let c = S0.ground[0].map((v, k) => lerp(v, S0.ground[1][k], t));
+      if (id === 'proxima' && x > 60) c = c.map((v, k) => lerp(v, [0.75, 0.82, 0.9][k], sstep(60, 160, x)));   // the frozen night side
+      if (S0.water && h < -4) c = [0.12, 0.3, 0.45];
+      row.push([x, h, z]); row.c = row.c || []; row.c.push(c); }
+    rows.push(row); }
+  const vi = rows.map(r => r.map((p, i) => mb.v(p, mat(r.c[i]))));
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const a = vi[j][i], b = vi[j + 1][i], c = vi[j + 1][i + 1], d = vi[j][i + 1]; mb.tri(a, c, b); mb.tri(a, d, c); }
+  if (S0.water) { mb.part = 'mare'; mb.poly([[-half, -4.2, -half], [-half, -4.2, half], [half, -4.2, half], [half, -4.2, -half]], mat([0.1, 0.35, 0.5], 0.15, 4)); }
+  mb.part = 'rocce';
+  for (let k = 0; k < 70; k++) { const x = (rnd() - 0.5) * 560, z = (rnd() - 0.5) * 560; if (Math.hypot(x, z) < 30) continue; const r = 0.6 + rnd() * 3.5, h = siteHeight(id, x, z);
+    mb.ellipsoid(x, h + r * 0.3, z, r, r * 0.6, r * (0.7 + rnd() * 0.6), 7, 5, mat(S0.ground[0].map(v => v * 0.7))); }
+  // per-site landmarks
+  if (id === 'marte') { mb.part = 'base_marziana';
+    for (const [x, z, r] of [[-28, 22, 7], [-14, 34, 5], [-36, 38, 4]]) { const h = siteHeight(id, x, z); mb.push(T(x, h, z)); KX.lathe(mb, [[r, 0], [r * 0.96, r * 0.4], [r * 0.7, r * 0.75], [0.01, r * 0.85]], 32, mat([0.88, 0.88, 0.9]), false); mb.torus(r, 0.15, 32, 6, mat([0, 1, 0.9], 1, 3)); mb.pop(); }
+    mb.rod([-21, siteHeight(id, -21, 28), 28], [-21, siteHeight(id, -21, 28) + 6, 28], 0.06, 6, mat([0.8, 0.8, 0.8]));
+    mb.box(-20.2, siteHeight(id, -21, 28) + 5.4, 28, 1.6, 1.0, 0.03, mat([0, 0.9, 0.85], 0.6, 3));
+    mb.part = 'rover'; { const x = 18, z = -14, h = siteHeight(id, x, z); mb.box(x, h + 1.1, z, 2.4, 0.6, 3.6, mat([0.85, 0.85, 0.88])); for (const sx of [-1, 1]) for (const sz of [-1.3, 0, 1.3]) { mb.push(M(T(x + sx * 1.35, h + 0.45, z + sz), RZ(PI / 2))); mb.cyl(-0.2, 0.2, 0.45, 0.45, 12, mat([0.1, 0.1, 0.1])); mb.pop(); } mb.rod([x + 0.6, h + 1.4, z + 1.2], [x + 0.6, h + 2.6, z + 1.2], 0.05, 6, mat([0.8, 0.8, 0.8])); }
+  } else if (id === 'colonia') { mb.part = 'cupole_colonia';
+    for (let k = 0; k < 12; k++) { const a = k / 12 * TAU, r = 60 + (k % 3) * 25, x = Math.cos(a) * r, z = Math.sin(a) * r, h = siteHeight(id, x, z), R0 = 8 + (k % 4) * 3;
+      mb.push(T(x, h, z)); KX.lathe(mb, [[R0, 0], [R0 * 0.9, R0 * 0.5], [R0 * 0.55, R0 * 0.85], [0.01, R0 * 0.95]], 28, mat([0.3, 0.2, 0.45], 0, 4), false); mb.torus(R0, 0.3, 28, 6, mat([0.3, 1, 0.8], 1.1, 3)); mb.pop(); }
+    mb.part = 'torri_cristallo';
+    for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + 0.3, r = 120, x = Math.cos(a) * r, z = Math.sin(a) * r, h = siteHeight(id, x, z), Hh = 40 + k * 9;
+      mb.push(T(x, h, z)); mb.cyl(0, Hh, 4, 0.4, 6, mat([0.5, 0.95, 0.85], 0.45, 3)); mb.pop(); }
+    mb.part = 'piazza'; mb.push(T(0, 0.05, 0)); mb.disc(22, 48, 0, mat([0.2, 0.12, 0.3])); mb.torus(22, 0.25, 48, 6, mat([0.3, 1, 0.8], 1.1, 3)); mb.pop();
+  } else if (id === 'kepler452' || id === 'kepler186') { mb.part = 'alberi';
+    const red = id === 'kepler186';
+    for (let k = 0; k < 140; k++) { const x = (rnd() - 0.5) * 560, z = (rnd() - 0.5) * 560; if (Math.hypot(x, z) < 40) continue; const h = siteHeight(id, x, z); if (SITES[id].water && h < -3) continue; const Hh = 6 + rnd() * 10;
+      mb.push(T(x, h, z)); mb.cyl(0, Hh * 0.4, 0.35, 0.25, 6, mat([0.3, 0.2, 0.12])); mb.cyl(Hh * 0.3, Hh, Hh * 0.28, 0.1, 8, mat(red ? [0.55, 0.12, 0.12] : [0.2, 0.45, 0.18])); mb.pop(); }
+  } else if (id === 'proxima') { mb.part = 'pinnacoli_ghiaccio';
+    for (let k = 0; k < 40; k++) { const x = 70 + rnd() * 220, z = (rnd() - 0.5) * 560, h = siteHeight(id, x, z), Hh = 4 + rnd() * 14; mb.push(T(x, h, z)); mb.cyl(0, Hh, 1.5 + rnd() * 2, 0.1, 5, mat([0.75, 0.88, 1], 0.2, 4)); mb.pop(); }
+  } else if (id === 'luna') { mb.part = 'bandiera_lander';
+    mb.box(25, siteHeight(id, 25, -20) + 1.6, -20, 3, 1.4, 3, mat([0.85, 0.7, 0.3])); for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mb.rod([25 + sx * 1.4, siteHeight(id, 25, -20) + 1, -20 + sz * 1.4], [25 + sx * 2.4, siteHeight(id, 25, -20), -20 + sz * 2.4], 0.08, 6, mat([0.7, 0.7, 0.72]));
+  }
+  // landing pad
+  mb.part = 'piazzola'; mb.push(T(0, 0.06, 0)); mb.torus(16, 0.2, 48, 6, mat([1, 0.6, 0.2], 1, 3, 7, [0, 0.3, 0])); mb.pop();
+  const m = mb.finish(); m.kind = 'site'; return m;
+}
+
+KF.KINDS.starship = { build: (o, lod) => { o = Object.assign({}, SHIP_DEF, o || {}); return o.view && o.view !== 'esterno' ? buildDeck(o.view, Object.assign({}, o, { cut: true }), lod || o.lod) : buildStarship(o, lod || o.lod); },
+  opts: SHIP_OPTS, names: SHIP_NAMES, def: SHIP_DEF, rig: RIG, title: 'KAGE ODYSSEY', extra: true };
+Object.assign(KF.OPT_TITLES, { view: 'VISTA', warp: 'GONDOLE WARP' });
+root.KageStar = { buildStarship, buildDeck, buildBadge, buildDisplay, buildPlanet, buildStars, buildStreaks, buildClouds, buildSite, siteHeight, hexBadge,
+  DECKS, LIFT_Z, RIG, DEST, DEST_ORDER, SITES, WARP_STEPS, warpC, dist, SHIP_DEF };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* KAGE pilot v2: a realistic, skinned, animated person.
@@ -4452,6 +4770,7 @@ function Game(canvas, hud, opts) {
   this.nexus = window.KageNexus ? new KageNexus(this) : null;   // portal to ECO (web/nexus.js)
   this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
+  this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
 }
 /** model resolution for the KAGE GT: low / high / ultra */
 Game.prototype.setQuality = function (q) {
@@ -4489,10 +4808,12 @@ Game.prototype.frame = function (dt, inp) {
   const eco = this.world === 'eco';
   let pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : eco ? Object.assign({}, cityPal, KageNexus.ECO_PAL) : cityPal;
   // real light and weather where you are (web/realsky.js): day / dusk / night from the sun, live weather unless you picked one
-  const RS = !past && !eco && window.getRealSky ? getRealSky() : null;
+  const SPACE = this.world === 'space' || this.world === 'planet';
+  const RS = !past && !eco && !SPACE && window.getRealSky ? getRealSky() : null;
   if (RS && RS.enabled) pal = RS.apply(pal);
-  this.dayK = past ? 1 : RS ? RS.dayK() : 0;
-  const wx = past ? null : (CYBER_WEATHER[o.weather || (RS && RS.weather()) || ''] || null);
+  if (this.star) pal = this.star.pal(pal);
+  this.dayK = past ? 1 : (this.star && this.star.dayK() !== null) ? this.star.dayK() : RS ? RS.dayK() : 0;
+  const wx = past || SPACE ? null : (CYBER_WEATHER[o.weather || (RS && RS.weather()) || ''] || null);
   this.t += dt; const t = this.t;
   this.flash = Math.max(0, this.flash - dt * 3.5);
   if (wx && wx.light > 0) { this.nextFlash -= dt; if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = Math.random() < 0.35 ? 0.15 : 4 + Math.random() * 9; } }
@@ -4509,11 +4830,12 @@ Game.prototype.frame = function (dt, inp) {
   this.phys = phys;
   if (this.nexus) this.nexus.update(dt);
   if (this.xeno) this.xeno.update(dt, inp);
+  if (this.star) this.star.update(dt, inp);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
-  const cv = this.xeno ? this.xeno.camera(cv0, dt) : cv0;
+  const cv1 = this.xeno ? this.xeno.camera(cv0, dt) : cv0, cv = this.star ? this.star.camera(cv1, dt) : cv1;
   // below the lagoon surface: teal murk, light from above, marine snow
-  const UNDER = !past && cv.e[1] < -1.25 && isWater(c.x + cv.e[0], c.z + cv.e[2]);
+  const UNDER = !past && !SPACE && cv.e[1] < -1.25 && isWater(c.x + cv.e[0], c.z + cv.e[2]);
   if (UNDER) pal = Object.assign({}, pal, { fog: eco ? [0.0, 0.07, 0.03] : [0.0, 0.075, 0.095], top: [0.0, 0.04, 0.05], fogDen: 0.042, sun: [0.3, 0.6, 0.65], stripes: 0 });
   this.cv = cv;
   if (this.eng && VEH) { this.audio.on = false; this.audio.feed(this.eng); this.fxO = null; }
@@ -4556,13 +4878,13 @@ Game.prototype.frame = function (dt, inp) {
   gl.viewport(0, 0, W, H);
   const er = eco ? 0.035 * Math.sin(t * 0.37) + 0.015 * Math.sin(t * 1.9) : 0;   // ECO: the horizon is never quite level
   const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], [Math.sin(er), Math.cos(er), 0]);
-  const fov = cv.fov * Math.PI / 180, far = 700;
+  const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || 700;
   const Pm = perspective(fov, W / H, 0.12, far);
   const VP = mul(Pm, V.m);
   const fogDen = pal.fogDen * (wx ? wx.fog : 1);
   const set = (pr) => {
     const u = pr.u, v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); }, f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
-    f1('uTime', t % 3600); f1('uL', S); f1('uFar', 620); f1('uZOff', 0.5); f1('uCamX', camX); f1('uWrapX', S); f1('uCamZ', camZ);
+    f1('uTime', t % 3600); f1('uL', S); f1('uFar', far > 700 ? far * 0.92 : 620); f1('uZOff', 0.5); f1('uCamX', camX); f1('uWrapX', S); f1('uCamZ', camZ);
     f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW); f1('uGlitch', eco ? 1 : 0);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
@@ -4584,6 +4906,8 @@ Game.prototype.frame = function (dt, inp) {
   if (past) {
     const g = P.meadow; gl.useProgram(g.p); set(g); gl.uniform3fv(g.u.uSunDir, pal.sunDir); gl.uniform3fv(g.u.uSunCol, pal.sun); this.draw(g, this.M.ground);
     const nt = P.nature; gl.useProgram(nt.p); set(nt); gl.uniform3fv(nt.u.uSunDir, pal.sunDir); gl.uniform3fv(nt.u.uSunCol, pal.sun); for (const m of this.M.nature) this.draw(nt, m);
+  } else if (SPACE) {
+    if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
   } else {
     gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
     gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
@@ -4598,6 +4922,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.nexus) this.nexus.drawWorld({ set, camX, camZ, t, pal, dt });
     if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -4627,7 +4952,7 @@ Game.prototype.frame = function (dt, inp) {
   if (cv.drawCar && this.hd && !VEH) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.useProgram(P.hd.p); set(P.hd); this.hd.draw(carM, hdState, "glass"); gl.blendFunc(gl.ONE, gl.ONE);
   }
-  if (this.eng && !VEH) {
+  if (this.eng && !VEH && !SPACE) {
     const tp = EngineFX.tipsFrom(carM, o.exhaust === 'race');
     this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, tp.hubs);
     this.fx.tyreSmoke(dt, carM, Math.max(this.eng.burn || 0, (this.eng.tyre || 0) * 0.7), [c.vx, 0, c.vz], CarHD.RIG.kitTrack[this.car.kit || 0]);
@@ -4636,7 +4961,7 @@ Game.prototype.frame = function (dt, inp) {
     gl.useProgram(P.fx.p); set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov / 2)));
     gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
   }
-  if (!past) { gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car); }
+  if (!past && !SPACE) { gl.useProgram(P.car.p); set(P.car); gl.uniform1f(P.car.u.uWidth, 0.3); this.draw(P.car, this.M.car); }
   if (!VEH) {
   gl.useProgram(P.glow.p); set(P.glow);
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
@@ -4644,10 +4969,11 @@ Game.prototype.frame = function (dt, inp) {
   gl.uniform1f(P.glow.u.uGlow, 1); this.draw(P.glow, this.CM.heads);
   gl.uniform1f(P.glow.u.uGlow, inp.brake ? 1.8 : 0.7); this.draw(P.glow, this.CM.tail);
   }
-  if (this.fleet) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
-  if (this.nexus) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
-  if (this.xeno) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.xeno.drawAdditive({ set, camX, camZ, t, pal, dt }); }
-  const rainAmt = UNDER ? 0.55 : eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
+  if (this.fleet && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  if (this.nexus && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  if (this.xeno && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.xeno.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  if (this.star) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.star.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  const rainAmt = SPACE ? 0 : UNDER ? 0.55 : eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
     gl.uniform1f(P.rain.u.uRain, rainAmt); gl.uniform1f(P.rain.u.uRainSpeed, UNDER ? 2.5 : eco ? -14 : 28);   // in ECO the rain falls upwards; under water: marine snow
@@ -4671,8 +4997,9 @@ Game.prototype.frame = function (dt, inp) {
   if (VEH) this.fleet.drawHud(this.hud); else if (FOOT) this.hud.getContext('2d').clearRect(0, 0, this.hud.width, this.hud.height); else this.drawHud(inp);
   if (this.foot && !VEH) this.foot.drawHud(this.hud);
   if (this.fleet) this.fleet.drawGarageHud(this.hud);
-  if (this.xeno) this.xeno.drawHud(this.hud);
-  if (window.realSky && realSky.enabled && !(this.xeno && this.xeno.tt)) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
+  if (this.xeno && !SPACE) this.xeno.drawHud(this.hud);
+  if (this.star) this.star.drawHud(this.hud);
+  if (window.realSky && realSky.enabled && !SPACE && !(this.xeno && this.xeno.tt) && !(this.star && this.star.involved())) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
     if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);
 };
@@ -6084,7 +6411,7 @@ XenoGame.prototype.spawn = function (pad) {
 
 /* ---------------- ENTER ---------------- */
 XenoGame.prototype.enter = function () {
-  const g = this.g, f = g.foot, F = g.fleet;
+  const g = this.g, f = g.foot, F = g.fleet; if (f && f.ss) return false;
   if (this.tt) return true;
   if (this.flying()) { this.leaveHelm(); return true; }
   if (!f || !f.active || g.veh) return false;
@@ -6210,7 +6537,7 @@ XenoGame.prototype.drawAdditive = function (ctx) {
 XenoGame.prototype.drawHud = function (hud) {
   const g = this.g, f = g.foot, ctx2 = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);
   let line = '', big = '';
-  const T = this.tt;
+  const T = this.tt; if (f && f.ss) return;
   if (T) { big = T.phase === 'vortex' ? 'VORTICE TEMPORALE' : 'KAGE EPOCH'; line = T.phase === 'vortex' ? (g.world === 'meadow' ? 'verso CYBERCITY · OGGI' : 'verso la PRATERIA DEL PASSATO') : T.phase === 'in' ? 'chiudi la porta… si parte' : 'ARRIVO'; }
   else if (f && f.active && !g.veh) {
     if (f.xs === 'in') {
@@ -6235,7 +6562,7 @@ XenoGame.prototype.drawHud = function (hud) {
 
 /** short label for the on-screen ACTION button ('' = nothing to do here) */
 XenoGame.prototype.action = function () {
-  const g = this.g, f = g.foot;
+  const g = this.g, f = g.foot; if (f && f.ss) return '';
   if (this.tt) return '';
   if (this.flying()) return 'LASCIA';
   if (!f || !f.active || g.veh) return '';
@@ -6255,6 +6582,499 @@ if (OF) {
   OF.prototype.nearCar = function () { return !this.xs && nc0.call(this); };
 }
 window.KageXenoGame = XenoGame;
+})();
+</script>
+<script>/* KAGE ODYSSEY in NEON RUN.
+ * Garage: the miniature + the crew badge (ACTION). With the badge on: BEAM IN (button or B) → dematerialise → rematerialise on the
+ * transporter pads of deck 2, the crew waves. Walk five decks (lift = ACTION), Astrolab cartouches = choose the destination,
+ * captain's chair = the helm: impulse, take off from Cybercity above the clouds into space, warp 1 → 10, land on the planet,
+ * beam down and walk on it, EVA from the deck-4 airlock. Worlds: 'city' (the ship hovers over the clouds), 'space', 'planet'.
+ * Hooks from Game (game.js): update / camera / pal / drawWorld / drawAdditive / drawHud / key / action / enter. */
+(function () {
+'use strict';
+const NR = window.NeonRun, U = window.CarRenderUtil, KF = window.KageFleet, KS = window.KageStar, KP = window.KagePilot;
+if (!NR || !KS) return;
+const { S, wrapD } = NR, PI = Math.PI, TAU = PI * 2, D = KS.DECKS, RIG = KS.RIG;
+const wrapP = v => ((v % S) + S) % S, wrapA = a => { a = (a + PI) % TAU; if (a < 0) a += TAU; return a - PI; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), ease = (c, t, k, dt) => c + (t - c) * Math.min(1, dt * k), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const mixv = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const mv = (M, v) => [M[0] * v[0] + M[4] * v[1] + M[8] * v[2] + M[12], M[1] * v[0] + M[5] * v[1] + M[9] * v[2] + M[13], M[2] * v[0] + M[6] * v[1] + M[10] * v[2] + M[14]];
+const LS = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };
+const CITY = { x: 630, y: 640, z: 630, h: 0 };
+const DISPLAY = { x: 24, z: 54 };          // inside the KAGE GARAGE
+const FM = (s) => new Float32Array([s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1]);
+const HUMANS = [{ suit: 'rosso', hair: 'corti', hairColor: 'nero', beard: 'corta' }, { suit: 'blu', hair: 'coda', hairColor: 'castano', beard: 'nessuna', skin: 'olivastra', build: 'snello' },
+  { suit: 'oro', hair: 'rasati', hairColor: 'nero', beard: 'nessuna', skin: 'scura' }, { suit: 'blu', hair: 'lunghi', hairColor: 'rosso', beard: 'nessuna', build: 'snello' },
+  { suit: 'oro', hair: 'ricci', hairColor: 'biondo', beard: 'accennata' }, { suit: 'rosso', hair: 'calvo', beard: 'piena', skin: 'ambrata', build: 'robusto' }];
+// crew: deck index, local x, z, heading, who, pose (wave = greets you when you come close; path = walks between two points)
+const CREW = [
+  { d: 1, x: 2.6, z: 15.6, h: PI, who: 0, pose: 'in piedi', wave: true, greet: true }, { d: 1, x: -3.5, z: 18.5, h: 2.6, who: 'verde', pose: 'in piedi', wave: true, greet: true },
+  { d: 1, x: 7, z: 10, h: -1.2, who: 4, pose: 'braccia conserte', wave: true },
+  { d: 0, x: -1.6, z: 15.9, h: 0, who: 1, pose: 'seduto_c' }, { d: 0, x: 1.6, z: 15.9, h: 0, who: 'nordico', pose: 'seduto_c' }, { d: 0, x: -7.2, z: 12, h: -1.9, who: 'grigio', pose: 'pensieroso', wave: true },
+  { d: 0, x: 6.6, z: 18.5, h: 2.4, who: 2, pose: 'indica', wave: true },
+  { d: 2, x: 2.2, z: 10.2, h: -0.4, who: 'scuro', pose: 'pensieroso', wave: true }, { d: 2, x: -6, z: 20, h: 1.6, who: 3, pose: 'indica', wave: true }, { d: 2, path: [[-8, 6], [8, 6]], who: 'grigio', wave: true },
+  { d: 3, x: -6, z: 9.6, h: PI, who: 5, pose: 'braccia conserte', wave: true }, { d: 3, x: 6, z: 16.6, h: 0, who: 'verde', pose: 'esulta' }, { d: 3, x: -9.4, z: 20.8, h: 0, who: 4, pose: 'in piedi', wave: true },
+  { d: 3, path: [[3, 4], [3, 23]], who: 'nordico', wave: true },
+  { d: 4, x: -5, z: 9, h: 0.4, who: 0, pose: 'mani sui fianchi', wave: true }, { d: 4, x: 5, z: 9, h: -0.4, who: 'grigio', pose: 'pensieroso' }, { d: 4, x: 2.8, z: 20.5, h: PI, who: 2, pose: 'indica', wave: true },
+  { d: 4, path: [[-7, 12], [-7, 22]], who: 'scuro', wave: true }];
+const SITE_CREW = { colonia: [['grigio', 8, 0], ['verde', -6, 9], ['nordico', 12, -10], ['scuro', -14, -6], ['verde', 3, 18], ['grigio', -18, 14]] };
+
+function Star(game) {
+  this.g = game; this.gl = game.gl; this.lod = 'ultra'; this.meshes = {};
+  this.ship = { world: 'city', x: CITY.x, y: CITY.y, z: CITY.z, h: CITY.h, pitch: 0, roll: 0, vx: 0, vy: 0, vz: 0, imp: 0, loc: 'terra', course: null, warpI: 8, mode: null, mt: 0, landed: null };
+  this.badge = LS.get('kageBadge', '0') === '1';
+  this.greetT = 0; this.flash = 0; this.msg = ''; this.msgT = 0; this.t = 0; this.E = [0, 0, 0];
+  this.buildUI();
+}
+Star.prototype.mesh = function (key, fn) { if (!this.meshes[key]) { const m = fn(); this.meshes[key] = this.g.vmesh(m); this.meshes[key].src = m; } return this.meshes[key]; };
+Star.prototype.cfg = function () { return KF.loadCfg('starship'); };
+Star.prototype.person = function (who) {
+  const cfg = typeof who === 'string' ? { species: who } : Object.assign({ species: 'umano', glasses: 'nessuno', helmet: false, accent: 'ciano' }, HUMANS[who % HUMANS.length]);
+  const key = 'p' + JSON.stringify(cfg); if (!this.meshes[key]) { const m = KP.build(cfg, 'hi'); this.meshes[key] = this.g.vmesh(m); this.meshes[key].S = m.S; } return this.meshes[key];
+};
+Star.prototype.say = function (s, t) { this.msg = s; this.msgT = t || 3; };
+
+/* ---------------- state helpers ---------------- */
+Star.prototype.foot = function () { return this.g.foot; };
+Star.prototype.aboard = function () { const f = this.foot(); return !!(f && f.active && (f.ss === 'in' || f.ss === 'helm' || f.ss === 'beamin')); };
+Star.prototype.involved = function () { const f = this.foot(); return !!(f && f.active && f.ss); };
+Star.prototype.R4 = function () { const s = this.ship; return U.mul(U.RY(s.h), U.mul(U.RX(s.pitch || 0), U.RZ(s.roll || 0))); };
+/** ship-local point → world point (city: torus coords; space / planet: scene coords) */
+Star.prototype.toW = function (p) { const s = this.ship, q = mv(this.R4(), p), w = [s.x + q[0], s.y + q[1], s.z + q[2]]; if (s.world === 'city') { w[0] = wrapP(w[0]); w[2] = wrapP(w[2]); } return w; };
+Star.prototype.rel = function (p, ctx) { return this.g.world === 'city' ? [wrapD(p[0] - ctx.camX), p[1], wrapD(p[2] - ctx.camZ)] : [p[0] - this.E[0], p[1] - this.E[1], p[2] - this.E[2]]; };
+Star.prototype.shipM = function (ctx) { const r = this.rel([this.ship.x, this.ship.y, this.ship.z], ctx); return U.mul(U.T(r[0], r[1], r[2]), this.R4()); };
+Star.prototype.deckY = function (i) { return D[i].y; };
+Star.prototype.SPACE = function () { return this.g.world === 'space' || this.g.world === 'planet'; };
+Star.prototype.shipVisible = function () { const s = this.ship; return (s.world === 'city' && this.g.world === 'city') || (s.world === this.g.world); };
+
+/* ---------------- per frame ---------------- */
+Star.prototype.update = function (dt, inp) {
+  const g = this.g, s = this.ship, f = this.foot(); this.t += dt;
+  this.greetT = Math.max(0, this.greetT - dt); this.flash = Math.max(0, this.flash - dt * 1.2); this.msgT = Math.max(0, this.msgT - dt);
+  // the ship: impulse / climb / descent / warp
+  if (s.mode === 'ascent') { s.mt += dt; s.vy = ease(s.vy, 70, 0.6, dt); s.y += s.vy * dt; s.pitch = ease(s.pitch, -0.3, 1, dt);
+    const fx = Math.sin(s.h), fz = Math.cos(s.h); s.x += fx * 30 * dt; s.z += fz * 30 * dt; if (s.world === 'city') { s.x = wrapP(s.x); s.z = wrapP(s.z); }
+    const top = s.world === 'city' ? 3200 : 1500;
+    if (s.y > top) { this.toSpace(); this.say('IN ORBITA · ' + KS.DEST[s.loc].name, 4); }
+  } else if (s.mode === 'descent') { s.mt += dt; const tgt = s.world === 'city' ? CITY.y : 60; s.y = ease(s.y, tgt, 0.55, dt); s.pitch = ease(s.pitch, 0, 1.5, dt);
+    if (Math.abs(s.y - tgt) < 3) { s.mode = null; s.vy = 0; s.landed = s.world === 'planet' ? this.site : null; this.say(s.world === 'city' ? 'SOPRA LE NUVOLE DI CYBERCITY' : 'ATTERRATI · ' + KS.DEST[this.site].name, 4); }
+  } else if (s.mode === 'warp') {
+    const w = KS.WARP_STEPS[s.warpI], c = KS.warpC(w), d = s.travel;
+    d.done += c * 0.0004 * dt; d.t += dt;
+    if (d.done >= d.total || !isFinite(c)) this.arrive();
+  } else if (f && f.ss === 'helm') {
+    // impulse: W/S throttle, A/D yaw, SPACE/X climb/dive (pitch in space), SHIFT = full impulse
+    s.imp = clamp(s.imp + (inp.fwd || 0) * dt * 0.5, -0.25, 1); if (inp.boost) s.imp = ease(s.imp, 1, 2, dt);
+    s.h = wrapA(s.h + (inp.yaw || 0) * 0.35 * dt);
+    const vmax = s.world === 'space' ? 260 : 70, v = s.imp * vmax;
+    if (s.world === 'space') s.pitch = clamp(s.pitch - (inp.lift || 0) * 0.4 * dt, -0.9, 0.9); else s.pitch = ease(s.pitch, -(inp.lift || 0) * 0.15, 2, dt);
+    s.roll = ease(s.roll, -(inp.yaw || 0) * 0.18, 2, dt);
+    const fwd = mv(this.R4(), [0, 0, 1]);
+    s.x += fwd[0] * v * dt; s.z += fwd[2] * v * dt; s.y += (s.world === 'space' ? fwd[1] * v : (inp.lift || 0) * 18) * dt;
+    if (s.world === 'city') { s.x = wrapP(s.x); s.z = wrapP(s.z); s.y = clamp(s.y, 520, 1500); }
+    if (s.world === 'planet') s.y = clamp(s.y, 50, 900);
+    if (s.world === 'space') { const r = Math.hypot(s.x, s.y, s.z); if (r > 5500) { const k = 5500 / r; s.x *= k; s.y *= k; s.z *= k; } }
+  } else { s.imp = ease(s.imp, 0, 1, dt); s.roll = ease(s.roll, 0, 1, dt); }
+  // the crew on the move
+  for (const c of CREW) if (c.path) { c.ph = (c.ph || Math.random() * 10) + dt * 0.08; }
+  // audio
+  if (this.au && this.au.ctx) { {
+    this.au.on = this.aboard() || (f && f.ss === 'eva'); this.au.update(this.au.on ? 'starship' : null, { thrust: s.mode === 'warp' ? 1 : Math.abs(s.imp), vx: 0, vz: 0, warp: s.mode === 'warp' ? KS.WARP_STEPS[s.warpI] : 0 }); } }
+  this.updateUI();
+};
+Star.prototype.toSpace = function () {
+  const s = this.ship, g = this.g;
+  s.world = 'space'; s.mode = null; s.x = 0; s.y = 0; s.z = 0; s.vy = 0; s.pitch = 0; s.roll = 0; s.imp = 0.2; s.landed = null; g.world = 'space'; this.flash = 0.8;
+};
+Star.prototype.arrive = function () {
+  const s = this.ship; s.loc = s.travel.to; s.mode = null; s.travel = null; s.x = 0; s.y = 0; s.z = 0; s.pitch = 0; s.imp = 0.1; this.flash = 1.2;
+  this.say('USCITA DALLA CURVATURA · ' + KS.DEST[s.loc].name, 5); if (this.au) this.au.blip(900, 120, 0.9, 0.4);
+};
+Star.prototype.engage = function () {
+  const s = this.ship;
+  if (s.world !== 'space') { this.say('PRIMA DECOLLA: IL WARP SI ATTIVA SOLO NELLO SPAZIO', 4); return; }
+  if (!s.course || s.course === s.loc) { this.say('IMPOSTA UNA ROTTA NELL’ASTROLAB O CON «ROTTA»', 4); return; }
+  const total = Math.max(1e-6, KS.dist(s.loc, s.course)), w = KS.WARP_STEPS[s.warpI];
+  s.travel = { to: s.course, total, done: 0, t: 0 }; s.mode = 'warp'; this.flash = 0.6;
+  if (w >= 10) { this.say('WARP 10 · VELOCITÀ INFINITA: SEI OVUNQUE NELLO STESSO ISTANTE', 5); }
+  else this.say('WARP ' + w + ' · INGRANA!', 3);
+  if (this.au) this.au.blip(80, 1400, 1.2, 0.35, 'sawtooth');
+};
+Star.prototype.takeoff = function () {
+  const s = this.ship; if (s.mode) return;
+  if (s.world === 'space') { this.say('SEI GIÀ IN ORBITA', 3); return; }
+  s.mode = 'ascent'; s.mt = 0; s.vy = 5; s.landed = null; this.say('DECOLLO · VERSO LO SPAZIO', 4);
+};
+Star.prototype.land = function () {
+  const s = this.ship, d = KS.DEST[s.loc]; if (s.mode) return;
+  if (s.world !== 'space') { this.say(s.world === 'city' ? 'SEI SOPRA CYBERCITY' : 'SEI GIÀ ATTERRATO', 3); return; }
+  if (d.star) { this.say(d.name + ' È UNA STELLA: SI PUÒ SOLO ORBITARE', 4); return; }
+  if (d.land === 'city') { s.world = 'city'; this.g.world = 'city'; s.x = CITY.x; s.z = CITY.z; s.y = 3200; s.h = CITY.h; }
+  else { this.site = d.land; s.world = 'planet'; this.g.world = 'planet'; s.x = 0; s.z = 0; s.y = 1200; s.h = 0; }
+  s.mode = 'descent'; s.mt = 0; s.pitch = 0.2; this.flash = 0.7; this.say('INGRESSO IN ATMOSFERA · ' + d.name, 4);
+};
+
+/* ---------------- the avatar (OnFoot extension) ---------------- */
+Star.prototype.footUpdate = function (f, dt, inp) {
+  if (!f.ss) {
+    // the garage display is solid; the badge is picked up with ACTION
+    const dx = wrapD(f.x - DISPLAY.x), dz = wrapD(f.z - DISPLAY.z), d = Math.hypot(dx, dz);
+    if (d < 1.1 && d > 1e-3 && this.g.world === 'city') { f.x = wrapP(DISPLAY.x + dx / d * 1.1); f.z = wrapP(DISPLAY.z + dz / d * 1.1); }
+    return false;
+  }
+  f.t += dt; const s = this.ship;
+  if (f.ss === 'beamout' || f.ss === 'beamin' || f.ss === 'beamdown' || f.ss === 'beamup') {
+    f.bt += dt; f.anim = 'in piedi'; f.v = 0;
+    if (f.bt > 1.9) {
+      if (f.ss === 'beamout' || f.ss === 'beamup') {   // → transporter pad
+        if (f.from === 'city') { f.cityX = f.x; f.cityZ = f.z; }
+        f.ss = 'beamin'; f.bt = 0; f.deck = 1; f.lx = RIG.pads[0][0]; f.lz = RIG.pads[0][1]; f.lh = PI; f.ly = 0.3; this.greetT = 7;
+        if (this.g.world !== s.world && !(s.world === 'city' && this.g.world === 'city')) this.g.world = s.world === 'city' ? 'city' : s.world;
+        this.syncFoot(f);
+      } else if (f.ss === 'beamin') { f.ss = 'in'; }
+      else if (f.ss === 'beamdown') {                 // → city street or planet surface
+        f.bt = 0;
+        if (s.world === 'city' || (s.world === 'space' && KS.DEST[s.loc].land === 'city')) { this.g.world = 'city'; f.ss = null; f.x = f.cityX !== undefined ? f.cityX : 30; f.z = f.cityZ !== undefined ? f.cityZ : 45; f.y = 0; f.h = 0; f.vis = 1;
+          if (s.world === 'space') { /* the ship stays in orbit */ } }
+        else { const site = s.world === 'planet' ? this.site : KS.DEST[s.loc].land; this.site = site; this.g.world = 'planet'; f.ss = 'planetin'; f.px = 6; f.pz = -6; f.ph = 0; f.h = 0; f.py = KS.siteHeight(site, 6, -6); }
+        this.flash = 0.3;
+      }
+    }
+    return true;
+  }
+  if (f.ss === 'planetin') { f.bt += dt; f.anim = 'in piedi'; if (f.bt > 1.9) f.ss = 'planet'; return true; }
+  const run = !!inp.boost;
+  if (f.ss === 'in') {
+    f.lh = wrapA(f.lh + (inp.yaw || 0) * 2.6 * dt);
+    f.v = ease(f.v, (inp.fwd || 0) * (run ? 4.2 : 1.9), 8, dt); f.vs = ease(f.vs || 0, (inp.strafe || 0) * 1.4, 8, dt);
+    const fx = Math.sin(f.lh), fz = Math.cos(f.lh), rx = -Math.cos(f.lh), rz = Math.sin(f.lh);
+    f.lx += (fx * f.v + rx * f.vs) * dt; f.lz += (fz * f.v + rz * f.vs) * dt;
+    this.collideDeck(f); this.syncFoot(f);
+    const sp = Math.abs(f.v) + Math.abs(f.vs) * 0.6; f.ph += dt * (sp > 3 ? sp / 5.5 : sp / 1.45);
+    f.anim = sp > 3.2 ? 'corre' : sp > 0.25 ? 'cammina' : 'in piedi';
+    return true;
+  }
+  if (f.ss === 'helm') { f.anim = 'seduto'; this.syncFoot(f); return true; }
+  if (f.ss === 'eva') {   // zero-g suit thrusters in the ship frame
+    f.lh = wrapA(f.lh + (inp.yaw || 0) * 1.6 * dt);
+    const fx = Math.sin(f.lh), fz = Math.cos(f.lh), rx = -Math.cos(f.lh), rz = Math.sin(f.lh), a = run ? 6 : 3;
+    f.evx = ease(f.evx || 0, (fx * (inp.fwd || 0) + rx * (inp.strafe || 0)) * a, 1.2, dt); f.evz = ease(f.evz || 0, (fz * (inp.fwd || 0) + rz * (inp.strafe || 0)) * a, 1.2, dt); f.evy = ease(f.evy || 0, (inp.lift || 0) * a, 1.2, dt);
+    f.ex += f.evx * dt; f.ey += f.evy * dt; f.ez += f.evz * dt;
+    const r = Math.hypot(f.ex, f.ey * 3, f.ez - 5); if (r > 160) { const k = 160 / r; f.ex *= k; f.ey *= k; f.ez = 5 + (f.ez - 5) * k; }
+    // don't go through the hull (a lens: |y| < 6.6·profile)
+    const inHull = Math.abs(f.ex) < 28 && f.ez > -40 && f.ez < 65 && Math.abs(f.ey) < 6.6 * (1 - Math.abs(f.ex) / 32);
+    if (inHull) { f.ex += Math.sign(f.ex || 1) * 0.5; f.evx = Math.abs(f.evx) * Math.sign(f.ex); }
+    f.anim = 'salta'; const w = this.toW([f.ex, f.ey, f.ez]); f.x = w[0]; f.y = w[1]; f.z = w[2]; return true;
+  }
+  if (f.ss === 'planet') {
+    const site = this.site, gr = (KS.DEST[Object.keys(KS.DEST).find(k => KS.DEST[k].land === site)] || {}).g || 1;
+    f.h = wrapA(f.h + (inp.yaw || 0) * 2.6 * dt);
+    f.v = ease(f.v, (inp.fwd || 0) * (run ? 6.2 : 1.9), 8, dt); f.vs = ease(f.vs || 0, (inp.strafe || 0) * 1.4, 8, dt);
+    const fx = Math.sin(f.h), fz = Math.cos(f.h), rx = -Math.cos(f.h), rz = Math.sin(f.h);
+    f.px = clamp(f.px + (fx * f.v + rx * f.vs) * dt, -280, 280); f.pz = clamp(f.pz + (fz * f.v + rz * f.vs) * dt, -280, 280);
+    const gh = KS.siteHeight(site, f.px, f.pz);
+    if (!f.pair && (inp.lift || 0) > 0.5) { f.pvy = 4.8; f.pair = true; }
+    if (f.pair) { f.pvy -= 9.8 * gr * dt; f.py += f.pvy * dt; if (f.py <= gh) { f.py = gh; f.pair = false; } } else f.py = gh;
+    const sp = Math.abs(f.v) + Math.abs(f.vs) * 0.6; f.ph += dt * (sp > 3 ? sp / 5.5 : sp / 1.45);
+    f.anim = f.pair ? 'salta' : sp > 3.2 ? 'corre' : sp > 0.25 ? 'cammina' : 'in piedi';
+    return true;
+  }
+  return false;
+};
+Star.prototype.syncFoot = function (f) { const w = this.toW([f.lx, D[f.deck].y + (f.ly || 0), f.lz]); f.x = w[0]; f.y = w[1]; f.z = w[2]; };
+Star.prototype.collideDeck = function (f) {
+  const d = D[f.deck];
+  if (d.round) { const dx = f.lx, dz = f.lz - d.cz, r = Math.hypot(dx, dz), m = d.round - 0.6; if (r > m) { f.lx = dx / r * m; f.lz = d.cz + dz / r * m; } }
+  else { f.lx = clamp(f.lx, d.box[0] + 0.6, d.box[1] - 0.6); f.lz = clamp(f.lz, d.box[2] + 0.6, d.box[3] - 0.6); }
+  const push = (cx, cz, r) => { const dx = f.lx - cx, dz = f.lz - cz, dd = Math.hypot(dx, dz) || 1e-3; if (dd < r) { f.lx = cx + dx / dd * r; f.lz = cz + dz / dd * r; } };
+  if (d.id === 'ponte') { push(-1.6, 16.8, 1.1); push(1.6, 16.8, 1.1); }
+  if (d.id === 'astrolab') push(0, RIG.astro[1], 2.1);
+  if (d.id === 'mensa') for (const [tx, tz] of [[-6, 8], [-6, 15], [6, 8], [6, 15], [0, 21]]) push(tx, tz, 1.25);
+  if (d.id === 'ingegneria') push(RIG.core[0], RIG.core[1], 2.6);
+  for (const c of CREW) if (c.d === f.deck && !c.path) push(c.x, c.z, 0.45);
+  f.ly = d.id === 'teletrasporto' && Math.hypot(f.lx, f.lz - 21.6) < 3.6 ? 0.3 : 0;
+};
+
+/* ---------------- ACTION / buttons ---------------- */
+Star.prototype.where = function () {
+  const f = this.foot(); if (!f || !f.active || this.g.veh) return '';
+  if (!f.ss) { if (this.g.world === 'city' && Math.hypot(wrapD(f.x - DISPLAY.x), wrapD(f.z - DISPLAY.z)) < 2.9) return this.badge ? 'badge_off' : 'badge'; return ''; }
+  if (f.ss === 'in') { const d = D[f.deck];
+    if (Math.hypot(f.lx, f.lz - KS.LIFT_Z) < 1.3) return 'lift';
+    if (d.id === 'ponte' && Math.hypot(f.lx - RIG.chair[0], f.lz - RIG.chair[1]) < 1.3) return 'chair';
+    if (d.id === 'teletrasporto' && Math.hypot(f.lx, f.lz - 21.6) < 3.2) return 'pad';
+    if (d.id === 'astrolab' && Math.hypot(f.lx, f.lz - (RIG.astro[1] - 3.2)) < 1.6) return 'astro';
+    if (d.id === 'mensa' && Math.hypot(f.lx - RIG.airlock[0], f.lz - RIG.airlock[1]) < 2.2) return 'airlock';
+    return ''; }
+  if (f.ss === 'helm') return 'leave';
+  if (f.ss === 'eva') return Math.hypot(f.ex - 24.5, f.ey + 3.2, f.ez - 20) < 5 ? 'reenter' : '';
+  return '';
+};
+const ACT_LABEL = { badge: 'BADGE', badge_off: 'BADGE', lift: 'PONTI', chair: 'COMANDO', pad: 'TELETRASP.', astro: 'ROTTA', airlock: 'EVA', leave: 'ALZATI', reenter: 'RIENTRA' };
+Star.prototype.action = function () { return ACT_LABEL[this.where()] || ''; };
+Star.prototype.enter = function () {
+  const f = this.foot(), w = this.where(); if (w) this.beamSound(true); if (!w) return !!(f && f.ss && f.ss !== 'planet');
+  if (w === 'badge') { this.badge = true; LS.set('kageBadge', '1'); this.say('BADGE KAGE ODYSSEY INDOSSATO · premi BEAM IN', 4); }
+  else if (w === 'badge_off') { this.badge = false; LS.set('kageBadge', '0'); this.say('BADGE RIMESSO AL SUO POSTO', 3); }
+  else if (w === 'lift') this.menu('decks');
+  else if (w === 'chair') { f.ss = 'helm'; f.lx = RIG.chair[0]; f.lz = RIG.chair[1]; f.lh = 0; this.g.view = 0; this.say('AI COMANDI · W/S impulso · A/D virata · SPAZIO/X quota · 1-9 · 0 = WARP 10', 5); }
+  else if (w === 'leave') { f.ss = 'in'; f.lz = RIG.chair[1] - 1.2; f.lh = PI; }
+  else if (w === 'pad') this.beamDown();
+  else if (w === 'astro') this.menu('course');
+  else if (w === 'airlock') { f.ss = 'eva'; f.ex = 25.5; f.ey = -3.2; f.ez = 20; f.lh = PI / 2; f.evx = f.evy = f.evz = 0; this.say('ATTIVITÀ EXTRAVEICOLARE · W/S/Q/E propulsori · SPAZIO/X su e giù', 5); }
+  else if (w === 'reenter') { f.ss = 'in'; f.deck = 3; f.lx = RIG.airlock[0] - 1.5; f.lz = RIG.airlock[1]; f.lh = -PI / 2; this.syncFoot(f); }
+  return true;
+};
+Star.prototype.beamIn = function () {
+  const f = this.foot(); if (!f || !f.active || this.g.veh) return;
+  if (!this.badge) { this.say('PRIMA PRENDI IL BADGE DAL MODELLINO NEL KAGE GARAGE', 4); return; }
+  if (f.ss === 'planet') { f.ss = 'beamup'; f.bt = 0; f.from = 'planet'; }
+  else if (!f.ss) {
+    if (this.g.world !== 'city') { this.say('QUI IL TELETRASPORTO NON RAGGIUNGE LA NAVE', 3); return; }
+    if (this.ship.world !== 'city' && !(this.ship.world === 'space' && this.ship.loc === 'terra')) { this.say('LA NAVE È LONTANA: È IN ORBITA ALTROVE', 4); return; }
+    f.ss = 'beamout'; f.bt = 0; f.from = 'city';
+  } else return;
+  this.beamSound();
+};
+Star.prototype.beamDown = function () {
+  const f = this.foot(), s = this.ship, d = KS.DEST[s.loc];
+  if (s.mode) { this.say('ATTENDI: LA NAVE È IN MANOVRA', 3); return; }
+  if (s.world === 'space' && d.star) { this.say('NIENTE SU CUI SCENDERE: ' + d.name + ' È UNA STELLA', 4); return; }
+  f.ss = 'beamdown'; f.bt = 0; this.beamSound();
+};
+Star.prototype.beamSound = function (quiet) { if (!this.au && window.FleetAudio) this.au = new FleetAudio(); if (this.au) { this.au.start(); this.au.on = true; if (!quiet) { this.au.blip(300, 2400, 1.8, 0.18, 'triangle'); this.au.blip(1800, 600, 1.8, 0.1); } } };
+Star.prototype.key = function (code) {
+  const f = this.foot(); if (!f || !f.active) return false;
+  if (code === 'KeyB') { if (!f.ss || f.ss === 'planet') { this.beamIn(); return true; } }
+  if (f.ss !== 'helm') return false;
+  const s = this.ship;
+  if (/^Digit[0-9]$/.test(code)) { const n = +code.slice(5); s.warpI = n === 0 ? KS.WARP_STEPS.length - 1 : Math.min(n - 1, 8); this.say('FATTORE WARP ' + KS.WARP_STEPS[s.warpI], 2); return true; }
+  if (code === 'Equal' || code === 'NumpadAdd') { s.warpI = Math.min(KS.WARP_STEPS.length - 1, s.warpI + 1); return true; }
+  if (code === 'Minus' || code === 'NumpadSubtract') { s.warpI = Math.max(0, s.warpI - 1); return true; }
+  if (code === 'KeyT') { this.takeoff(); return true; } if (code === 'KeyL') { this.land(); return true; }
+  if (code === 'KeyJ') { this.engage(); return true; } if (code === 'KeyN') { this.menu('course'); return true; }
+  if (code === 'KeyX' && s.mode === 'warp') { s.mode = null; s.travel = null; this.say('USCITA DALLA CURVATURA · ROTTA INTERROTTA', 3); return true; }
+  return false;
+};
+
+/* ---------------- on-screen UI: BEAM IN, helm buttons, deck + cartouche menus ---------------- */
+Star.prototype.buildUI = function () {
+  const st = document.createElement('style');
+  st.textContent = '#stUI{position:fixed;left:50%;transform:translateX(-50%);bottom:8vmin;display:flex;gap:1.2vmin;z-index:20;flex-wrap:wrap;justify-content:center;max-width:80vw}'
+    + '#stUI button,#stMenu button{font:bold 2.2vmin monospace;color:#ecfcff;background:rgba(7,11,19,.72);border:2px solid rgba(255,200,90,.8);border-radius:2vmin;padding:1.2vmin 2vmin;cursor:pointer}'
+    + '#stUI button.big{font-size:3vmin;border-color:#7ff;box-shadow:0 0 2vmin rgba(120,255,255,.6)} #stUI button.on{background:rgba(255,190,80,.35)}'
+    + '#stMenu{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;background:rgba(5,8,16,.92);border:2px solid rgba(255,200,90,.8);border-radius:2vmin;padding:2vmin;display:none;max-height:80vh;overflow:auto;min-width:50vmin;color:#ecfcff;font:2vmin monospace}'
+    + '#stMenu .card{display:block;width:100%;text-align:left;margin:.8vmin 0} #stMenu .card small{display:block;font-weight:normal;opacity:.8;margin-top:.4vmin} #stMenu h3{margin:0 0 1vmin;letter-spacing:.2em;color:#ffcf70}';
+  document.head.appendChild(st);
+  const ui = this.ui = document.createElement('div'); ui.id = 'stUI'; document.body.appendChild(ui);
+  const mn = this.mn = document.createElement('div'); mn.id = 'stMenu'; document.body.appendChild(mn);
+  const B = (id, label, fn, cls) => { const b = document.createElement('button'); b.id = id; b.textContent = label; if (cls) b.className = cls; b.style.display = 'none';
+    const go = e => { e.preventDefault(); e.stopPropagation(); fn(); }; b.addEventListener('click', go); b.addEventListener('touchstart', go); ui.appendChild(b); return b; };
+  this.btn = {
+    beam: B('stBeam', '✦ BEAM IN', () => this.beamIn(), 'big'),
+    up: B('stUp', '⇧ DECOLLA', () => this.takeoff()), down: B('stDown', '⇩ ATTERRA', () => this.land()),
+    wm: B('stWm', 'WARP −', () => { this.ship.warpI = Math.max(0, this.ship.warpI - 1); }), wp: B('stWp', 'WARP +', () => { this.ship.warpI = Math.min(KS.WARP_STEPS.length - 1, this.ship.warpI + 1); }),
+    go: B('stGo', '⚡ INGRANA', () => this.engage(), 'big'), stop: B('stStop', '■ ESCI DAL WARP', () => this.key('KeyX')), nav: B('stNav', '🧭 ROTTA', () => this.menu('course')) };
+};
+Star.prototype.updateUI = function () {
+  const f = this.foot(), s = this.ship, show = (b, on) => { const v = on ? 'inline-block' : 'none'; if (b.style.display !== v) b.style.display = v; };
+  const foot = f && f.active && !this.g.veh, helm = foot && f.ss === 'helm';
+  show(this.btn.beam, foot && this.badge && (!f.ss || f.ss === 'planet'));
+  show(this.btn.up, helm && !s.mode && s.world !== 'space'); show(this.btn.down, helm && !s.mode && s.world === 'space');
+  for (const k of ['wm', 'wp', 'nav']) show(this.btn[k], helm && s.mode !== 'warp'); show(this.btn.go, helm && s.world === 'space' && !s.mode); show(this.btn.stop, helm && s.mode === 'warp');
+  const lab = 'WARP ' + KS.WARP_STEPS[s.warpI]; if (this.btn.go.dataset.l !== lab) { this.btn.go.dataset.l = lab; this.btn.go.textContent = window.tr ? tr('⚡ INGRANA') + ' · ' + lab : '⚡ INGRANA · ' + lab; }
+  if (this.mn.style.display !== 'none' && !(f && f.active && (f.ss === 'in' || f.ss === 'helm'))) this.mn.style.display = 'none';
+};
+Star.prototype.menu = function (kind) {
+  const mn = this.mn, s = this.ship, f = this.foot(); let h = '';
+  if (kind === 'decks') { h = '<h3>ASCENSORE · PONTI</h3>' + D.map((d, i) => '<button class="card" data-deck="' + i + '">' + (i === f.deck ? '▶ ' : '') + d.title + '</button>').join(''); }
+  else { h = '<h3>ASTROLAB · CARTIGLI DI NAVIGAZIONE</h3><div style="opacity:.8;margin-bottom:1vmin">Posizione: ' + KS.DEST[s.loc].name + ' · fattore warp ' + KS.WARP_STEPS[s.warpI] + '</div>';
+    for (const k of KS.DEST_ORDER) { const d = KS.DEST[k], dl = KS.dist(s.loc, k), c = KS.warpC(KS.WARP_STEPS[s.warpI]), eta = isFinite(c) ? dl / (c * 0.0004) : 0, real = isFinite(c) ? dl / c * 365.25 : 0;
+      h += '<button class="card" data-dest="' + k + '"' + (k === s.loc ? ' disabled style="opacity:.5"' : '') + '>' + (s.course === k ? '◆ ' : '') + d.name + '<small>' + d.type + ' · ' + fmtLy(dl) + (d.temp ? ' · ' + d.temp : '') + (d.g ? ' · gravità ' + d.g + ' g' : '')
+        + (k !== s.loc ? ' · ETA ' + (isFinite(c) ? fmtT(eta) + ' (reale ' + fmtDays(real) + ')' : 'ISTANTANEA') : '') + '</small></button>'; } }
+  h += '<button data-close="1" style="margin-top:1vmin">✕ CHIUDI</button>';
+  mn.innerHTML = h; mn.style.display = 'block';
+  mn.querySelectorAll('button').forEach(b => { const go = e => { e.preventDefault(); e.stopPropagation(); const d = b.dataset;
+      if (d.deck !== undefined) { f.deck = +d.deck; f.lx = 0; f.lz = KS.LIFT_Z + 1.4; f.lh = 0; this.syncFoot(f); this.say(D[f.deck].title, 2); }
+      if (d.dest) { s.course = d.dest; this.say('ROTTA IMPOSTATA · ' + KS.DEST[d.dest].name + ' · ' + fmtLy(KS.dist(s.loc, d.dest)), 4); }
+      mn.style.display = 'none'; };
+    b.addEventListener('click', go); b.addEventListener('touchstart', go); });
+};
+const fmtLy = ly => ly >= 1 ? ly.toLocaleString('it-IT', { maximumFractionDigits: 2 }) + ' anni luce' : ly > 1e-6 ? (ly * 63241).toLocaleString('it-IT', { maximumFractionDigits: 2 }) + ' UA' : (ly * 9.461e12).toLocaleString('it-IT', { maximumFractionDigits: 0 }) + ' km';
+const fmtT = s => s < 1 ? '<1 s' : s < 120 ? Math.round(s) + ' s' : Math.round(s / 60) + ' min';
+const fmtDays = d => d < 1 / 24 ? Math.max(1, Math.round(d * 1440)) + ' min' : d < 2 ? Math.round(d * 24) + ' ore' : d < 730 ? Math.round(d) + ' giorni' : Math.round(d / 365.25) + ' anni';
+
+/* ---------------- camera ---------------- */
+Star.prototype.camera = function (cv, dt) {
+  const f = this.foot(), g = this.g, s = this.ship; if (!f || !f.active || !f.ss) { this.far = this.SPACE() ? 9000 : 700; return cv; }
+  let E, L, fov = 62;
+  const W = p => this.toW(p);
+  if (f.ss === 'in' || f.ss === 'beamin') {
+    const d = D[f.deck], y = d.y + (f.ly || 0), fx = Math.sin(f.lh), fz = Math.cos(f.lh);
+    let ex = f.lx - fx * 3.0, ez = f.lz - fz * 3.0;
+    if (d.round) { const r = Math.hypot(ex, ez - d.cz), m = d.round - 0.4; if (r > m) { ex = ex / r * m; ez = d.cz + (ez - d.cz) / r * m; } }
+    else { ex = clamp(ex, d.box[0] + 0.35, d.box[1] - 0.35); ez = clamp(ez, d.box[2] + 0.35, d.box[3] - 0.35); }
+    E = W([ex, y + 1.95, ez]); L = W([f.lx + fx * 2, y + 1.4, f.lz + fz * 2]); fov = 70;
+  } else if (f.ss === 'helm') {
+    if (g.view % 2 === 0) { const y = D[0].y; E = W([0, y + 1.75, RIG.chair[1] - 0.6]); L = W([0, y + 1.4, 40]); fov = 78; }
+    else { this.cin = (this.cin || 0) + dt * 0.05; E = W([Math.sin(this.cin) * 60, 38, -170]); L = W([0, 0, 25]); fov = 55; }
+  } else if (f.ss === 'eva') {
+    const fx = Math.sin(f.lh), fz = Math.cos(f.lh); E = W([f.ex - fx * 5, f.ey + 1.8, f.ez - fz * 5]); L = W([f.ex + fx * 3, f.ey + 0.8, f.ez + fz * 3]); fov = 66;
+  } else if (f.ss === 'beamout') { return cv; }
+  else if (f.ss === 'beamdown') { const d = D[1]; E = W([0, d.y + 2.6, 15.5]); L = W([0, d.y + 1.2, 21.6]); }
+  else if (f.ss === 'planet' || f.ss === 'planetin' || f.ss === 'beamup') {
+    const fx = Math.sin(f.h), fz = Math.cos(f.h), view = g.view % 3, D2 = view === 1 ? 7 : 4, H2 = view === 1 ? 3 : 2;
+    E = [f.px - fx * D2, f.py + H2, f.pz - fz * D2]; E[1] = Math.max(E[1], KS.siteHeight(this.site, E[0], E[2]) + 0.6); L = [f.px + fx * 2, f.py + 1.4, f.pz + fz * 2]; fov = 62;
+    if (view === 2) { E = [f.px, f.py + 30, f.pz - 6]; L = [f.px, f.py, f.pz]; }
+  } else return cv;
+  this.far = this.SPACE() || s.y > 900 ? 9000 : (this.aboard() ? 2600 : 700);
+  if (g.world === 'city') { const c = g.c, ex = wrapD(E[0] - c.x), ez = wrapD(E[2] - c.z); return { e: [ex, E[1], ez], l: [ex + wrapD(L[0] - E[0]), L[1], ez + wrapD(L[2] - E[2])], fov, drawCar: !this.aboard() && f.ss !== 'eva', cockpit: false }; }
+  this.E = E; return { e: [0, 0, 0], l: [L[0] - E[0], L[1] - E[1], L[2] - E[2]], fov, drawCar: false, cockpit: false };
+};
+/** palette: climbing above Cybercity darkens the sky; space is black; each planet has its own sky */
+Star.prototype.pal = function (pal) {
+  const g = this.g, s = this.ship;
+  if (g.world === 'space') return Object.assign({}, pal, { fog: [0, 0, 0.004], top: [0, 0, 0.01], fogDen: 0.00002, stripes: 0, sun: [1, 0.95, 0.85], sunDir: [0.55, 0.3, 0.78] });
+  if (g.world === 'planet') { const P = KS.SITES[this.site] || KS.SITES.marte; return Object.assign({}, pal, { fog: P.fog, top: P.top, sun: P.sun, sunDir: this.site === 'proxima' ? [0.95, 0.08, 0.3] : [0.5, 0.45, 0.74], fogDen: P.fogDen, stripes: 0 }); }
+  if (this.involved() && s.world === 'city' && s.y > 700) { const k = sstep(700, 3200, s.y); return Object.assign({}, pal, { fog: mixv(pal.fog, [0, 0, 0.01], k), top: mixv(pal.top, [0, 0, 0], k), fogDen: pal.fogDen * (1 - 0.9 * k) }); }
+  return pal;
+};
+Star.prototype.dayK = function () { const g = this.g; if (g.world === 'space') return 0; if (g.world === 'planet') return (KS.SITES[this.site] || {}).day || 0; return null; };
+
+/* ---------------- drawing ---------------- */
+Star.prototype.drawM = function (mesh, M, o) {
+  const gl = this.gl, P = this.g.P.veh, u = P.u; o = o || {};
+  gl.uniformMatrix4fv(u.uModel, false, M); gl.uniform1f(u.uRotA, o.rot || 0); gl.uniform1f(u.uPropA, o.prop || 0); gl.uniform1f(u.uBlur, 0); gl.uniform1f(u.uSail, 0);
+  if (u.uSteer) gl.uniform1f(u.uSteer, 0); this.g.draw(P, mesh);
+};
+Star.prototype.drawAvatar = function (ctx, Mv, pose, opt, t) {
+  const F = this.g.fleet; if (!F) return;
+  F.drawPilotPose(ctx.set, Mv, pose, opt || {}, null, t);
+  if (this.badge) { const pm = F.pilotMesh(true); if (!pm) return; const B = KP.pose(pose, t, opt || {}, pm.S), Sx = pm.S || 1;
+    const bm = new Float32Array(B.buffer, B.byteOffset + 2 * 16 * 4, 16);
+    const gl = this.gl, P = this.g.P.veh; gl.useProgram(P.p); ctx.set(P); gl.uniform1f(P.u.uGlowOnly, 0);
+    this.drawM(this.mesh('badge', () => KS.buildBadge()), U.mul(Mv, U.mul(bm, U.T(0.085 * Sx, 1.37 * Sx, 0.15 * Sx)))); }
+};
+Star.prototype.drawWorld = function (ctx) {
+  const g = this.g, gl = this.gl, F = g.fleet; if (!F) return;
+  const P = g.P.veh, u = P.u, t = ctx.t, s = this.ship, f = this.foot(), cfg = this.cfg();
+  const prep = () => { gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uGlowOnly, 0); if (u.uDay) gl.uniform1f(u.uDay, g.dayK || 0); };
+  prep();
+  // garage display: the miniature turning above its pedestal + the badge on its stand
+  if (g.world === 'city') { const r = this.rel([DISPLAY.x, 0, DISPLAY.z], ctx);
+    if (Math.hypot(r[0], r[2]) < 250) { this.drawM(this.mesh('display', () => KS.buildDisplay()), U.T(r[0], 0, r[2]));
+      this.drawM(this.mesh('mini', () => KS.buildStarship(cfg, 'hi')), U.mul(U.T(r[0], 2.0 + Math.sin(t) * 0.05, r[2]), U.mul(U.RY(t * 0.3), FM(0.014))));
+      if (!this.badge) this.drawM(this.mesh('badgeBig', () => { const mb = new KF.MB(); mb.part = 'badge'; KS.hexBadge(mb, 0.12, { c: [0.85, 0.65, 0.2], e: 0.15, slot: 2 }, { c: [0, 1, 0.9], e: 1.3, slot: 3 }); return mb.finish(); }), U.mul(U.T(r[0] + 0.55, 1.32, r[2] + 0.45), U.RY(t))); } }
+  // clouds under the ship (only seen from up high)
+  if (g.world === 'city' && g.cv && g.cv.e[1] > 250) { gl.uniform1f(u.uLit, 1.2);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const r = this.rel([630 + i * S, 470, 630 + j * S], ctx); if (Math.abs(r[0]) > 1500 || Math.abs(r[2]) > 1500) continue; this.drawM(this.mesh('clouds', () => KS.buildClouds()), U.T(r[0], r[1], r[2])); }
+    gl.uniform1f(u.uLit, 1); }
+  // space: stars, the local body (planet or the two suns), warp streaks
+  if (g.world === 'space') {
+    gl.uniform1f(u.uGlowOnly, 1); if (!window.__noStars) this.drawM(this.mesh('stars', () => KS.buildStars()), U.T(0, 0, 0));
+    if (s.mode === 'warp') { const wk = clamp(KS.WARP_STEPS[s.warpI] / 10, 0.1, 1), z = ((t * 900 * (0.4 + wk)) % 1600) - 800, fwd = this.R4();
+      for (const dz of [z, z - 1600]) this.drawM(this.mesh('streaks', () => KS.buildStreaks()), U.mul(U.T(0, 0, 0), U.mul(fwd, U.T(0, 0, -dz)))); }
+    gl.uniform1f(u.uGlowOnly, 0);
+    if (s.mode !== 'warp' && !window.__noPlanet) { const d = KS.DEST[s.loc], pr = this.rel([0, -d.R - 650, 2800], ctx);
+      if (d.star) { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_alpha', () => KS.buildPlanet('alpha', this.lod)), U.mul(U.T(...this.rel([0, 200, 3800], ctx)), FM(900)));
+        this.drawM(this.mesh('pl_alphaB', () => KS.buildPlanet('alpha', 'hi')), U.mul(U.T(...this.rel([3200, 900, 5200], ctx)), FM(520))); gl.uniform1f(u.uGlowOnly, 0); }
+      else { gl.uniform1f(u.uLit, 1.1); this.drawM(this.mesh('pl_' + s.loc, () => KS.buildPlanet(s.loc, this.lod)), U.mul(U.T(...pr), U.mul(U.RY(t * 0.01), FM(d.R)))); gl.uniform1f(u.uLit, 1);
+        gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_sun', () => KS.buildPlanet('alpha', 'hi')), U.mul(U.T(...this.rel([4300, 2400, 6000], ctx)), FM(s.loc === 'proxima' ? 700 : 260))); gl.uniform1f(u.uGlowOnly, 0); } }
+  }
+  // planet surface + landmarks + locals
+  if (g.world === 'planet') { const site = this.site;
+    this.drawM(this.mesh('site_' + site, () => KS.buildSite(site, this.lod)), U.T(...this.rel([0, 0, 0], ctx)), { rot: t });
+    if (site === 'luna') { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_terra', () => KS.buildPlanet('terra', this.lod)), U.mul(U.T(...this.rel([600, 1400, 3200], ctx)), FM(420))); gl.uniform1f(u.uGlowOnly, 0); }
+    if (site === 'proxima') { gl.uniform1f(u.uGlowOnly, 1); this.drawM(this.mesh('pl_sun', () => KS.buildPlanet('alpha', 'hi')), U.mul(U.T(...this.rel([4200, 300, 1300], ctx)), FM(800))); gl.uniform1f(u.uGlowOnly, 0); }
+    for (const [who, x, z] of (SITE_CREW[site] || [])) { const a = t * 0.12 + x, px = x + Math.cos(a) * 6, pz = z + Math.sin(a) * 6, h = -a;
+      F.drawPilotPose(ctx.set, U.mul(U.T(...this.rel([px, KS.siteHeight(site, px, pz), pz], ctx)), U.RY(h)), 'cammina', { speed: 1 }, this.person(who), t * 1.2 + x); }
+    prep(); }
+  // the ship (exterior when seen from outside; the current deck + crew when you're aboard)
+  if (this.shipVisible()) {
+    const Ms = this.shipM(ctx), aboard = this.aboard(), helmIn = f && f.ss === 'helm' && g.view % 2 === 0;
+    const inside = aboard && (f.ss !== 'helm' || helmIn);
+    if (!inside) { gl.uniform1f(u.uLit, g.world === 'space' ? 1.7 : 1.1); this.drawM(this.mesh('ship', () => KS.buildStarship(cfg, this.lod)), Ms, { rot: t * 0.8 }); gl.uniform1f(u.uLit, 1); }
+    if (inside) { const di = f.ss === 'helm' ? 0 : f.deck; gl.uniform1f(u.uLit, 1.6);
+      this.drawM(this.mesh('deck' + di, () => KS.buildDeck(D[di].id, cfg, this.lod)), Ms, { rot: t * 0.7 }); gl.uniform1f(u.uLit, 1);
+      // crew of this deck
+      for (const c of CREW) { if (c.d !== di) continue; let x = c.x, z = c.z, h = c.h, pose = c.pose, tt = t + (c.x || 0);
+        if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; tt = c.ph * 9; }
+        const near = f.ss === 'in' && f.deck === di && Math.hypot(f.lx - x, f.lz - z) < 3.2;
+        if ((near && c.wave) || (c.greet && this.greetT > 0)) { pose = 'saluto'; h = Math.atan2(f.lx - x, f.lz - z); }
+        let opt = {}; if (pose === 'seduto_c') { pose = 'seduto'; opt = { seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
+        F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(x, D[di].y, z), U.RY(h))), pose, opt, this.person(c.who), tt); }
+      prep(); }
+    // the avatar inside / on EVA
+    if (f && f.active && (f.ss === 'in' || f.ss === 'beamin' || f.ss === 'beamdown' || (f.ss === 'helm' && !helmIn) || f.ss === 'eva')) {
+      const vis = f.ss === 'beamin' ? f.bt / 1.9 : f.ss === 'beamdown' ? 1 - f.bt / 1.9 : 1;
+      if (vis > 0.98 || Math.random() < vis) {
+        if (f.ss === 'eva') this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(f.ex, f.ey, f.ez), U.mul(U.RY(f.lh), U.RX(0.3)))), 'salta', {}, t * 0.3);
+        else if (f.ss === 'helm') this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(RIG.chair[0], D[0].y, RIG.chair[1]), U.RY(0))), 'seduto', { seat: { hip: [0, 0.55, -0.05], footL: [0.12, 0.05, 0.5], footR: [-0.12, 0.05, 0.5], wheel: [0, 0.75, 0.25], wheelR: 0.35 }, speed: 0 }, t);
+        else this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(f.lx, D[f.deck].y + (f.ly || 0), f.lz), U.RY(f.lh))), f.anim || 'in piedi', { speed: Math.abs(f.v || 0) }, f.anim === 'cammina' || f.anim === 'corre' ? f.ph : t);
+      }
+      prep(); }
+  }
+  // avatar on the street (beaming out) and on planets
+  if (f && f.active) {
+    if (g.world === 'city' && f.ss === 'beamout') { const vis = f.ss === 'beamout' ? 1 - f.bt / 1.9 : 1;
+      if (vis > 0.98 || Math.random() < vis) this.drawAvatar(ctx, U.mul(U.T(...this.rel([f.x, f.y || 0, f.z], ctx)), U.RY(f.h)), 'in piedi', {}, t); prep(); }
+    if (g.world === 'planet' && (f.ss === 'planet' || f.ss === 'planetin' || f.ss === 'beamup')) { const vis = f.ss === 'planetin' ? f.bt / 1.9 : f.ss === 'beamup' ? 1 - f.bt / 1.9 : 1;
+      if (vis > 0.98 || Math.random() < vis) this.drawAvatar(ctx, U.mul(U.T(...this.rel([f.px, f.py, f.pz], ctx)), U.RY(f.h)), f.anim || 'in piedi', { speed: Math.abs(f.v || 0) }, f.anim === 'cammina' || f.anim === 'corre' ? f.ph : t); prep(); }
+  }
+};
+/** transporter sparkle columns (additive) */
+Star.prototype.drawAdditive = function (ctx) {
+  const g = this.g, gl = this.gl, f = this.foot(); if (!f || !f.active || !f.ss) return;
+  let at = null, k = 0;
+  if ((f.ss === 'beamout' || f.ss === 'beamup') ) { k = Math.sin(clamp(f.bt / 1.9, 0, 1) * PI); at = f.ss === 'beamout' ? [f.x, f.y || 0, f.z] : [f.px, f.py, f.pz]; }
+  else if (f.ss === 'beamin' || f.ss === 'beamdown') { k = Math.sin(clamp(f.bt / 1.9, 0, 1) * PI); at = this.toW([f.lx, D[f.deck].y + (f.ly || 0), f.lz]); }
+  else if (f.ss === 'planetin') { k = Math.sin(clamp(f.bt / 1.9, 0, 1) * PI); at = [f.px, f.py, f.pz]; }
+  if (!at || k <= 0.01) return;
+  const P = g.P.veh, u = P.u; gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uGlowOnly, 1); gl.uniform1f(u.uLit, k * 1.5);
+  const sp = this.mesh('sparkle', () => { const mb = new KF.MB(); let s9 = 3; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647; mb.part = 'scintille_teletrasporto';
+    for (let i = 0; i < 160; i++) { const a = rnd() * TAU, r = 0.15 + rnd() * 0.38, y = rnd() * 1.95, sz = 0.012 + rnd() * 0.025; mb.ellipsoid(Math.cos(a) * r, y, Math.sin(a) * r, sz, sz * 2.5, sz, 4, 2, { c: rnd() < 0.5 ? [0.7, 0.95, 1] : [1, 0.95, 0.7], e: 1.8, slot: 3, mode: 1, a: [0, 0, 0] }); }
+    mb.part = 'colonna_luce'; mb.cyl(0, 2.1, 0.55, 0.55, 20, { c: [0.6, 0.85, 1], e: 0.35, slot: 3, mode: 0 }, false); return mb.finish(); });
+  this.drawM(sp, U.T(...this.rel(at, ctx)), { rot: ctx.t * 3 });
+  gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uLit, 1);
+};
+Star.prototype.drawHud = function (hud) {
+  const g = this.g, f = this.foot(), s = this.ship, c2 = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);
+  const lines = [];
+  if (f && f.active && f.ss) {
+    if (f.ss === 'in') { const d = D[f.deck]; lines.push('KAGE ODYSSEY · ' + d.title); }
+    if (f.ss === 'helm') { const w = KS.WARP_STEPS[s.warpI], c = KS.warpC(w);
+      lines.push('KAGE ODYSSEY · PLANCIA · ' + (s.world === 'space' ? 'ORBITA · ' + KS.DEST[s.loc].name : s.world === 'city' ? 'SOPRA CYBERCITY' : 'ATTERRATI · ' + KS.DEST[s.loc].name));
+      if (s.mode === 'warp') { const tr2 = s.travel, rem = Math.max(0, tr2.total - tr2.done); lines.push('IN CURVATURA · WARP ' + w + ' (' + (isFinite(c) ? Math.round(c).toLocaleString('it-IT') + ' × c' : '∞') + ') · VERSO ' + KS.DEST[tr2.to].name + ' · MANCANO ' + fmtLy(rem)); }
+      else lines.push('IMPULSO ' + Math.round(s.imp * 100) + '% · FATTORE WARP ' + w + (s.course ? ' · ROTTA: ' + KS.DEST[s.course].name + ' (' + fmtLy(KS.dist(s.loc, s.course)) + ')' : ' · nessuna rotta'));
+      lines.push('W/S impulso · A/D virata · SPAZIO/X quota · 1-9 / 0 warp · J ingrana · T decolla · L atterra · N rotta · C vista · INVIO alzati'); }
+    if (f.ss === 'eva') lines.push('EVA · tuta spaziale · torna al portello verde per rientrare');
+    if (f.ss === 'planet') lines.push(KS.DEST[Object.keys(KS.DEST).find(k => KS.DEST[k].land === this.site)].name + ' · esplora · ✦ BEAM IN per tornare a bordo');
+    if (f.ss === 'beamout' || f.ss === 'beamup' || f.ss === 'beamdown') lines.push('TELETRASPORTO IN CORSO…');
+    if (f.ss === 'beamin' || f.ss === 'planetin') lines.push('RIMATERIALIZZAZIONE…');
+  }
+  if (this.msgT > 0) lines.push('» ' + this.msg);
+  if (f && f.active && !f.ss && this.where().startsWith('badge')) lines.push(this.badge ? 'INVIO · rimetti il badge' : 'INVIO · prendi il badge della KAGE ODYSSEY');
+  if (f && f.active && f.ss === 'in') { const w = this.where(); const L = { lift: 'INVIO · ascensore: scegli il ponte', chair: 'INVIO · siediti al posto del capitano', pad: 'INVIO · teletrasporto: scendi', astro: 'INVIO · cartigli dell’Astrolab: scegli il pianeta', airlock: 'INVIO · esci nello spazio (EVA)' }[w]; if (L) lines.push(L); }
+  if (f && f.active && f.ss === 'eva' && this.where() === 'reenter') lines.push('INVIO · rientra a bordo');
+  if (!lines.length && !this.flash) return;
+  c2.textAlign = 'center';
+  lines.forEach((ln, i) => { c2.font = (i === 0 ? 'bold ' : '') + (m * (i === 0 ? 0.026 : 0.02) | 0) + 'px monospace'; const w = c2.measureText(ln).width + m * 0.03, y = m * 0.07 + i * m * 0.042;
+    c2.fillStyle = 'rgba(5,8,16,0.6)'; c2.fillRect(W / 2 - w / 2, y - m * 0.028, w, m * 0.038); c2.fillStyle = i === 0 ? '#ffcf70' : ln.startsWith('»') ? '#7ff' : '#ecfcff'; c2.fillText(ln, W / 2, y); });
+  if (this.flash > 0) { c2.fillStyle = 'rgba(220,240,255,' + Math.min(0.9, this.flash) + ')'; c2.fillRect(0, 0, W, H); }
+  c2.textAlign = 'left';
+};
+
+/* ---------------- OnFoot extension ---------------- */
+const OF = window.KageOnFoot;
+if (OF) {
+  const up0 = OF.prototype.update, dr0 = OF.prototype.draw, hud0 = OF.prototype.drawHud, cam0 = OF.prototype.camera, nc0 = OF.prototype.nearCar;
+  OF.prototype.update = function (dt, inp) { const X = this.g.star; if (X && X.footUpdate(this, dt, inp)) return { vF: this.v }; return up0.call(this, dt, inp); };
+  OF.prototype.draw = function (ctx) { if (this.ss) return; return dr0.call(this, ctx); };
+  OF.prototype.drawHud = function (hud) { if (this.ss) return; return hud0.call(this, hud); };
+  OF.prototype.camera = function (view, dt) { return cam0.call(this, view, dt); };
+  OF.prototype.nearCar = function () { return !this.ss && nc0.call(this); };
+}
+window.KageStarGame = Star;
 })();
 </script>
 <script>
@@ -6296,6 +7116,8 @@ window.KageXenoGame = XenoGame;
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
+    if(game.star&&game.star.key(e.code)){ e.preventDefault(); return; }
+    if(e.code==='Enter'&&game.star&&game.star.enter()) return;
     if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
     if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
@@ -6336,7 +7158,7 @@ window.KageXenoGame = XenoGame;
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
   document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
-  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
+  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk;
     inp.steer=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0);
@@ -6375,9 +7197,16 @@ window.KageXenoGame = XenoGame;
   if(ap&&q.has('shot')){ const T=parseFloat(q.get('t')||'3'); let s; for(let i=0;i<T*30;i++){ s=ap.step(game.c,1/30,null); NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
     game.view=parseInt(q.get('view')||'0'); game.frame(1/30,s); window.__ap={x:game.c.x,z:game.c.z,h:game.c.h,v:Math.hypot(game.c.vx,game.c.vz),dir:ap.dir}; window.__done=true; return; }
   if(q.has('shot')&&q.has('foot')&&game.foot){ const T=parseFloat(q.get('t')||'2'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); game.foot.toggle();
+    { const sq=q.get('star'), Y=game.star, f=game.foot; if(sq&&Y){ Y.badge=true; const s=Y.ship;
+        if(sq==='in'){ f.ss='in'; f.deck=parseInt(q.get('deck')||'1'); const p=(q.get('xl')||'0,12').split(',').map(Number); f.lx=p[0]; f.lz=p[1]; f.lh=parseFloat(q.get('xh')||'0'); f.v=0; Y.syncFoot(f); Y.greetT=5; }
+        else if(sq==='helm'){ f.ss='helm'; f.deck=0; f.lx=0; f.lz=11.6; if(q.get('w')==='space'){ Y.toSpace(); s.loc=q.get('loc')||'terra'; } if(q.get('warp')){ s.course=q.get('warp'); if(q.get('wi')) s.warpI=+q.get('wi'); Y.engage(); } if(q.get('cmd')==='takeoff') Y.takeoff(); if(q.get('cmd')==='land') Y.land(); }
+        else if(sq==='eva'){ f.ss='eva'; f.ex=30; f.ey=-2; f.ez=30; f.lh=-2.2; f.evx=f.evy=f.evz=0; }
+        else if(sq==='planet'){ Y.site=q.get('site')||'marte'; game.world='planet'; f.ss='planet'; f.px=4; f.pz=-8; f.h=0.4; f.py=KageStar.siteHeight(Y.site,4,-8); }
+        else if(sq==='garage'){ Y.badge=false; f.x=21.8; f.z=52.8; f.h=1.0; game.view=1; }
+        else if(sq==='beam'){ f.ss='beamout'; f.bt=0.9; f.from='city'; } } }
     { const xq=q.get('xeno'), X=game.xeno, f=game.foot; if(xq&&X){ if(xq==='in'){ const p=(q.get('xl')||'0,2').split(',').map(Number); f.xs='in'; f.lx=p[0]; f.lz=p[1]; f.h=X.ship.h+parseFloat(q.get('xh')||'0'); f.v=0; X.syncFoot(f); }
       else if(xq==='vortex') X.tt={phase:'vortex',t:0}; else if(xq==='up'){ const pd=X.toWorld(0,-4.2); f.x=pd[0]; f.z=pd[1]; f.xs='up'; f.xp=0; f.x0=f.x; f.z0=f.z; } else if(xq==='near'){ const pd=X.toWorld(0,-4.2); f.x=pd[0]+6; f.z=pd[1]-8; f.h=-0.6; } else if(xq==='epoch'){ f.x=26; f.z=27; f.h=Math.PI/2; } } }
-    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); if(game.xeno) game.xeno.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
+    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); if(game.xeno) game.xeno.update(1/30,vi); if(game.star) game.star.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
     window.__fleet={x:game.foot.x,z:game.foot.z,anim:game.foot.anim}; window.__done=true; return; }
   if(q.has('shot')&&game.veh){   // test: simulate the vehicle with a fixed input, then render one frame
     const T=parseFloat(q.get('t')||'3'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); F.autoMe=!!vi.ai;
@@ -6392,7 +7221,7 @@ window.KageXenoGame = XenoGame;
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
-    { const ft=game.foot, xa=game.xeno?game.xeno.action():'', ca=ft&&!game.veh?(ft.active?(ft.nearCar()?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
+    { const ft=game.foot, xa=(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=ft&&!game.veh?(ft.active?(ft.nearCar()?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
       const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
       const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }

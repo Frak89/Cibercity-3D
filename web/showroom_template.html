@@ -37,7 +37,7 @@
 <canvas id="c"></canvas>
 <div id="title"><h1>AMPY KAGE GT</h1><div>SHOWROOM · CYBERCITY 3D</div></div>
 <div id="specs"></div>
-<div id="vsel"><button data-v="car" class="on">KAGE GT</button><button data-v="moto">🏍 VOLT</button><button data-v="drone">🚁 STRIX</button><button data-v="hover">🛸 GLIDE</button><button data-v="boat">🚤 RIPTIDE</button><button data-v="sub">🤿 ABYSS</button><button data-v="galleon">⛵ LEVIATHAN</button><button data-v="pilot">🧑‍🚀 PILOTA</button><button data-v="alien">👽 ALIENI</button><button data-v="ufo">🛸 XENO</button><button data-v="chrono">⏳ EPOCH</button></div>
+<div id="vsel"><button data-v="car" class="on">KAGE GT</button><button data-v="moto">🏍 VOLT</button><button data-v="drone">🚁 STRIX</button><button data-v="hover">🛸 GLIDE</button><button data-v="boat">🚤 RIPTIDE</button><button data-v="sub">🤿 ABYSS</button><button data-v="galleon">⛵ LEVIATHAN</button><button data-v="pilot">🧑‍🚀 PILOTA</button><button data-v="alien">👽 ALIENI</button><button data-v="ufo">🛸 XENO</button><button data-v="chrono">⏳ EPOCH</button><button data-v="starship">🚀 ODYSSEY</button></div>
 <div id="fcust"></div>
 <div id="bar">
   <button id="bTurn" class="on">⟳ RUOTA</button><button class="caronly" id="bHood">COFANO</button><button class="caronly" id="bDoors">PORTIERE</button>
@@ -180,7 +180,7 @@
   addEventListener('pointermove',e=>{ if(!drag) return; const dx=(e.clientX-drag[0])/innerWidth, dy=(e.clientY-drag[1])/innerHeight; drag=[e.clientX,e.clientY];
     if(sr.cam.mode==='cockpit'){ sr.cam.look-=dx*3; sr.cam.lookP=Math.max(-0.8,Math.min(0.8,sr.cam.lookP-dy*2)); }
     else { sr.turn+=dx*4; sr.cam.pitch=Math.max(0.02,Math.min(1.2,sr.cam.pitch+dy*2)); } });
-  cv.addEventListener('wheel',e=>{ const base=sr.F&&sr.F.kind?{drone:4.6,boat:13,galleon:52,pilot:3.4,alien:3.6,moto:4,hover:12,sub:10,ufo:36,chrono:6}[sr.F.kind]:7.2; sr.cam.dist=Math.max(base*0.55,Math.min(base*2,sr.cam.dist*(1+e.deltaY*0.001))); });
+  cv.addEventListener('wheel',e=>{ const base=sr.F&&sr.F.kind?{drone:4.6,boat:13,galleon:52,pilot:3.4,alien:3.6,moto:4,hover:12,sub:10,ufo:36,chrono:6,starship:(sr.F.cfg&&sr.F.cfg.view&&sr.F.cfg.view!=='esterno'?30:190)}[sr.F.kind]:7.2; sr.cam.dist=Math.max(base*0.55,Math.min(base*2,sr.cam.dist*(1+e.deltaY*0.001))); });
   if(q.has('vehicle')) pickV(q.get('vehicle'));
   if(q.has('shot')){
     for(const k of ['hood','doors']) if(q.has(k)) { sr.tg[k]=1; sr.st[k==='doors'?'doorL':'hood']=1; if(k==='doors') sr.st.doorR=1; }

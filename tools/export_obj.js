@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const root = path.resolve(__dirname, '..');
 globalThis.localStorage = { getItem: () => null, setItem: () => {} };
-for (const f of ['vehicles.js', 'xeno.js', 'pilot.js']) (0, eval)(fs.readFileSync(path.join(root, 'web', f), 'utf8'));
+for (const f of ['vehicles.js', 'xeno.js', 'pilot.js', 'starship.js']) (0, eval)(fs.readFileSync(path.join(root, 'web', f), 'utf8'));
 const KF = globalThis.KageFleet, KX = globalThis.KageXeno, KP = globalThis.KagePilot;
 const OUT = path.resolve(process.argv[2] || path.join(root, 'models/cybercity3d_ultra'));
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
@@ -78,6 +78,13 @@ add('kage_xeno_ufo_interno', 'KAGE XENO · UFO (interno esplorabile)', KX.buildU
 add('kage_xeno_raggio_traente', 'KAGE XENO · raggio traente', KX.buildBeam({}), ['hangs from the emitter: origin at the top, 30 m long (scale Y to the height)']);
 add('kage_epoch_cabina_tempo', 'KAGE EPOCH · cabina del tempo Art Déco', KX.buildChrono(Object.assign({}, KX.CHRONO_DEF), U));
 add('vortice_temporale', 'Vortice temporale (tunnel)', KX.buildVortex(U), ['tunnel along -Y, 600 m; the game turns it to face the flight']);
+// KAGE ODYSSEY starship: exterior, the five decks (same origin as the hull), badge, garage display
+const KS = globalThis.KageStar;
+add('kage_odyssey_astronave', 'KAGE ODYSSEY · astronave (esterno)', KS.buildStarship({}, U), ['the decks (kage_odyssey_ponte_*) fit inside at the same origin']);
+for (const d of KS.DECKS) add('kage_odyssey_ponte_' + d.n + '_' + d.id, 'KAGE ODYSSEY · ' + d.title, KS.buildDeck(d.id, {}, U), ['deck floor at y = ' + d.y + ' m, ship origin']);
+add('kage_odyssey_badge', 'KAGE ODYSSEY · badge dell’equipaggio', KS.buildBadge());
+add('kage_odyssey_espositore_garage', 'KAGE ODYSSEY · espositore nel garage', KS.buildDisplay());
+for (const k of KS.DEST_ORDER) add('pianeta_' + k, 'Pianeta · ' + KS.DEST[k].name, KS.buildPlanet(k, U), ['unit sphere: scale by the radius you like']);
 // characters (bind pose; parts = body regions used for skinning)
 const ppl = [['pilota_il_mio_pilota', 'Il mio pilota', Object.assign({}, KP.MINE)], ['alieno_nordico', 'Alieno nordico', { species: 'nordico' }],
   ['alieno_grigio', 'Alieno grigio', { species: 'grigio' }], ['alieno_verde', 'Piccolo alieno verde', { species: 'verde' }], ['alieno_ombra', 'Alieno ombra (scuro)', { species: 'scuro' }]];
