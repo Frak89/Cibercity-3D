@@ -572,13 +572,18 @@ Game.prototype.draw = function (pr, m) {
 };
 
 Game.prototype.frame = function (dt, inp) {
+  this.inp = inp;
   const gl = this.gl, P = this.P, o = this.o;
   if (this.paletteBuilt !== o.palette + o.paint) this.buildCar();
   const cityPal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
   const past = this.world === 'meadow';
   const eco = this.world === 'eco';
   let pal = past ? Object.assign({}, cityPal, MEADOW_PAL) : eco ? Object.assign({}, cityPal, KageNexus.ECO_PAL) : cityPal;
-  const wx = past ? null : (CYBER_WEATHER[o.weather] || null);
+  // real light and weather where you are (web/realsky.js): day / dusk / night from the sun, live weather unless you picked one
+  const RS = !past && !eco && window.getRealSky ? getRealSky() : null;
+  if (RS && RS.enabled) pal = RS.apply(pal);
+  this.dayK = past ? 1 : RS ? RS.dayK() : 0;
+  const wx = past ? null : (CYBER_WEATHER[o.weather || (RS && RS.weather()) || ''] || null);
   this.t += dt; const t = this.t;
   this.flash = Math.max(0, this.flash - dt * 3.5);
   if (wx && wx.light > 0) { this.nextFlash -= dt; if (this.nextFlash <= 0) { this.flash = 1; this.nextFlash = Math.random() < 0.35 ? 0.15 : 4 + Math.random() * 9; } }
@@ -663,7 +668,7 @@ Game.prototype.frame = function (dt, inp) {
   gl.uniform3fv(sp.u.uFwd, V.f); gl.uniform3fv(sp.u.uRight, V.r); gl.uniform3fv(sp.u.uUp, V.u);
   const ty = Math.tan(fov / 2); gl.uniform2f(sp.u.uTan, ty * W / H, ty);
   if (sp.u.uCloud) gl.uniform1f(sp.u.uCloud, past ? 0.45 : wx ? wx.cloud : 0);
-  if (sp.u.uDay) gl.uniform1f(sp.u.uDay, past ? 1 : 0);
+  if (sp.u.uDay) gl.uniform1f(sp.u.uDay, this.dayK);
   gl.uniform3fv(sp.u.uSunDir, pal.sunDir); gl.uniform3fv(sp.u.uSunCol, pal.sun); gl.uniform1f(sp.u.uSunStripes, pal.stripes);
   if (!UNDER) this.draw(sp, this.M.quad);
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
@@ -678,7 +683,7 @@ Game.prototype.frame = function (dt, inp) {
     { const w = P.water; gl.useProgram(w.p); set(w); gl.uniform3f(w.u.uWaterC, HARBOR.cx, -1.2, HARBOR.cz); gl.uniform1f(w.u.uWaterRel, 0);
       const wk = this.fleet ? this.fleet.wake(camX, camZ) : [0, 0, 0, 0]; gl.uniform4f(w.u.uWake, wk[0], wk[1], wk[2], wk[3]); if (w.u.uUnder) gl.uniform1f(w.u.uUnder, UNDER ? 1 : 0); this.draw(w, this.M.water); }
     if (this.fleet) this.fleet.drawUnder({ set, camX, camZ, t, pal, dt, under: UNDER });
-    if (this.T) { const v = P.veh, u = v.u; gl.useProgram(v.p); set(v); gl.uniform1f(u.uTraffic, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0);
+    if (this.T) { const v = P.veh, u = v.u; gl.useProgram(v.p); set(v); gl.uniform1f(u.uTraffic, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.dayK || 0); if (u.uSteer) gl.uniform1f(u.uSteer, 0);
       gl.uniform1f(u.uScale, 2.2); gl.uniform1f(u.uBob, 0); gl.uniform1f(u.uBlur, 0.45); gl.uniform1f(u.uFlut, 0.4); gl.uniform1f(u.uSailSide, 1); for (const m of this.T.drones) this.draw(v, m); }
     if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.nexus) this.nexus.drawWorld({ set, camX, camZ, t, pal, dt });
@@ -699,7 +704,7 @@ Game.prototype.frame = function (dt, inp) {
   else if (cv.drawCar && this.hd) {
     gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB, kageExtra(this.car));
     { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
-    gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
+    gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35 + (this.dayK || 0) * 0.75); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
     if (this.fleet && this.view !== 3 && !FOOT) { this.fleet.drawPilot(set, carM, 'car'); gl.useProgram(P.hd.p); set(P.hd); }
   } else if (cv.drawCar && !this.hd) {
@@ -758,6 +763,8 @@ Game.prototype.frame = function (dt, inp) {
   if (this.foot && !VEH) this.foot.drawHud(this.hud);
   if (this.fleet) this.fleet.drawGarageHud(this.hud);
   if (this.xeno) this.xeno.drawHud(this.hud);
+  if (window.realSky && realSky.enabled && !(this.xeno && this.xeno.tt)) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
+    if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);
 };
 

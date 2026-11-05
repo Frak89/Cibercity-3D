@@ -117,7 +117,7 @@ Showroom.prototype.frame = function (dt) {
   this.noseM = carM;
   set(cp); this.car.setMaterials(o.paint, pal.neonA, pal.neonB, kageExtra(this.carCfg));
   if (cp.u.uSpd) { gl.uniform1f(cp.u.uSpd, 0); gl.uniform1f(cp.u.uRpmK, this.eng.rpm / this.eng.T.limiter); gl.uniform1f(cp.u.uGear, this.eng.T.gears ? -1 : -2); gl.uniform1f(cp.u.uFuelK, this.eng.fuelK === undefined ? 1 : this.eng.fuelK); gl.uniform1f(cp.u.uGx, 0); }
-  gl.uniform1f(cp.u.uKey, 1.15); gl.uniform1f(cp.u.uLights, tg.lights); gl.uniform1f(cp.u.uBrake, tg.lights * 0.3);
+  gl.uniform1f(cp.u.uKey, this.spots ? 2.8 : 1.15); gl.uniform1f(cp.u.uLights, tg.lights); gl.uniform1f(cp.u.uBrake, tg.lights * 0.3);
   // mirrored car = floor reflection
   const mir = U.mul(new Float32Array([1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1]), carM);
   if (cam.mode !== 'cockpit') this.car.draw(mir, st, 'opaque');

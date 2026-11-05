@@ -30,7 +30,7 @@
   #fcust{position:fixed;left:3vmin;top:14vmin;width:min(52vmin,440px);display:none;flex-wrap:wrap;gap:1vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);padding:1.6vmin}
   #fcust.open{display:flex}
   #fcust b{width:100%;color:var(--a);letter-spacing:.2em;font-size:1.5vmin}
-  body.fleet .caronly{display:none}
+  body.fleet .caronly{display:none} .fleetonly{display:none} body.fleet .fleetonly{display:inline-block} body.kpil .fleetonly{display:none}
 </style>
 </head>
 <body style="--a:#00ffe2">
@@ -44,7 +44,7 @@
   <button class="caronly" id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button class="caronly" id="bEng">MOTORE</button>
   <button class="caronly" id="bSteer">STERZO</button><button class="caronly on" id="bLights">LUCI</button><button class="caronly" id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
-  <button class="caronly" id="bRoof">CAPOTE: CHIUSA</button><button class="caronly" id="bPower">V8 BITURBO IBRIDO</button><button class="caronly" id="bExh">SCARICO: SERIE</button><button class="caronly" id="bChrono">MODULO CRONO</button><button class="caronly" id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bQual">RISOLUZIONE: ALTA</button><button class="caronly on" id="bMotor">MOTORE ON</button><button class="caronly rev" id="bRev">🔥 SU DI GIRI</button>
+  <button class="caronly" id="bRoof">CAPOTE: CHIUSA</button><button class="caronly" id="bPower">V8 BITURBO IBRIDO</button><button class="caronly" id="bExh">SCARICO: SERIE</button><button class="caronly" id="bChrono">MODULO CRONO</button><button class="caronly" id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bQual">RISOLUZIONE: ALTA</button><button id="bSpots" class="on">💡 RIFLETTORI: ON</button><button class="fleetonly" id="bFSnd">🔊 SUONO: OFF</button><button class="fleetonly rev" id="bFRev">⚡ A TUTTA POTENZA</button><button class="caronly on" id="bMotor">MOTORE ON</button><button class="caronly rev" id="bRev">🔥 SU DI GIRI</button>
 </div>
 <div id="err"></div>
 <div id="cust"><b>PERSONALIZZAZIONE</b>
@@ -114,7 +114,7 @@
       if(d.rnd){ if(PIL){ const r={}; for(const key in KagePilot.OPTS){ const O=KagePilot.OPTS[key]; r[key]=O[Math.random()*O.length|0]; } r.inVehicle=sr.F.cfg.inVehicle; sr.F.cfg=r; } else sr.F.cfg=KageFleet.randomCfg(k); }
       if(PIL) KagePilot.save(sr.F.cfg); else KageFleet.saveCfg(k,sr.F.cfg); sr.rebuildFleet(); fpanel(); specs(); }); };
   const pickV=v=>{ document.querySelectorAll('#vsel button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-    sr.setVehicle(v); document.body.classList.toggle('fleet',v!=='car');
+    sr.setVehicle(v); document.body.classList.toggle('fleet',v!=='car'); document.body.classList.toggle('kpil',v==='pilot'||v==='alien'); if(v!=='car'&&sr.tg.engine) $('bMotor').onclick();
     if(v!=='car'){ sr.tg.engine=false; sr.audio.on=false; $('cust').classList.remove('open'); if(sr.cam.mode!=='orbit'&&sr.cam.mode!=='cockpit') sr.cam.mode='orbit'; } else { fcust.classList.remove('open'); }
     tog('bCock',sr.cam.mode==='cockpit'); fpanel(); specs(); };
   document.querySelectorAll('#vsel button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); pickV(b.dataset.v); });
@@ -131,11 +131,19 @@
   $('bMotor').onclick=()=>{ sr.tg.engine=!sr.tg.engine; tog('bMotor',sr.tg.engine); $('bMotor').textContent=sr.tg.engine?'MOTORE ON':'MOTORE OFF';
     if(sr.tg.engine){ sr.eng.rpm=300; sr.tg.rev=0.45; setTimeout(()=>{ if(!revHeld) sr.tg.rev=0; },260); } };
   let revHeld=false;
+  // studio spotlights (saved), fleet sound demo
+  try{ sr.spots=localStorage.getItem('kageSpots')!=='0'; }catch(e){ sr.spots=true; }
+  const spl=()=>{ $('bSpots').textContent='💡 RIFLETTORI: '+(sr.spots?'ON':'OFF'); tog('bSpots',sr.spots); }; spl();
+  $('bSpots').onclick=()=>{ sr.spots=!sr.spots; try{localStorage.setItem('kageSpots',sr.spots?'1':'0');}catch(e){} spl(); };
+  $('bFSnd').onclick=()=>{ sr.fleetSnd=!sr.fleetSnd; tog('bFSnd',sr.fleetSnd); $('bFSnd').textContent='🔊 SUONO: '+(sr.fleetSnd?'ON':'OFF'); };
+  const frev=on=>{ if(on&&!sr.fleetSnd) $('bFSnd').onclick(); sr.fleetRev=on; tog('bFRev',on); };
+  $('bFRev').addEventListener('pointerdown',e=>{ e.stopPropagation(); frev(true); });
+  for(const ev of ['pointerup','pointerleave','pointercancel']) $('bFRev').addEventListener(ev,()=>frev(false));
   const rev=on=>{ revHeld=on; if(on&&!sr.tg.engine) $('bMotor').onclick(); sr.tg.rev=on?1:0; tog('bRev',on); };
   $('bRev').addEventListener('pointerdown',e=>{ e.stopPropagation(); snd(); rev(true); });
   for(const ev of ['pointerup','pointerleave','pointercancel']) $('bRev').addEventListener(ev,()=>rev(false));
-  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat) rev(true); });
-  addEventListener('keyup',e=>{ if(e.code==='Space') rev(false); });
+  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat){ if(sr.F&&sr.F.kind) frev(true); else rev(true); } });
+  addEventListener('keyup',e=>{ if(e.code==='Space'){ rev(false); frev(false); } });
   setInterval(()=>{ $('rpm').textContent=sr.tg.engine?(Math.round(sr.eng.rpm/50)*50)+' RPM':''; },80);
   // ?demo=1 → screensaver turnaround: random configuration + camera every 9-14 s, no UI, no sound
   if(q.has('demo')){

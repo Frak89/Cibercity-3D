@@ -14,6 +14,7 @@ uniform float uSail;     // sail billow 0..1
 uniform float uSailYaw;  // yard bracing (rad)
 uniform float uSailSide; // which side the fore-aft sails fill (-1..1)
 uniform float uFlut;     // flutter amount
+uniform float uSteer;    // steering angle for steered parts (rad)
 uniform float uTraffic;
 uniform float uScale;
 uniform float uBob;      // traffic: 0 drones (hover bob + nose down), 1 boats (waves)
@@ -53,8 +54,12 @@ void main(){
     if (mode > 0.5 && mode < 2.5) {          // rotors about y
         float a = mode < 1.5 ? -rA : rA;
         vec2 q = rot2(p.xz - aAnim.yz, a) + aAnim.yz; p.xz = q; n.xz = rot2(n.xz, a);
-    } else if (mode > 2.5 && mode < 3.5) {   // propeller about z
-        vec2 q = rot2(p.xy - aAnim.yz, pA) + aAnim.yz; p.xy = q; n.xy = rot2(n.xy, pA);
+    } else if (mode > 2.5 && mode < 3.5) {   // propeller about z (pivot x, y) · aAnim.w = 1: wheel about x (pivot y, z)
+        if (aAnim.w > 0.5) { vec2 q = rot2(p.yz - aAnim.yz, pA) + aAnim.yz; p.yz = q; n.yz = rot2(n.yz, pA); }
+        else { vec2 q = rot2(p.xy - aAnim.yz, pA) + aAnim.yz; p.xy = q; n.xy = rot2(n.xy, pA); }
+        if (aAnim.w > 2.5) { vec2 pv = vec2(0.0, aAnim.z); p.xz = rot2(p.xz - pv, -uSteer) + pv; n.xz = rot2(n.xz, -uSteer); }
+    } else if (mode < 0.5 && aAnim.w > 1.5 && aAnim.w < 2.5) {   // steered part: yaw about (x, z) = (a, b)
+        p.xz = rot2(p.xz - aAnim.yz, -uSteer) + aAnim.yz; n.xz = rot2(n.xz, -uSteer);
     } else if (mode > 3.5 && mode < 4.5) {   // square sail: billow forward, then brace about the mast
         float u = clamp(aAnim.y, 0.0, 1.0), v = clamp(aAnim.z, 0.0, 1.0);
         p.z += sail * 1.6 * sin(3.14159 * u) * (0.25 + 0.75 * sin(3.14159 * v)) + sin(uTime * 2.3 + u * 4.0 + v * 3.0) * 0.06 * uFlut;
@@ -65,7 +70,7 @@ void main(){
     }
     vec3 c = aCol.rgb; float e = aCol.a;
     if (mode > 6.5) e *= step(0.9, fract(uTime * 1.1 + aAnim.y));
-    if (mode < 0.5 && aAnim.y > 0.5) e *= 0.05 + 0.95 * step(aAnim.y, uLocks + 0.5);
+    if (mode < 0.5 && aAnim.y > 0.5 && aAnim.w < 1.5) e *= 0.05 + 0.95 * step(aAnim.y, uLocks + 0.5);
     vec4 wp;
     if (uTraffic > 0.5) {
         if (slot > 0.5 && slot < 1.5) c = paintOf(seed);

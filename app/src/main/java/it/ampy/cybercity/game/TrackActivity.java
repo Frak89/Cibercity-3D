@@ -33,7 +33,12 @@ public class TrackActivity extends Activity {
         ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setMediaPlaybackRequiresUserGesture(false);
         ws.setAllowFileAccess(true);
         web.setWebViewClient(new WebViewClient());
-        web.setWebChromeClient(new WebChromeClient());
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override public void onGeolocationPermissionsShowPrompt(String origin, android.webkit.GeolocationPermissions.Callback cb) {
+                cb.invoke(origin, checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED, false);
+            }
+        });
+        ws.setGeolocationEnabled(true);
         web.setBackgroundColor(0xff000000);
         setContentView(web);
         SharedPreferences sp = Prefs.get(this).raw();
@@ -47,6 +52,10 @@ public class TrackActivity extends Activity {
         if (page == null) page = "track.html";
         String url = "file:///android_asset/web/" + page + "?" + (veh != null ? "vehicle=" + Uri.encode(veh) + "&" : "") + "quality=" + Prefs.get(this).modelQuality() + "&car=" + Uri.encode(car) + "&paint=" + Uri.encode(sp.getString("gPaint", "rosso"))
             + "&power=" + Uri.encode(sp.getString("gPower", "v8")) + "&exhaust=" + (sp.getBoolean("gRace", false) ? "race" : "serie") + "&roof=" + (sp.getBoolean("gRoof", false) ? "1" : "0") + "&lang=" + (it.ampy.cybercity.L.english() ? "en" : "it");
+        // real light and weather: the position saved in the settings (or the device's last known one)
+        Prefs pr = Prefs.get(this);
+        try { if (!pr.hasLocation() || pr.useGps()) it.ampy.cybercity.Weather.fromDevice(this, pr); } catch (Exception ignored) { }
+        if (pr.hasLocation()) url += String.format(java.util.Locale.US, "&lat=%.4f&lon=%.4f&city=", pr.lat(), pr.lon()) + Uri.encode(pr.city().startsWith("posizione") ? "" : pr.city());
         web.loadUrl(url);
     }
     @Override protected void onResume() {

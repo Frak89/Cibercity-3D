@@ -15,6 +15,10 @@
   #tdn{display:none!important} body.touch.veh-drone #tdn,body.touch.veh-sub #tdn{display:flex!important}
   #tnx{display:none!important} body.touch.nx #tnx{display:flex!important}
   #tex{display:none!important} body.touch.ex #tex{display:flex!important}
+  #tdn{} body.touch.veh-ufo #tdn{display:flex!important}
+  #tfr{display:none!important} body.touch.veh-ufo #tfr{display:flex!important}
+  #tgar{display:none!important} body.touch.gar #tgar{display:flex!important}
+  body.touch.veh-foot #tn,body.touch.veh-foot #tg,body.touch.veh-foot #tbk{display:flex}
   #fbtn{position:fixed;right:2vmin;top:2vmin;border:1px solid rgba(0,255,226,.6);background:rgba(7,11,19,.55);color:#ecfcff;font:bold 12px monospace;padding:7px 10px;border-radius:8px;cursor:pointer;z-index:5}
   #fleet{position:fixed;right:2vmin;top:7vmin;max-width:min(560px,94vw);max-height:84vh;overflow:auto;background:rgba(7,11,19,.86);border:1px solid rgba(0,255,226,.6);border-radius:10px;padding:10px 12px;font:12px monospace;display:none;z-index:6}
   #fleet.open{display:block}
@@ -39,6 +43,8 @@
 <div class="tb" id="tv" style="right:39vmin;bottom:24vmin">VISTA</div>
 <div class="tb" id="tdn" style="right:39vmin;bottom:44vmin">GIÙ</div>
 <div class="tb" id="tex" style="left:21vmin;bottom:24vmin;border-color:rgba(255,210,80,.7)">AUTO</div>
+<div class="tb" id="tfr" style="right:57vmin;bottom:24vmin;border-color:rgba(150,255,120,.8)">RAGGIO</div>
+<div class="tb" id="tgar" style="left:39vmin;bottom:24vmin;border-color:rgba(255,80,200,.8);font-size:2.6vmin">GARAGE</div>
 <div class="tb" id="tnx" style="left:3vmin;bottom:24vmin;border-color:rgba(255,80,200,.7)">NEXUS</div>
 <button id="fbtn">🚁⛵ FLOTTA</button>
 <div id="fleet"></div>
@@ -78,8 +84,8 @@
   const snd=()=>{ if(game.audio) game.audio.start(); if(game.fleet) game.fleet.audio.start(); };
   // KAGE fleet: drone / boat / galleon (garage panel, races)
   const F=game.fleet, fp=document.getElementById('fleet');
-  const labels=()=>{ const k=game.veh?game.veh.kind:'car'; document.body.className=document.body.className.replace(/\bveh-\w+/g,'')+' veh-'+k;
-    const L={car:['GAS','FRENO','DRIFT','N₂O'],drone:['AVANTI','INDIETRO','SU','BOOST'],boat:['GAS','RETRO','—','N₂O'],galleon:['VELE +','VELE −','FUOCO','ASSIST'],moto:['GAS','FRENO','—','BOOST'],hover:['SPINTA','RETRO','—','BOOST'],sub:['AVANTI','INDIETRO','SU','BOOST']}[k]||['GAS','FRENO','—','BOOST'];
+  const labels=()=>{ const k=game.veh?game.veh.kind:(game.foot&&game.foot.active?'foot':'car'); labels.k=k; document.body.className=document.body.className.replace(/\bveh-\w+/g,'')+' veh-'+k;
+    const L={car:['GAS','FRENO','DRIFT','N₂O'],drone:['AVANTI','INDIETRO','SU','BOOST'],boat:['GAS','RETRO','—','N₂O'],galleon:['VELE +','VELE −','FUOCO','ASSIST'],moto:['GAS','FRENO','—','BOOST'],hover:['SPINTA','RETRO','—','BOOST'],sub:['AVANTI','INDIETRO','SU','BOOST'],ufo:['AVANTI','INDIETRO','SU','BOOST'],foot:['AVANTI','INDIETRO','SALTA','CORRI']}[k]||['GAS','FRENO','—','BOOST'];
     ['tg','tbk','th','tn'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.textContent=L[i]; }); };
   if(F){ F.buildUI(fp,(what,v)=>{ if(what==='vehicle'){ o.vehicle=v; labels(); } if(what==='quality'){ o.quality=v; try{localStorage.setItem('kageQuality',v);}catch(e){} } save(); });
     document.getElementById('fbtn').onclick=e=>{ e.stopPropagation(); F.renderUI(); fp.classList.toggle('open'); };
@@ -95,6 +101,7 @@
     if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
     if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
+    if(e.code==='KeyO'&&window.getRealSky){ const RS=getRealSky(); RS.setEnabled(!RS.enabled); }
     if(e.code==='KeyB'&&game.audio) game.audio.toggle();
     if(e.code==='KeyL') setLang(LANG==='it'?'en':'it');
     if(game.veh){
@@ -122,10 +129,14 @@
   });
   addEventListener('keyup',e=>{ keys[e.code]=false; });
   // touch buttons
-  if('ontouchstart' in window) document.body.classList.add('touch');
-  const tb={}; for(const id of ['tl','tr','tg','tbk','th','tn','tv','tdn']){ const el=document.getElementById(id);
+  if('ontouchstart' in window){ document.body.classList.add('touch');
+    // on touch screens the prompts name the on-screen buttons instead of the keys
+    const C2=CanvasRenderingContext2D.prototype, f0=C2.fillText, m0=C2.measureText, tz=t=>String(t).replace(/\bINVIO ·/g,'AZIONE ·').replace('premi G per','tocca GARAGE per');
+    C2.fillText=function(t,...a){ return f0.call(this,tz(t),...a); }; C2.measureText=function(t){ return m0.call(this,tz(t)); }; }
+  const tb={}; for(const id of ['tl','tr','tg','tbk','th','tn','tv','tdn','tfr']){ const el=document.getElementById(id);
     el.addEventListener('touchstart',e=>{e.preventDefault(); tb[id]=true; if(id==='tv') game.view=(game.view+1)%(game.veh?5:NeonRun.VIEWS.length);});
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
+  document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
   document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
   function readInput(){
@@ -138,7 +149,7 @@
       inp.yaw=b(keys.KeyA||keys.ArrowLeft||tb.tl)-b(keys.KeyD||keys.ArrowRight||tb.tr);
       inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
       inp.lift=k==='drone'||k==='foot'||k==='sub'||k==='ufo'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
-      inp.fire=(k==='galleon'&&(keys.Space||tb.th))||(k==='ufo'&&!!keys.KeyF); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
+      inp.fire=(k==='galleon'&&(keys.Space||tb.th))||(k==='ufo'&&!!(keys.KeyF||tb.tfr)); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
       // gamepad (standard mapping; drone in mode 2: left stick = altitude/yaw, right stick = pitch/roll)
       const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null;
       if(gp){ const ax=i=>Math.abs(gp.axes[i]||0)>0.12?gp.axes[i]:0, bt=i=>gp.buttons[i]&&(gp.buttons[i].pressed||gp.buttons[i].value>0.3);
@@ -183,7 +194,10 @@
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
-    if(game.foot){ const ex=!game.veh&&(game.foot.active?game.foot.nearCar():game.foot.canExit()); if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } }
+    { const ft=game.foot, xa=game.xeno?game.xeno.action():'', ca=ft&&!game.veh?(ft.active?(ft.nearCar()?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
+      if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
+      const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
+      const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }
     { const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null; const b1=gp&&gp.buttons[1]&&gp.buttons[1].pressed; if(b1&&!loop.b1&&game.nexus) game.nexus.dial(); loop.b1=b1; } if(ap) Object.assign(inp,ap.step(game.c,dt,game)); else readInput(); game.frame(dt,inp); requestAnimationFrame(loop); }
 
   requestAnimationFrame(loop);

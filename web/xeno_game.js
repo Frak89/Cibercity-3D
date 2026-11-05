@@ -58,6 +58,8 @@ XenoGame.prototype.update = function (dt, inp) {
   const n0 = this.items.length; this.items = this.items.filter(it => it.y < it.top - 0.6); this.count += n0 - this.items.length;
   // time travel
   const T = this.tt;
+  if (T || this.au) { if (!this.au && window.FleetAudio) { this.au = new FleetAudio(); }
+    if (this.au) { this.au.start(); this.au.on = !!T; this.au.update(T ? 'chrono' : null, { thrust: T && T.phase === 'vortex' ? 1 : 0.4 }); } }
   if (T) { T.t += dt;
     if (T.phase === 'in' && T.t > 1.3) { T.phase = 'vortex'; T.t = 0; }
     else if (T.phase === 'vortex' && T.t > 6.5) { T.phase = 'out'; T.t = 0; g.world = g.world === 'meadow' ? 'city' : 'meadow'; if (g.fx) g.fx.p.length = 0; if (g.tj) { g.tj.white = 1; g.tj.arrive = 1; } }
@@ -228,6 +230,19 @@ XenoGame.prototype.drawHud = function (hud) {
   ctx2.fillStyle = 'rgb(150,255,120)'; ctx2.fillText(line, W / 2, m * 0.434); ctx2.textAlign = 'left';
 };
 
+/** short label for the on-screen ACTION button ('' = nothing to do here) */
+XenoGame.prototype.action = function () {
+  const g = this.g, f = g.foot;
+  if (this.tt) return '';
+  if (this.flying()) return 'LASCIA';
+  if (!f || !f.active || g.veh) return '';
+  if (f.xs === 'in') { if (Math.hypot(f.lx - R.lift[0], f.lz - R.lift[1]) < 1.2) return 'SCENDI'; if (Math.hypot(f.lx - R.seat[0], f.lz - (R.seat[1] - 0.15)) < 1.3) return 'VOLA'; return ''; }
+  if (f.xs) return '';
+  const pad = this.toWorld(R.lift[0], R.lift[1]);
+  if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) return 'RAGGIO';
+  if (Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6) return 'TEMPO';
+  return '';
+};
 /* ---------------- OnFoot extension ---------------- */
 const OF = window.KageOnFoot;
 if (OF) {

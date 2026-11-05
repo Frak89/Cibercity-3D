@@ -139,7 +139,7 @@ Nexus.prototype.transit = function () {
 Nexus.prototype.drawWorld = function (ctx) {
   const gl = this.g.gl, P = this.P.veh, u = P.u, t = ctx.t;
   gl.useProgram(P.p); ctx.set(P);
-  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uBlur, 0); gl.uniform1f(u.uGlowOnly, 0);
+  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uBlur, 0); gl.uniform1f(u.uGlowOnly, 0);
   const M = (x, y, z, h, pitch) => U.mul(U.T(wrapD(x - ctx.camX), y, wrapD(z - ctx.camZ)), U.mul(U.RY(h), U.RX(pitch || 0)));
   const far = (x, z, d) => Math.hypot(wrapD(x - ctx.camX), wrapD(z - ctx.camZ)) > d;
   for (const r of RINGS) {

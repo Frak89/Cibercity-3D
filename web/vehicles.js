@@ -39,7 +39,9 @@ MB.prototype.v = function (p, mat, lp) {
   const w = this.tp(p), n = this.p.length / 3;
   this.p.push(w[0], w[1], w[2]); this.pt.push(this.part || this.tag || '');
   this.c.push(mat.c[0], mat.c[1], mat.c[2], mat.e || 0);
-  const an = typeof mat.a === 'function' ? mat.a(lp || p, w) : (mat.a || [0, 0, 0]);
+  let an = typeof mat.a === 'function' ? mat.a(lp || p, w) : (mat.a || [0, 0, 0]);
+  // steered parts (fork, rudders, outboards) yaw by uSteer about the pivot mb.steer = [x, z]
+  if (this.steer) { if (!(mat.mode > 0)) an = [this.steer[0], this.steer[1], 2]; else if (mat.mode === 3 && an[2] === 1) an = [an[0], an[1], 3]; }
   this.a.push((mat.mode || 0) + 8 * (mat.slot || 0), an[0], an[1], an[2]);
   return n;
 };
@@ -308,6 +310,7 @@ function buildBoat(o) {
   const zt = z0;
   if (o.engine === 'outboard') {
     for (const sx of (o.hull === 'catamaran' ? [-0.95, 0.95] : [-0.55, 0.55])) {
+      mb.steer = [sx, zt - 0.1];
       mb.ellipsoid(sx, 0.85, zt - 0.35, 0.28, 0.42, 0.36, lo ? 6 : 14 * U, lo ? 4 : 8 * U, acc);
       mb.box(sx, 0.82, zt - 0.35, 0.58, 0.05, 0.5, led);
       mb.box(sx, 0.05, zt - 0.32, 0.12, 1.2, 0.26, dark);
@@ -317,6 +320,7 @@ function buildBoat(o) {
       for (let b = 0; b < 3; b++) { mb.push(M(RZ(b / 3 * Math.PI * 2), RY(0.35))); mb.box(0, 0.12, 0, 0.1, 0.22, 0.012, mat([0.6, 0.62, 0.66], 0, 0, 3, pv)); mb.pop(); }
       mb.pop();
     }
+    mb.steer = null;
   } else if (o.engine === 'jet') {
     for (const sx of (o.hull === 'catamaran' ? [-0.95, 0.95] : [-0.5, 0.5])) {
       mb.push(M(T(sx, -0.12, zt + 0.05), RX(-Math.PI / 2))); mb.cyl(0, 0.45, 0.2, 0.16, lo ? 6 : 14, dark); mb.cyl(0.4, 0.46, 0.13, 0.13, lo ? 6 : 14, mat(col(o.led, LEDS), 1.6, 3), false); mb.pop();
@@ -525,18 +529,18 @@ function buildMoto(o) {
   for (const [z, w] of [[zf, 0.12], [zr, 0.18]]) {
     const pv = [0, R, 0];
     mb.push(M(T(0, R, z), RY(PI / 2)));      // wheel plane: local xy, axis local z (= world x)
-    const tyre = mat([0.03, 0.03, 0.03], 0, 0, 3, [0, 0, 0]), rim = mat(col(o.accent), 0, 2, 3, [0, 0, 0]), ring = mat(col(o.led, LEDS), 1.1, 3, 3, [0, 0, 0]);
+    const tyre = mat([0.03, 0.03, 0.03], 0, 0, 3, [R, z, 1]), rim = mat(col(o.accent), 0, 2, 3, [R, z, 1]), ring = mat(col(o.led, LEDS), 1.1, 3, 3, [R, z, 1]);
     mb.torus2 = null;
     // tyre: torus about local z
-    const wn = z > 0 ? 'anteriore' : 'posteriore'; mb.part = 'ruota_' + wn;
+    const wn = z > 0 ? 'anteriore' : 'posteriore'; mb.part = 'ruota_' + wn; mb.steer = z > 0 ? [0, zf] : null;
     mb.push(RX(PI / 2)); mb.torus(R - 0.05, 0.055 + w * 0.15, lo ? 14 : 32 * U, lo ? 5 : 10 * U, tyre); mb.pop();
     if (o.wheels === 'hubless') { mb.push(RX(PI / 2)); mb.torus(R - 0.12, 0.022, lo ? 14 : 32 * U, 4, ring); mb.torus(R - 0.1, 0.035, lo ? 12 : 28 * U, 4, rim); mb.pop(); }
     else { mb.push(RX(PI / 2)); mb.torus(R - 0.1, 0.03, lo ? 12 : 28 * U, 4, rim); mb.pop(); for (let k = 0; k < 6; k++) { mb.push(RZ(k / 6 * TAU)); mb.box(0, (R - 0.1) / 2, 0, 0.025, R - 0.1, 0.02, rim); mb.pop(); }
       mb.cyl2 = null; mb.push(RX(PI / 2)); mb.cyl(-0.05, 0.05, 0.05, 0.05, 10, rim); mb.pop(); }
     // brake disc
     mb.part = 'disco_freno_' + wn;
-    mb.push(T(0, 0, 0.06)); mb.push(RX(PI / 2)); mb.cyl(-0.004, 0.004, 0.16, 0.16, lo ? 10 : 24, mat([0.55, 0.56, 0.6], 0, 0, 3, [0, 0, 0])); mb.pop(); mb.pop();
-    mb.pop(); void pv;
+    mb.push(T(0, 0, 0.06)); mb.push(RX(PI / 2)); mb.cyl(-0.004, 0.004, 0.16, 0.16, lo ? 10 : 24, mat([0.55, 0.56, 0.6], 0, 0, 3, [R, z, 1])); mb.pop(); mb.pop();
+    mb.pop(); void pv; mb.steer = null;
   }
   // frame / swingarm / fork
   mb.part = 'telaio_forcellone_forcella';
@@ -567,9 +571,10 @@ function buildMoto(o) {
   mb.box(0, 0.86, o.fairing === 'sport' ? 0.88 : 0.78, 0.18, 0.04, 0.03, mat([1, 0.97, 0.9], 1.6));
   mb.box(0, 0.96, -0.82, 0.2, 0.03, 0.03, mat([1, 0.1, 0.15], 1.5));
   // handlebars
-  mb.part = 'manubrio';
+  mb.part = 'manubrio'; mb.steer = [0, zf - 0.1];
   mb.rod([-0.34, 1.02, zf - 0.28], [0.34, 1.02, zf - 0.28], 0.016, 6, dark);
   for (const sx of [-1, 1]) mb.rod([sx * 0.3, 1.02, zf - 0.28], [sx * 0.36, 1.02, zf - 0.28], 0.024, 6, mat([0.06, 0.06, 0.06]));
+  mb.steer = null;
   // foot pegs
   mb.part = 'pedane';
   for (const sx of [-1, 1]) mb.box(sx * 0.17, 0.4, -0.3, 0.08, 0.02, 0.04, metal);
@@ -620,7 +625,7 @@ function buildHover(o) {
     for (const sx of [-1, 1]) mb.rod([fx + sx * fr * 0.7, 0.62, zf + 0.4], [fx + sx * fr * 0.5, fy - fr * 0.5, zf], 0.05, 6, acc);
     // rudders behind the fan
     mb.part = 'timoni';
-    for (const rx of [-fr * 0.4, fr * 0.4]) mb.box(fx + rx, fy, zf - 0.35, 0.03, fr * 1.6, 0.4, dark);
+    for (const rx of [-fr * 0.4, fr * 0.4]) { mb.steer = [fx + rx, zf - 0.17]; mb.box(fx + rx, fy, zf - 0.35, 0.03, fr * 1.6, 0.4, dark); } mb.steer = null;
   }
   // lights
   mb.part = 'luci';

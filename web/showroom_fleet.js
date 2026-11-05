@@ -91,7 +91,7 @@ SR.prototype.pilotSeat = function (kind) {
 /** draw a skinned pilot mesh with pose `pname` (bones from KagePilot.pose) under model matrix Mv */
 SR.prototype.drawPilotMesh = function (set, mesh, Mv, pname, opt) {
   const gl = this.gl, pp = this.F.pil, u = pp.u;
-  set(pp); gl.uniform1f(u.uLit, 1.2); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uBlur, 0);
+  set(pp); gl.uniform1f(u.uLit, this.spots ? 2.1 : 1.2); gl.uniform1f(u.uDay, this.spots ? 0.3 : 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uBlur, 0);
   if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
   gl.uniformMatrix4fv(u.uModel, false, Mv);
   gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, KagePilot.pose(pname, this.t, opt, mesh.S));
@@ -104,12 +104,36 @@ SR.prototype.setQuality = function (q) {
 };
 const frame0 = SR.prototype.frame;
 /* the pilot sitting in the KAGE GT (car showroom) */
+/** studio spotlights: soft light pools on the floor (additive) + three lamp heads on a ring above */
+SR.prototype.drawSpots = function (set, R) {
+  if (!this.spots) return; this.initFleet(); const F = this.F, gl = this.gl, vp = F.veh, u = vp.u;
+  if (!F.spotM) { const mb = new KageFleet.MB(), rings = 14, seg = 48;
+    for (const [cx, cz, rr, w] of [[0, 0, 1, 1], [0.9, 0.6, 0.55, 0.55], [-0.9, 0.6, 0.55, 0.55], [0, -1, 0.55, 0.55]]) for (let j = 0; j < rings; j++) for (let k = 0; k < seg; k++) {
+      const r0 = j / rings * rr, r1 = (j + 1) / rings * rr, a0 = k / seg * Math.PI * 2, a1 = (k + 1) / seg * Math.PI * 2, e = w * 1.15 * Math.pow(1 - j / rings, 1.4), m = { c: [1, 0.97, 0.92], e, slot: 3 };
+      mb.poly([[cx + Math.sin(a0) * r0, 0, cz + Math.cos(a0) * r0], [cx + Math.sin(a1) * r0, 0, cz + Math.cos(a1) * r0], [cx + Math.sin(a1) * r1, 0, cz + Math.cos(a1) * r1], [cx + Math.sin(a0) * r1, 0, cz + Math.cos(a0) * r1]], m); }
+    F.spotM = F.vmesh(mb.finish()); }
+  set(vp); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uGlowOnly, 1);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+  gl.uniformMatrix4fv(u.uModel, false, new Float32Array([R, 0, 0, 0, 0, 1, 0, 0, 0, 0, R, 0, 0, 0.012, 0, 1])); this.drawMesh(vp, F.spotM);
+  gl.disable(gl.BLEND); gl.depthMask(true); gl.uniform1f(u.uGlowOnly, 0);
+};
 SR.prototype.afterOpaque = function (set, carM, eye, mode) {
+  this.drawSpots(set, 4.2);
   if (mode === 'cockpit') return;
   const ps = this.pilotSeat('car'); if (!ps) return;
   this.drawPilotMesh(set, ps.mesh, U.mul(carM, U.T(ps.S[0], ps.S[1], ps.S[2])), ps.S[4], { seat: ps.S[5], steer: (this.st && this.st.steerWheel ? this.st.steerWheel / 2.6 * 0.5 : 0) });
 };
+/** showroom sound demo: idle → hold SPINTA for full power */
+SR.prototype.fleetSound = function (dt) {
+  const F = this.F; if (!F) return; const A = F.audio || (F.audio = window.FleetAudio ? new FleetAudio() : null); if (!A) return;
+  const k = F.kind, voiced = k && !['pilot', 'alien'].includes(k) && this.fleetSnd;
+  F.thr = (F.thr || 0) + ((this.fleetRev ? 1 : 0.15) - (F.thr || 0)) * Math.min(1, dt * 3);
+  const v = F.thr * ({ moto: 40, hover: 18, drone: 20, boat: 16, sub: 8, galleon: 6, ufo: 30 }[k] || 0);
+  if (voiced) A.start(); A.on = !!voiced;
+  A.update(voiced ? k : null, { vx: v, vz: 0, vF: v, thrust: F.thr, energy: this.fleetRev ? 0.5 : 1, beam: k === 'ufo' && this.fleetRev, y: 10 }, { speed: 9 });
+};
 SR.prototype.frame = function (dt) {
+  this.fleetSound(dt);
   if (!this.F || !this.F.kind) return frame0.call(this, dt);
   const gl = this.gl, P = this.P, o = this.o, F = this.F, cam = this.cam, k = F.kind, m = F.mesh;
   const pal = CYBER_PALETTES[o.palette] || CYBER_PALETTES.neon;
@@ -159,10 +183,10 @@ SR.prototype.frame = function (dt) {
   gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
   const vp = F.veh, vu = vp.u;
   const vehUniforms = () => {
-    set(vp); gl.uniform1f(vu.uTraffic, 0); gl.uniform1f(vu.uScale, 1); gl.uniform3f(vu.uTint, -1, 0, 0); gl.uniform1f(vu.uLit, 1.25); gl.uniform1f(vu.uDay, 0); gl.uniform1f(vu.uGlowOnly, 0);
-    gl.uniform1f(vu.uRotA, F.t * 42); gl.uniform1f(vu.uBlur, k === 'drone' ? 0.6 : 0); gl.uniform1f(vu.uPropA, F.t * (k === 'boat' ? 6 : 0));
+    set(vp); gl.uniform1f(vu.uTraffic, 0); gl.uniform1f(vu.uScale, 1); gl.uniform3f(vu.uTint, -1, 0, 0); gl.uniform1f(vu.uLit, this.spots ? 2.8 : 1.25); gl.uniform1f(vu.uDay, this.spots ? 0.3 : 0); gl.uniform1f(vu.uGlowOnly, 0);
+    gl.uniform1f(vu.uRotA, F.t * 42); gl.uniform1f(vu.uBlur, k === 'drone' ? 0.6 : 0); gl.uniform1f(vu.uPropA, F.t * ({ boat: 6, moto: 2.5, hover: 18, sub: 9 }[k] || 0));
     gl.uniform1f(vu.uSail, k === 'galleon' ? 0.75 : 0); gl.uniform1f(vu.uSailYaw, k === 'galleon' ? Math.sin(F.t * 0.15) * 0.25 : 0); gl.uniform1f(vu.uSailSide, 1); gl.uniform1f(vu.uFlut, 0.35);
-    if (vu.uLocks) gl.uniform1f(vu.uLocks, 0); if (vu.uPortal) gl.uniform1f(vu.uPortal, 0);
+    if (vu.uLocks) gl.uniform1f(vu.uLocks, 0); if (vu.uPortal) gl.uniform1f(vu.uPortal, 0); if (vu.uSteer) gl.uniform1f(vu.uSteer, Math.sin(F.t * 0.5) * 0.3);
   };
   if (water) {
     const w = F.water; set(w); gl.uniform3f(w.u.uWaterC, 0, 0, 0); gl.uniform1f(w.u.uWaterRel, 1);
@@ -176,6 +200,7 @@ SR.prototype.frame = function (dt) {
     draw1(U.mul(new Float32Array([1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1]), Mv));
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     set(P.floor); gl.uniform1f(P.floor.u.uAlpha, 0.86); this.drawQuad(P.floor, this.ground);
+    this.drawSpots(set, Math.max(2.2, Math.min(40, (m.bounds[3] - m.bounds[0]) * 0.9)));
     gl.disable(gl.BLEND);
     draw1(Mv);
   }

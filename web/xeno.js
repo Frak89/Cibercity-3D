@@ -9,10 +9,11 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const Q = lod => lod === 'lo' ? 0.5 : lod === 'ultra' ? 2 : 1;
 
 /** surface of revolution about local y: prof = [[r, y], ...] bottom → top; colf(j, k, seg) → material; inward = normals point to the axis */
-function lathe(mb, prof, seg, colf, inward, a0, a1) {
+function lathe(mb, prof, seg, colf, inward, a0, a1, skip) {
   a0 = a0 || 0; a1 = a1 === undefined ? TAU : a1;
   const g = prof.map(([r, y], j) => { const row = []; for (let k = 0; k <= seg; k++) { const a = lerp(a0, a1, k / seg); row.push(mb.v([Math.sin(a) * r, y, Math.cos(a) * r], typeof colf === 'function' ? colf(j, k, seg, a) : colf)); } return row; });
   for (let j = 0; j + 1 < g.length; j++) for (let k = 0; k < seg; k++) {
+    if (skip && skip(j, lerp(a0, a1, (k + 0.5) / seg))) continue;
     const a = g[j][k], b = g[j + 1][k], c = g[j + 1][k + 1], d = g[j][k + 1];
     if (inward) { mb.tri(a, b, c); mb.tri(a, c, d); } else { mb.tri(a, c, b); mb.tri(a, d, c); }
   }
@@ -34,16 +35,18 @@ function buildUfo(o, lod) {
   mb.part = 'scafo_inferiore';
   const panel = (j, k, s, a) => (Math.abs(((a / TAU * 12) % 1) - 0.5) > 0.485 ? mat(paint.map(v => v * 0.55), 0, 1) : P);
   mb.disc(7.2, seg, 1.15, mat(paint.map(v => v * 0.8), 0, 1));
-  lathe(mb, [[7.2, 1.15], [8.0, 1.35], [8.9, 1.7], [10.4, 2.35], [11.5, 2.85], [12, 3.15]], seg, panel, true);
+  lathe(mb, [[7.2, 1.15], [8.0, 1.35], [8.9, 1.7], [10.4, 2.35], [11.5, 2.85], [12, 3.15]], seg, panel, true, 0, TAU, (j, a) => j >= 2 && Math.cos(a) > 0.86);   // the bridge window opens the front
   // rim: thick ring, accent band and the running lights (they spin with uRotA: mode 1 about the axis)
   mb.part = 'bordo';
-  lathe(mb, [[12, 3.15], [12.35, 3.3], [12.45, 3.55], [12.35, 3.8], [12, 3.95]], seg, A, true);
+  lathe(mb, [[12, 3.15], [12.35, 3.3], [12.45, 3.55], [12.35, 3.8], [12, 3.95]], seg, A, true, 0, TAU, (j, a) => Math.cos(a) > 0.86);
   mb.part = 'luci_bordo';
-  const nl = 24; for (let k = 0; k < nl; k++) { const a = k / nl * TAU; mb.ellipsoid(Math.sin(a) * 12.47, 3.55, Math.cos(a) * 12.47, 0.28, 0.18, 0.28, N(8), 6, mat(k % 2 ? led : [1, 1, 1], 1.4, 3, 1, [0, 0, 0])); }
+  const nl = 24; for (let k = 0; k < nl; k++) { const a = k / nl * TAU; if (Math.cos(a) > 0.86) continue; mb.ellipsoid(Math.sin(a) * 12.47, 3.55, Math.cos(a) * 12.47, 0.28, 0.18, 0.28, N(8), 6, mat(k % 2 ? led : [1, 1, 1], 1.4, 3, 1, [0, 0, 0])); }
   // upper hull
   mb.part = 'scafo_superiore';
   const dome = o.hull === 'cupola';
-  lathe(mb, [[12, 3.95], [11.2, 4.35], [9.8, 4.95], [8.2, 5.5], [6.6, 5.9], [dome ? 6.2 : 4.8, dome ? 6.05 : 6.25]], seg, panel, true);
+  lathe(mb, [[12, 3.95], [11.2, 4.35], [9.8, 4.95], [8.2, 5.5], [6.6, 5.9], [dome ? 6.2 : 4.8, dome ? 6.05 : 6.25]], seg, panel, true, 0, TAU, (j, a) => j < 2 && Math.cos(a) > 0.86);
+  mb.part = 'cornice_vetrata'; for (const s of [-1, 1]) { const a = s * Math.acos(0.86); mb.rod([Math.sin(a) * 10.4, 2.35, Math.cos(a) * 10.4], [Math.sin(a) * 12.4, 3.55, Math.cos(a) * 12.4], 0.14, 8, A); mb.rod([Math.sin(a) * 12.4, 3.55, Math.cos(a) * 12.4], [Math.sin(a) * 9.8, 4.95, Math.cos(a) * 9.8], 0.14, 8, A); }
+  mb.part = 'scafo_superiore';
   // portholes (emissive, the interior lights) on the upper hull
   mb.part = 'oblo';
   for (let k = 0; k < 16; k++) { const a = (k + 0.5) / 16 * TAU, r = 9.95, y = 4.92;
@@ -91,7 +94,9 @@ function buildUfoInterior(o, lod) {
   // curved wall, ceiling dome, ribs
   mb.part = 'pareti';
   lathe(mb, [[R.rIn, R.floor], [R.rIn, R.floor + 0.25], [R.rIn - 0.1, R.floor + 2.2], [R.rIn - 0.6, R.ceil - 0.2], [R.rIn - 1.4, R.ceil]], seg, (j, k, s, a) => {
-    const front = Math.cos(a) > 0.82 && j >= 1 && j <= 2; return front ? glass : wall; }, false);
+    return wall; }, false, 0, TAU, (j, a) => Math.cos(a) > 0.86 && j >= 1 && j <= 2);
+  mb.part = 'cornice_vetrata'; for (const s of [-1, 1]) { const a = s * Math.acos(0.86); mb.rod([Math.sin(a) * R.rIn, R.floor + 0.25, Math.cos(a) * R.rIn], [Math.sin(a) * (R.rIn - 0.6), R.ceil - 0.2, Math.cos(a) * (R.rIn - 0.6)], 0.09, 8, rib); }
+  mb.part = 'pareti';
   mb.part = 'soffitto';
   lathe(mb, [[R.rIn - 1.4, R.ceil], [4.5, R.ceil + 0.35], [1.6, R.ceil + 0.5], [0.01, R.ceil + 0.5]], seg, wall, false);
   mb.part = 'costole';
@@ -114,9 +119,9 @@ function buildUfoInterior(o, lod) {
   lathe(mb, [[R.seat[1] + 0.75, R.floor], [R.seat[1] + 0.8, R.floor + 0.85], [R.seat[1] + 1.25, R.floor + 1.0], [R.seat[1] + 1.35, R.floor + 0.95]], N(24), (j) => j === 2 ? mat([0.12, 0.13, 0.14]) : dark, true, -0.6, 0.6);
   for (let k = -3; k <= 3; k++) { const a = k * 0.16; mb.push(RY(a)); mb.box(0, R.floor + 1.0, R.seat[1] + 1.05, 0.34, 0.02, 0.24, mat(k % 2 ? led : [0.3, 0.8, 1], 1.1, 3)); mb.pop(); }
   mb.part = 'schermi_olografici';
-  for (const k of [-1, 0, 1]) { mb.push(M(RY(k * 0.45), T(0, R.floor + 1.75, R.seat[1] + 1.6), RX(-0.15))); mb.box(0, 0, 0, 1.3, 0.7, 0.02, mat(led.map(v => v * 0.5 + 0.2), 0.8, 3)); mb.pop(); }
+  for (const k of [-1, 1]) { mb.push(M(RY(k * 0.62), T(0, R.floor + 1.35, R.seat[1] + 1.25), RX(-0.35))); mb.box(0, 0, 0, 0.9, 0.5, 0.02, mat(led.map(v => v * 0.5 + 0.2), 0.8, 3)); mb.pop(); }
   mb.part = 'sedili';
-  for (const k of [-1, 0, 1]) { mb.push(M(RY(k * 0.42), T(0, R.floor, R.seat[1] - 0.15))); mb.cyl(0, 0.42, 0.12, 0.1, N(10), dark); mb.box(0, 0.48, 0, 0.55, 0.1, 0.55, mat([0.2, 0.21, 0.23])); mb.box(0, 0.95, -0.27, 0.55, 0.9, 0.1, mat([0.2, 0.21, 0.23]), [0.85, 1]); mb.box(0, 0.5, 0, 0.6, 0.02, 0.6, L); mb.pop(); }
+  for (const k of [-1, 0, 1]) { mb.push(M(RY(k * 0.42), T(0, R.floor, R.seat[1] - 0.15))); mb.cyl(0, 0.42, 0.12, 0.1, N(10), dark); mb.box(0, 0.48, 0, 0.55, 0.1, 0.55, mat([0.2, 0.21, 0.23])); mb.box(0, 0.95, -0.27, 0.55, 0.9, 0.1, mat([0.2, 0.21, 0.23]), [0.85, 1]); mb.box(0, 0.5, 0.29, 0.6, 0.03, 0.03, L); mb.pop(); }
   // star-map table with a holographic galaxy (spinning)
   mb.part = 'mappa_stellare';
   mb.push(T(-4.4, R.floor, 0.6)); mb.cyl(0, 0.9, 0.5, 0.7, N(20), dark); mb.cyl(0.9, 1.0, 1.1, 1.1, N(28), mat([0.12, 0.13, 0.14])); mb.disc(1.0, N(28), 1.005, soft); mb.pop();

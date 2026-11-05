@@ -305,49 +305,7 @@ function aiInput(r, course, wind, dt) {
 }
 
 /* ===================================================================== audio (rotor buzz, outboard growl, wind & water) */
-function FleetAudio() { this.ctx = null; this.on = false; }
-FleetAudio.prototype.start = function () {
-  if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
-  try {
-    const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
-    const ctx = this.ctx = new C(), out = this.out = ctx.createGain(); out.gain.value = 0.0; out.connect(ctx.destination);
-    const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    const ns = ctx.createBufferSource(); ns.buffer = nb; ns.loop = true;
-    this.nf = ctx.createBiquadFilter(); this.nf.type = 'bandpass'; this.nf.Q.value = 0.8; this.ng = ctx.createGain(); this.ng.gain.value = 0;
-    ns.connect(this.nf); this.nf.connect(this.ng); this.ng.connect(out); ns.start();
-    this.osc = []; this.lp = ctx.createBiquadFilter(); this.lp.type = 'lowpass'; this.lp.frequency.value = 1200;
-    this.sh = ctx.createWaveShaper(); const cv = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; cv[i] = Math.tanh(x * 2.5); } this.sh.curve = cv;
-    this.og = ctx.createGain(); this.og.gain.value = 0;
-    for (const det of [0, 0.013, -0.009, 0.5]) { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 100; o.det = det; o.connect(this.sh); o.start(); this.osc.push(o); }
-    this.sh.connect(this.lp); this.lp.connect(this.og); this.og.connect(out);
-  } catch (e) { this.ctx = null; }
-};
-FleetAudio.prototype.boom = function () {
-  if (!this.ctx) return; const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
-  o.type = 'sine'; o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.5);
-  g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.7); o.connect(g); g.connect(this.out); o.start(t); o.stop(t + 0.8);
-};
-FleetAudio.prototype.update = function (kind, st, wind) {
-  if (!this.ctx) return; const t = this.ctx.currentTime, set = (p, v) => p.setTargetAtTime(v, t, 0.06);
-  set(this.out.gain, this.on && kind ? 0.9 : 0);
-  if (!kind) return;
-  const sp = Math.hypot(st.vx, st.vz);
-  if (kind === 'drone') {
-    const f = 92 + st.thrust * 95 + sp * 0.8;
-    this.osc.forEach(o => set(o.frequency, f * (1 + o.det) * (o.det === 0.5 ? 1 : 1)));
-    set(this.lp.frequency, 900 + st.thrust * 1500); set(this.og.gain, 0.05 + st.thrust * 0.05);
-    set(this.nf.frequency, 1100 + sp * 30); set(this.ng.gain, 0.03 + sp * 0.002);
-  } else if (kind === 'boat') {
-    const f = 36 + st.thrust * 55 + Math.abs(st.vF) * 1.6;
-    this.osc.forEach(o => set(o.frequency, f * (1 + o.det)));
-    set(this.lp.frequency, 500 + st.thrust * 1400); set(this.og.gain, 0.06 + st.thrust * 0.1);
-    set(this.nf.frequency, 500 + sp * 18); set(this.ng.gain, 0.02 + Math.min(0.12, sp * 0.004));
-  } else {
-    this.osc.forEach(o => set(o.frequency, 48 * (1 + o.det)));
-    set(this.og.gain, st.energy < 0.999 && st.thrust > 0 ? 0.0 : 0.0);
-    set(this.nf.frequency, 320 + sp * 20); set(this.ng.gain, 0.04 + wind.speed * 0.003 + sp * 0.004);
-  }
-};
+const FleetAudio = window.FleetAudio;   // web/fleet_audio.js
 
 /* ===================================================================== the fleet in the game */
 function FleetGame(game) {
@@ -481,6 +439,7 @@ FleetGame.prototype.updateRace = function (dt, inpMe) {
   void t0;
 };
 FleetGame.prototype.stepOne = function (st, inp, dt, cfg) {
+  st.steerA = ease(st.steerA || 0, clamp(inp.yaw || 0, -1, 1) * (st.kind === 'moto' ? 0.35 : 0.5), 6, dt);
   if (st.kind === 'moto') stepMoto(st, inp, dt, this.g.city);
   else if (st.kind === 'hover') stepHover(st, inp, dt, this.g.city);
   else if (st.kind === 'sub') stepSub(st, inp, dt);
@@ -539,7 +498,7 @@ FleetGame.prototype.camera = function (view, dt, t) {
   else if (v === 1) { const d = back(D[2]); e = [-fx * d, yb + D[3] * (0.6 + 0.4 * d / D[2]), -fz * d]; l = [fx * 8, yb + 1, fz * 8]; }
   else if (v === 2) {
     const c = Math.cos(st.h), s = Math.sin(st.h);
-    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : k === 'ufo' ? [0, KF.KINDS.ufo.rig.floor + 1.55, 5.6] : KF.GALLEON_RIG.eye;
+    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : k === 'ufo' ? [0, KF.KINDS.ufo.rig.floor + 1.4, 5.15] : KF.GALLEON_RIG.eye;
     const look = st.h, pc = Math.cos(st.pitch * (k === 'drone' ? 0.6 : 1));
     e = [s * E[2] + c * E[0], st.y + E[1], c * E[2] - s * E[0]];
     l = [e[0] + Math.sin(look) * 30 * pc, e[1] - Math.sin(st.pitch * (k === 'drone' ? 0.6 : 1)) * 30 + (k === 'drone' ? 0 : -1.5), e[2] + Math.cos(look) * 30 * pc];
@@ -564,7 +523,7 @@ FleetGame.prototype.drawModel = function (m, st, ctx, extra) {
   if (Math.hypot(rx, rz) > 640) return;
   const M = U.mul(U.T(rx, st.y, rz), U.mul(U.RY(st.h), U.mul(U.RX(st.pitch || 0), U.RZ(st.roll || 0))));
   gl.uniformMatrix4fv(u.uModel, false, M);
-  gl.uniform1f(u.uRotA, st.rot || 0); gl.uniform1f(u.uPropA, st.prop || 0); gl.uniform1f(u.uBlur, st.blur || 0);
+  gl.uniform1f(u.uRotA, st.rot || 0); gl.uniform1f(u.uPropA, st.prop || 0); gl.uniform1f(u.uBlur, st.blur || 0); if (u.uSteer) gl.uniform1f(u.uSteer, st.steerA || 0);
   gl.uniform1f(u.uSail, st.kind === 'galleon' ? st.sail * (0.3 + 0.7 * (st.eff || 0)) : 0); gl.uniform1f(u.uSailYaw, st.sailYaw || 0); gl.uniform1f(u.uSailSide, st.sailSide || 1); gl.uniform1f(u.uFlut, st.kind === 'galleon' ? 0.3 + (1 - (st.eff || 0)) * st.sail : 0.4);
   if (extra) extra(u);
   this.g.draw(P, m);
@@ -586,7 +545,7 @@ FleetGame.prototype.drawPilotPose = function (set, Mv, pname, opt, mesh, tt) {
   const pm = mesh || this.pilotMesh(true); if (!pm) return;
   const gl = this.gl, P = this.g.P.pil, u = P.u;
   gl.useProgram(P.p); set(P);
-  gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uBlur, 0);
+  gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uBlur, 0);
   if (u.uShadow) gl.uniform1f(u.uShadow, 0); if (u.uPortal) gl.uniform1f(u.uPortal, 0);
   gl.uniformMatrix4fv(u.uModel, false, Mv);
   gl.uniformMatrix4fv(u['uBones[0]'] || u.uBones, false, KagePilot.pose(pname, tt === undefined ? this.g.t : tt, opt, pm.S));
@@ -596,12 +555,15 @@ FleetGame.prototype.drawPilotPose = function (set, Mv, pname, opt, mesh, tt) {
 FleetGame.prototype.drawPilot = function (set, Mv, kind) {
   const S = window.KagePilot && KagePilot.SEATS[kind]; if (!S) return;
   const pm = this.pilotMesh(); if (!pm) return;
-  this.drawPilotPose(set, U.mul(Mv, U.mul(U.T(S[0], S[1], S[2]), U.RY(S[3]))), S[4], { seat: S[5], steer: kind === 'car' ? (this.g.c.steer || 0) * 0.4 : kind === 'galleon' ? -(this.g.c.steer || 0) * 0.3 : (this.g.c.steer || 0) * 0.4 }, pm);
+  const g = this.g, st = kind === 'car' || !this.st ? g.c : this.st, sp = kind === 'car' ? Math.abs((g.phys && g.phys.vF) || Math.hypot(g.c.vx, g.c.vz)) : Math.abs(st.vF || 0);
+  const now = g.t, dtt = Math.max(1e-3, now - (this._pvT || now - 0.016)); this._acc = ((this._acc || 0) * 0.85) + 0.15 * clamp((sp - (this._pv || 0)) / dtt, -15, 15); this._pv = sp; this._pvT = now;
+  this.drawPilotPose(set, U.mul(Mv, U.mul(U.T(S[0], S[1], S[2]), U.RY(S[3]))), S[4], { seat: S[5], steer: kind === 'car' ? (g.c.steer || 0) * 0.4 : kind === 'galleon' ? -(g.c.steer || 0) * 0.3 : (g.c.steer || 0) * 0.4,
+    speed: sp, accel: this._acc, lean: kind === 'moto' ? -(st.roll || 0) : 0, boost: !!(g.inp && g.inp.boost) || (kind !== 'car' && st.energy < 0.99 && (st.thrust || 0) > 0.9) }, pm);
 };
 FleetGame.prototype.drawWorld = function (ctx) {
   const gl = this.gl, P = this.g.P.veh, u = P.u, pal = ctx.pal;
   gl.useProgram(P.p); ctx.set(P);
-  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0);
+  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0);
   // lighthouse
   this.drawModel(this.light, { x: HARBOR.cx, y: 0, z: HARBOR.cz, h: 0 }, ctx);
   // garage + its display
@@ -647,7 +609,7 @@ FleetGame.prototype.drawUnder = function (ctx) {
   if (sb) { gl.useProgram(sb.p); ctx.set(sb); gl.uniform3f(sb.u.uWaterC, HARBOR.cx, SEABED, HARBOR.cz); gl.uniform1f(sb.u.uWaterRel, 0); g.draw(sb, g.M.water); }
   const P = g.P.veh, u = P.u, t = ctx.t;
   gl.useProgram(P.p); ctx.set(P);
-  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, 0); gl.uniform1f(u.uBlur, 0); gl.uniform1f(u.uSail, 0); gl.uniform1f(u.uFlut, 0.6); gl.uniform1f(u.uSailSide, 1);
+  gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uBlur, 0); gl.uniform1f(u.uSail, 0); gl.uniform1f(u.uFlut, 0.6); gl.uniform1f(u.uSailSide, 1);
   const M = (x, y, z, h, sc, pitch, roll) => U.mul(U.T(wrapD(x - ctx.camX), y, wrapD(z - ctx.camZ)), U.mul(U.RY(h), U.mul(U.RX(pitch || 0), U.mul(U.RZ(roll || 0), new Float32Array([sc, 0, 0, 0, 0, sc, 0, 0, 0, 0, sc, 0, 0, 0, 0, 1])))));
   const near = (x, z, d) => Math.hypot(wrapD(x - ctx.camX), wrapD(z - ctx.camZ)) < d;
   for (const it of this.U.items) if (near(it.x, it.z, 160)) { gl.uniformMatrix4fv(u.uModel, false, M(it.x, it.y, it.z, it.h, it.s)); g.draw(P, it.m); }
@@ -767,6 +729,7 @@ FleetGame.prototype.buildUI = function (el, onChange) {
   const render = () => {
     const k = self.kind || 'car';
     let h = '<b>FLOTTA KAGE</b><div class="frow">' + kinds.map(x => '<button data-v="' + x + '" class="' + (x === k ? 'on' : '') + '">' + titles[x] + '</button>').join('') + '</div>';
+    if (window.getRealSky) { const RS = getRealSky(); h += '<div class="frow"><span>LUCE E METEO REALI</span><button data-real="1" class="' + (RS.enabled ? 'on' : '') + '">' + (RS.enabled ? 'ON' : 'OFF') + '</button></div>'; }
     h += '<div class="frow"><span>RISOLUZIONE MODELLI</span>' + ['low', 'high', 'ultra'].map(q => '<button data-q="' + q + '" class="' + (self.quality === q ? 'on' : '') + '">' + { low: 'BASSA', high: 'ALTA', ultra: 'ALTISSIMA' }[q] + '</button>').join('') + '</div>';
     if (k !== 'car') {
       const K = KF.KINDS[k];
@@ -781,6 +744,7 @@ FleetGame.prototype.buildUI = function (el, onChange) {
     el.querySelectorAll('button').forEach(b => b.onclick = e => {
       e.stopPropagation(); const d = b.dataset;
       if (d.v) { self.setVehicle(d.v); onChange && onChange('vehicle', d.v); }
+      if (d.real && window.getRealSky) { const RS = getRealSky(); RS.setEnabled(!RS.enabled); }
       if (d.q) { self.g.setQuality(d.q); self.setQuality(d.q); onChange && onChange('quality', d.q); }
       if (d.o) { const O = KF.KINDS[self.kind].opts[d.o], i = O.indexOf(self.cfg[d.o]); self.cfg[d.o] = O[(i + 1) % O.length]; self.applyCfg(self.cfg); }
       if (d.rnd) self.applyCfg(KF.randomCfg(self.kind));

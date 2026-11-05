@@ -1,6 +1,10 @@
 # Italian → English for every user-visible text of Cybercity 3D (screensaver, NEON RUN, showroom, KAGE CIRCUIT).
 # Whole phrases first; the translator replaces the longest matches first, on word boundaries.
 PAIRS = [
+("LUCE E METEO REALI", "REAL LIGHT AND WEATHER"), ("TRAMONTO", "SUNSET"), ("ALBA", "DAWN"), ("CREPUSCOLO", "TWILIGHT"), ("NOTTE", "NIGHT"), ("PIOGGERELLA", "DRIZZLE"), ("NUVOLOSO", "CLOUDY"), ("SERENO", "CLEAR"),
+("💡 RIFLETTORI: ON", "💡 SPOTLIGHTS: ON"), ("💡 RIFLETTORI: OFF", "💡 SPOTLIGHTS: OFF"), ("🔊 SUONO: ON", "🔊 SOUND: ON"), ("🔊 SUONO: OFF", "🔊 SOUND: OFF"), ("⚡ A TUTTA POTENZA", "⚡ FULL POWER"),
+("VOLA", "FLY"), ("LASCIA", "LEAVE"), ("SCENDI", "GET OUT"), ("SALI", "GET IN"), ("RAGGIO", "BEAM"), ("SALTA", "JUMP"), ("CORRI", "RUN"), ("SPINTA", "THRUST"), ("VELE +", "SAILS +"), ("VELE −", "SAILS −"),
+("Impostazioni", "Settings"),
 ("W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi", "W/S forward-back · A/D turn · Q/E strafe · SPACE rise · X descend · F tractor beam · SHIFT boost · C view · ENTER leave the helm"),
 ("A BORDO DEL KAGE XENO · esplora la nave · plancia davanti, raggio dietro il nucleo", "ABOARD THE KAGE XENO · explore the ship · bridge ahead, beam behind the core"),
 ("INVIO · KAGE EPOCH: viaggia nel tempo", "ENTER · KAGE EPOCH: travel in time"), ("INVIO · ai comandi del KAGE XENO", "ENTER · take the KAGE XENO's helm"),

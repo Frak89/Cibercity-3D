@@ -10,7 +10,7 @@ I18N = (root / 'web/i18n.js').read_text()
 def i18n(html): return re.sub(r'(<body[^>]*>)', lambda m: m.group(1) + '\n<script>' + I18N.replace('</', '<\\/') + '</script>', html, count=1)
 shaders = {p.name: p.read_text() for p in sorted((root / 'app/src/main/assets/shaders').iterdir())}
 tpl = (root / 'web/template.html').read_text()
-engine = (root / 'web/vehicles.js').read_text() + '\n' + (root / 'web/xeno.js').read_text() + '\n' + (root / 'web/pilot.js').read_text() + '\n' + (root / 'web/cybercity.js').read_text()
+engine = (root / 'web/vehicles.js').read_text() + '\n' + (root / 'web/fleet_audio.js').read_text() + '\n' + (root / 'web/realsky.js').read_text() + '\n' + (root / 'web/xeno.js').read_text() + '\n' + (root / 'web/pilot.js').read_text() + '\n' + (root / 'web/cybercity.js').read_text()
 html = tpl.replace('/*SHADERS*/', 'const SHADERS=' + json.dumps(shaders) + ';').replace('/*ENGINE*/', engine)
 out = root / 'docs/index.html'
 out.parent.mkdir(exist_ok=True)

@@ -558,6 +558,14 @@ function poseSpec(name, t, opt) {
       const hand = (s) => { const a = (s > 0 ? 0.15 : PI - 0.15) + steer * 1.3; return add(wc, [Math.cos(a) * wr, Math.sin(a) * wr * 0.95, -Math.sin(a) * wr * 0.4]); };
       spec.ik.handL = { t: hand(1), pole: [1, -0.8, -0.3] }; spec.ik.handR = { t: hand(-1), pole: [-1, -0.8, -0.3] };
       rot.handL = [0.2, 0, 0.3]; rot.handR = [0.2, 0, -0.3];
+      // driving: head turns into the corner and glances around, the body is pushed back by acceleration and sideways by the turn
+      const sp = opt.speed || 0, acc = clamp(opt.accel || 0, -12, 12), lat = clamp(steer * Math.min(1, sp / 15), -1, 1);
+      const glance = Math.sin(t * 0.23) > 0.85 ? Math.sin(t * 0.23 * 7) * 0.5 : 0;
+      rot.head = [-0.12 + Math.sin(t * 0.9) * 0.02, steer * 0.45 + glance + Math.sin(t * 0.5) * 0.06, -lat * 0.08];
+      rot.spine = [0.18 - acc * 0.012, 0, lat * 0.1]; rot.chest = [0.12 + br * 0.3 - acc * 0.008, steer * 0.08, lat * 0.08];
+      // stopped for a while: one hand leaves the wheel (adjusts the collar, then a little wave)
+      if (sp < 0.5) { const ph = (t % 14) / 14; if (ph > 0.78) { const k = Math.sin((ph - 0.78) / 0.22 * PI), w = Math.sin(t * 8) * 0.04;
+        spec.ik.handR = { t: add(scl(hand(-1), 1 - k), scl(add(hip, [-0.28 + w, 0.75, 0.18]), k)), pole: [-1, -0.3, -0.4] }; rot.head = [-0.1, -0.35 * k, 0]; } }
       delete rot.armL; delete rot.armR;
       break; }
     case 'moto': {
@@ -568,13 +576,23 @@ function poseSpec(name, t, opt) {
       spec.ik.footL = { t: [0.19, 0.42, -0.3], pole: [0.3, 1, 0.6] }; spec.ik.footR = { t: [-0.19, 0.42, -0.3], pole: [-0.3, 1, 0.6] };
       spec.ik.handL = { t: [0.33, 1.02, 0.42 - steer * 0.05], pole: [1, -0.4, -0.6] }; spec.ik.handR = { t: [-0.33, 1.02, 0.42 + steer * 0.05], pole: [-1, -0.4, -0.6] };
       rot.handL = [0.4, 0, 0.6]; rot.handR = [0.4, 0, -0.6]; rot.footL = [-0.3, 0, 0]; rot.footR = [-0.3, 0, 0];
+      // hang off into the corners, tuck in on the boost, sit up and put a foot down when stopped
+      const sp = opt.speed || 0, lean = clamp(opt.lean || 0, -0.8, 0.8), tuck = opt.boost ? 1 : 0;
+      rot.pelvis = [0.45 + tuck * 0.12, 0, -lean * 0.35]; rot.spine = [0.3 + tuck * 0.1, 0, -lean * 0.25]; rot.chest = [0.22 + br * 0.3 + tuck * 0.08, 0, 0];
+      rot.neck = [-0.45 - tuck * 0.15, steer * 0.2, lean * 0.3]; rot.head = [-0.35 - tuck * 0.1, steer * 0.3 + Math.sin(t * 0.6) * 0.05, lean * 0.35];
+      spec.root = add(spec.root, [-lean * 0.08, -tuck * 0.03, 0]);
+      if (sp < 0.6) { rot.pelvis = [0.18, 0, 0]; rot.spine = [0.1, 0, 0]; rot.neck = [-0.15, 0, 0]; rot.head = [-0.1, Math.sin(t * 0.4) * 0.3, 0];
+        spec.ik.footL = { t: [0.36, 0.03, -0.12], pole: [0.5, 1, 0.6] }; }
       delete rot.armL; delete rot.armR;
       break; }
     case 'timone': {
       const steer = opt.steer || 0, wc = [0, 1.22 * S, 0.42 * S], a1 = 0.3 + steer * 2, a2 = PI - 0.3 + steer * 2;
       spec.ik.handL = { t: add(wc, [Math.cos(a1) * 0.2, Math.sin(a1) * 0.2, 0]), pole: [1, -0.7, -0.5] };
       spec.ik.handR = { t: add(wc, [Math.cos(a2) * 0.2, Math.sin(a2) * 0.2, 0]), pole: [-1, -0.7, -0.5] };
-      rot.thighL = [-0.12, 0, 0.06]; rot.thighR = [0.08, 0, -0.06]; rot.shinL = [0.1, 0, 0]; rot.shinR = [0.18, 0, 0]; rot.head = [-0.05, Math.sin(t * 0.3) * 0.2, 0];
+      rot.thighL = [-0.12, 0, 0.06]; rot.thighR = [0.08, 0, -0.06]; rot.shinL = [0.1, 0, 0]; rot.shinR = [0.18, 0, 0];
+      // the captain rides the swell and looks up at the sails now and then
+      const sw = Math.sin(t * 0.7) * 0.05, up = Math.sin(t * 0.17) > 0.8 ? -0.35 : -0.05;
+      rot.pelvis = [0, 0, sw]; rot.spine = [0.05, 0, -sw * 0.6]; rot.head = [up, Math.sin(t * 0.3) * 0.25 + steer * 0.3, -sw * 0.4];
       break; }
   }
   return spec;
