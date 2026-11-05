@@ -52,12 +52,13 @@
 <script>/*FLEET*/</script>
 <script>/*NEXUS*/</script>
 <script>/*ONFOOT*/</script>
+<script>/*XENO*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
   let o={palette:'neon',weather:'',paint:'nero',seed:2077,help:true};
   try{Object.assign(o,JSON.parse(localStorage.getItem('neonrun')||'{}'));}catch(e){}
-  try{ o.quality=localStorage.getItem('kageQuality')||o.quality||'high'; }catch(e){} if(q.has('quality')) o.quality=q.get('quality');
+  try{ o.quality=localStorage.getItem('kageQuality')||o.quality||'ultra'; }catch(e){} if(q.has('quality')) o.quality=q.get('quality');
   for(const k of ['palette','weather','paint','power']) if(q.has(k)) o[k]=q.get(k); if(q.has('roof')) o.roof=true; for(const k of ['chrono','fly']) if(q.has(k)) o[k]=true; if(q.has('exhaust')) o.exhaust=q.get('exhaust');
   const save=()=>{try{localStorage.setItem('neonrun',JSON.stringify(o));}catch(e){}};
   const cv=document.getElementById('c'), hud=document.getElementById('hud');
@@ -91,6 +92,7 @@
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
+    if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
     if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
     if(e.code==='KeyB'&&game.audio) game.audio.toggle();
@@ -125,7 +127,7 @@
     el.addEventListener('touchstart',e=>{e.preventDefault(); tb[id]=true; if(id==='tv') game.view=(game.view+1)%(game.veh?5:NeonRun.VIEWS.length);});
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
-  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.foot) game.foot.toggle(); });
+  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.xeno&&game.xeno.enter()) return; if(game.foot) game.foot.toggle(); });
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk;
     inp.steer=((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0);
@@ -135,12 +137,12 @@
       inp.fwd=b(keys.KeyW||keys.ArrowUp||tb.tg)-b(keys.KeyS||keys.ArrowDown||tb.tbk);
       inp.yaw=b(keys.KeyA||keys.ArrowLeft||tb.tl)-b(keys.KeyD||keys.ArrowRight||tb.tr);
       inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
-      inp.lift=k==='drone'||k==='foot'||k==='sub'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
-      inp.fire=k==='galleon'&&(keys.Space||tb.th); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
+      inp.lift=k==='drone'||k==='foot'||k==='sub'||k==='ufo'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
+      inp.fire=(k==='galleon'&&(keys.Space||tb.th))||(k==='ufo'&&!!keys.KeyF); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
       // gamepad (standard mapping; drone in mode 2: left stick = altitude/yaw, right stick = pitch/roll)
       const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null;
       if(gp){ const ax=i=>Math.abs(gp.axes[i]||0)>0.12?gp.axes[i]:0, bt=i=>gp.buttons[i]&&(gp.buttons[i].pressed||gp.buttons[i].value>0.3);
-        if(k==='drone'||k==='sub'){ inp.lift+= -ax(1); inp.yaw+= -ax(0); inp.fwd+= -ax(3); inp.strafe+= ax(2); }
+        if(k==='drone'||k==='sub'||k==='ufo'){ inp.lift+= -ax(1); inp.yaw+= -ax(0); inp.fwd+= -ax(3); inp.strafe+= ax(2); }
         else { inp.yaw+= -ax(0); inp.fwd+= (gp.buttons[7]?gp.buttons[7].value:0)-(gp.buttons[6]?gp.buttons[6].value:0)-ax(1)*0; }
         if(bt(5)) inp.boost=true; if(bt(2)) inp.fire=true;
         if(bt(3)&&!readInput.y) game.view=(game.view+1)%5; readInput.y=bt(3);
@@ -164,7 +166,9 @@
   if(ap&&q.has('shot')){ const T=parseFloat(q.get('t')||'3'); let s; for(let i=0;i<T*30;i++){ s=ap.step(game.c,1/30,null); NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
     game.view=parseInt(q.get('view')||'0'); game.frame(1/30,s); window.__ap={x:game.c.x,z:game.c.z,h:game.c.h,v:Math.hypot(game.c.vx,game.c.vz),dir:ap.dir}; window.__done=true; return; }
   if(q.has('shot')&&q.has('foot')&&game.foot){ const T=parseFloat(q.get('t')||'2'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); game.foot.toggle();
-    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
+    { const xq=q.get('xeno'), X=game.xeno, f=game.foot; if(xq&&X){ if(xq==='in'){ const p=(q.get('xl')||'0,2').split(',').map(Number); f.xs='in'; f.lx=p[0]; f.lz=p[1]; f.h=X.ship.h+parseFloat(q.get('xh')||'0'); f.v=0; X.syncFoot(f); }
+      else if(xq==='vortex') X.tt={phase:'vortex',t:0}; else if(xq==='up'){ const pd=X.toWorld(0,-4.2); f.x=pd[0]; f.z=pd[1]; f.xs='up'; f.xp=0; f.x0=f.x; f.z0=f.z; } else if(xq==='near'){ const pd=X.toWorld(0,-4.2); f.x=pd[0]+6; f.z=pd[1]-8; f.h=-0.6; } else if(xq==='epoch'){ f.x=26; f.z=27; f.h=Math.PI/2; } } }
+    for(let i=0;i<T*30;i++){ game.foot.update(1/30,vi); if(game.xeno) game.xeno.update(1/30,vi); game.t+=1/30; } game.foot.camH=game.foot.h; game.view=parseInt(q.get('view')||'0'); game.frame(1/30,Object.assign({gas:false,brake:false,steer:0},vi));
     window.__fleet={x:game.foot.x,z:game.foot.z,anim:game.foot.anim}; window.__done=true; return; }
   if(q.has('shot')&&game.veh){   // test: simulate the vehicle with a fixed input, then render one frame
     const T=parseFloat(q.get('t')||'3'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); F.autoMe=!!vi.ai;

@@ -25,7 +25,7 @@ public final class Prefs {
     public boolean dim() { return sp.getBoolean("dim", false); }
     public int quality() { return sp.getInt("quality", 85); }
     /** model resolution of the KAGE GT and the KAGE fleet: low / high / ultra */
-    public String modelQuality() { return sp.getString("modelQuality", "high"); }
+    public String modelQuality() { return sp.getString("modelQuality", "ultra"); }
     public static final String[] MODEL_Q = {"low", "high", "ultra"};
     public static final String[] MODEL_Q_NAMES = {L.t("BASSA (veloce)"), L.t("ALTA"), L.t("ALTISSIMA")};
     public int fps() { return sp.getInt("fps", 45); }

@@ -32,7 +32,7 @@
    Translates every canvas text (HUDs) and every DOM text / placeholder, so the pages need no other change. */
 (function () {
   'use strict';
-  const PAIRS = [["\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", "\"When to start\" (charging / docked) and the screen timeout. This app controls what Cybercity does from there on."], ["P atmosfera · M meteo · V colore · E propulsione · T capote · X scarico · Q crono · F volo (LEVITA) · B suono · H aiuto", "P atmosphere · M weather · V colour · E power unit · T roof · X exhaust · Q chrono · F flight (LEVITA) · B sound · H help · L language"], ["Ogni fascia sceglie cosa mostrare (città con la sua atmosfera, solo orologio, nero o niente) e con che luminosità. ", "Each time slot chooses what to show (city with its atmosphere, clock only, black or nothing) and how bright. "], ["W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D yaw · Q/E strafe · SPACE up · X down · SHIFT boost · C view · G fleet · ENTER race"], ["A PIEDI · W/S cammina · A/D gira · Q/E laterale · SHIFT corri · SPAZIO salta · INVIO vicino all'auto per salire", "ON FOOT · W/S walk · A/D turn · Q/E sidestep · SHIFT run · SPACE jump · ENTER near the car to get in"], ["W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara", "W thrust · S reverse · A/D rudder · SHIFT boost · drive from road to water · C view · G fleet · ENTER race"], ["Ogni tanto: giro dell'auto con configurazioni casuali e corsa in città col pilota automatico (senza suono)", "Now and then: a turnaround of the car in random configurations and an autopilot run through the city (no sound)"], ["W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D rudder · SPACE rise · X dive · SHIFT boost · C view · G fleet · ENTER race"], ["W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO regata", "W/S hoist-lower sails · A/D helm · SHIFT assist · SPACE cannons · C view · G fleet · ENTER regatta"], ["Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti", "Pick an effect and see it on the city right away; in the preview the WEATHER button cycles through all of them"], ["Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale", "2,616 cc quad-rotor Wankel (4 × 654 cc) on hydrogen · hybrid with axial electric motor"], ["Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati", "Electromagnetic drive · 4 levitating spheres with integrated axial-flux motors"], ["Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → ", "When the screensaver starts is decided by Android: Settings → Display → Screen saver → "], ["2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)", "2,400 Nm instant · 360° vectoring (the spheres roll in any direction)"], ["Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)", "Live preview: every change shows immediately (effects start more often here)"], ["Se la modalità Non disturbare (o una modalità Focus/Bedtime) è attiva, niente città", "If Do Not Disturb (or a Focus/Bedtime mode) is on, no city"], ["Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", "Only used to read the app icons; no content is read or stored."], ["1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)", "1,020 Nm combined (rotors 640 Nm at 7,800 rpm + instant electric torque)"], ["W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara", "W throttle · S brake · A/D lean · SHIFT boost · C view · G fleet · ENTER race"], ["W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO gara", "W throttle · S reverse · A/D helm · SHIFT N₂O · C view · G fleet · ENTER race"], ["Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring", "8-speed dual clutch · e-AWD all-wheel drive with torque vectoring"], ["Droni KAGE STRIX al posto delle scie volanti, barche e galeone nel canale", "KAGE STRIX drones instead of the flying trails, boats and a galleon on the canal"], ["860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min", "860 hp hydrogen + 260 hp electric = 1120 hp (824 kW) at 10,200 rpm"], ["Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", "Source: Open-Meteo (free, no account). Updates every 30 minutes."], ["P atmosfera · M meteo · V colore auto · B suono · R riparti · H aiuto", "P atmosphere · M weather · V car colour · B sound · R restart · H help"], ["780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min", "780 hp combustion + 220 hp electric = 1000 hp (735 kW) at 8,200 rpm"], ["Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri", "Under the clock: one icon per app with notifications, no numbers"], ["Posizione non disponibile: apri Maps una volta o scrivi la città", "Location unavailable: open Maps once or type the city"], ["F = schermo intero · Spazio = cambia telecamera · P = atmosfera", "F = full screen · Space = change camera · P = atmosphere"], ["1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)", "1,390 kg · 700 bar carbon-fibre H₂ tanks (6.4 kg)"], ["Si sposta di poco ogni minuto per proteggere lo schermo OLED", "Moves slightly every minute to protect the OLED screen"], ["V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore", "4.0 L twin-turbo hybrid V8 · front axial electric motor"], ["11 km · 31 curve · pit lane con rifornimento e cambio gomme", "11 km · 31 corners · pit lane with refuelling and tyre change"], ["QUANDO È NASCOSTO (lavoro / non disturbare / fuori fascia)", "WHEN HIDDEN (work / do not disturb / outside slots)"], ["Se stacchi il caricatore il salvaschermo si chiude subito", "Unplugging the charger closes the screensaver immediately"], ["INDIRIZZO PERDUTO RICOMPOSTO · PALETTE ECO SBLOCCATA (P)", "LOST ADDRESS RESTORED · ECO PALETTE UNLOCKED (P)"], ["Spento = fuori fascia usa atmosfera e luminosità globali", "Off = outside the slots the global atmosphere and brightness are used"], ["reattore a fusione compatto da 2 MW · eliche retrattili", "2 MW compact fusion reactor · retractable propellers"], ["0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s", "0–100 km/h 2.4 s · 0–200 km/h 6.9 s · 0–300 km/h 17.8 s"], ["0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s", "0–100 km/h 2.3 s · 0–200 km/h 6.5 s · 0–300 km/h 16.4 s"], ["0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s", "0–100 km/h 1.8 s · 0–200 km/h 5.2 s · 0–300 km/h 12.9 s"], ["Icona, temperatura e condizione (con meteo automatico)", "Icon, temperature and condition (with automatic weather)"], ["Sfere Ø 670 mm con battistrada in elastomero a grafene", "Ø 670 mm spheres with graphene elastomer tread"], ["28 kWh a stato solido · ronzio elettrostatico di serie", "28 kWh solid-state · electrostatic hum as standard"], ["Vince la prima fascia attiva che corrisponde all'ora.", "The first active slot matching the time wins."], ["18 kWh allo stato solido · boost a supercondensatori", "18 kWh solid-state · supercapacitor boost"], ["RISOLUZIONE MODELLI (KAGE GT, DRONE, BARCA, GALEONE)", "MODEL RESOLUTION (KAGE GT, DRONE, BOAT, GALLEON)"], ["In questo orario il salvaschermo non mostra la città", "During these hours the screensaver doesn't show the city"], ["100–0 km/h in 29 m · dischi carboceramici 410/390 mm", "100–0 km/h in 29 m · 410/390 mm carbon-ceramic discs"], ["Deportanza 520 kg a 250 km/h · ala posteriore attiva", "520 kg downforce at 250 km/h · active rear wing"], ["6,2 kWh · boost elettrico 18 s · ricarica in frenata", "6.2 kWh · 18 s electric boost · regenerative braking"], ["QUANDO ROVESCI IL TELEFONO (schermo verso il basso)", "WHEN YOU TURN THE PHONE OVER (screen down)"], ["integrale in carbonio · visiera a realtà aumentata", "full-face carbon · augmented-reality visor"], ["1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)", "1,150 Nm combined (800 Nm from 3,200–6,500 rpm)"], ["Presa diretta · controllo di campo per ogni sfera", "Direct drive · field control per sphere"], ["18 cannoni a luce (stordiscono, non distruggono)", "18 light cannons (they stun, they do not destroy)"], ["PORTALE APERTO · attraversalo per tornare a casa", "PORTAL OPEN · cross it to go home"], ["PORTALE APERTO · attraversalo per entrare in ECO", "PORTAL OPEN · cross it to enter ECO"], ["4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico", "4 × 320 kW = 1280 kW (1740 hp) · no exhaust"], ["gimbal 8K · LiDAR a 360° · radar anticollisione", "8K gimbal · 360° LiDAR · collision radar"], ["KAGE GARAGE · premi G per scegliere il veicolo", "KAGE GARAGE · press G to pick a vehicle"], ["Scie luminose di auto e spinner su più livelli", "Light trails of cars and spinners on several levels"], ["KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"], ["Salvaschermo 3D · città cyberpunk procedurale", "3D screensaver · procedural cyberpunk city"], ["L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m", "L 4.70 m · W 2.06 m · H 1.24 m · wheelbase 2.87 m"], ["380 km/h (boost di campo) · 290 km/h di serie", "380 km/h (field boost) · 290 km/h standard"], ["Pilota collaudatore KAGE · auto, drone, mare", "KAGE test pilot · cars, drones, sea"], ["Posizione approssimativa, solo per il meteo", "Approximate location, only for the weather"], ["1.420 kg · rapporto peso/potenza 1,42 kg/CV", "1,420 kg · power-to-weight 1.42 kg/hp"], ["cuscino d'aria a 0,5 m · gonna in neoprene", "0.5 m air cushion · neoprene skirt"], ["FASCE ORARIE · QUALE SALVASCHERMO E QUANDO", "TIME SLOTS · WHICH SCREENSAVER AND WHEN"], ["🛠 SHOWROOM FLOTTA · DRONE, BARCA, GALEONE", "🛠 FLEET SHOWROOM · DRONE, BOAT, GALLEON"], ["Anteprima dal vivo · tocca per nascondere", "Live preview · tap to hide"], ["W/↑ accelera · S/↓ frena · A D/← → sterza", "W/↑ throttle · S/↓ brake · A D/← → steer"], ["345 km/h (con N₂O) · 260 km/h senza boost", "345 km/h (with N₂O) · 260 km/h without boost"], ["352 km/h (con N₂O) · 268 km/h senza boost", "352 km/h (with N₂O) · 268 km/h without boost"], ["5,0 kWh · allo scarico solo vapore acqueo", "5.0 kWh · only water vapour from the exhaust"], ["Drone da corsa e da ripresa · classe 2 m", "Racing and filming drone · 2 m class"], ["Galeone a tre alberi · rifacimento cyber", "Three-masted galleon · cyber rebuild"], ["Fuori dalle fasce: non mostrare la città", "Outside the slots: don't show the city"], ["METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE", "WEATHER · FOG, RAIN, SNOW, STORM"], ["RITARDO DOPO LA MESSA IN CARICA / AVVIO", "DELAY AFTER PLUGGING IN / START"], ["SPAZIO derapata · SHIFT nitro · C vista", "SPACE drift · SHIFT nitro · C view"], ["220 kWh · ricarica rapida in 30 minuti", "220 kWh · 30-minute fast charge"], ["GIRO LIBERO · premi INVIO per una gara", "FREE ROAM · press ENTER for a race"], ["KAGE GT · CORSA IN CITTÀ (SENZA SUONO)", "KAGE GT · CITY RUN (NO SOUND)"], ["1.480 kg · altezza di levitazione 4 cm", "1,480 kg · 4 cm hover height"], ["Rispetta il Non disturbare di Android", "Respect Android's Do Not Disturb"], ["DURATA ANIMAZIONE (0 = sempre accesa)", "ANIMATION LENGTH (0 = always on)"], ["🔊 tocca / premi un tasto per il suono", "🔊 tap / press a key for sound"], ["LE STRADE CAMBIANO QUANDO NON GUARDI", "THE STREETS CHANGE WHEN YOU ARE NOT LOOKING"], ["L 10,0 m · B 2,7 m · pescaggio 0,6 m", "L 10.0 m · beam 2.7 m · draft 0.6 m"], ["Hovercraft anfibio · strada e acqua", "Amphibious hovercraft · road and water"], ["12 nodi a vela · 21 nodi con assist", "12 knots under sail · 21 knots with assist"], ["AUTO (ciclo di tutte le telecamere)", "AUTO (cycle all cameras)"], ["2 propulsori elettrici orientabili", "2 vectoring electric thrusters"], ["34 m di scafo · 44 m col bompresso", "34 m hull · 44 m with the bowsprit"], ["PARTENZA DA FERMO · TIENI IL FRENO", "STANDING START · WAIT FOR THE LIGHTS"], ["DURATA DI OGNI INQUADRATURA (AUTO)", "LENGTH OF EACH SHOT (AUTO)"], ["265/30 R21 ant. · 325/25 R22 post.", "265/30 R21 front · 325/25 R22 rear"], ["motore assiale da 160 kW · 300 Nm", "160 kW axial-flux motor · 300 Nm"], ["ORARIO DI LAVORO · NON DISTURBARE", "WORK HOURS · DO NOT DISTURB"], ["2 fuoribordo elettrici da 330 kW", "twin 330 kW electric outboards"], ["128 km/h sulle ali · 155 con N₂O", "128 km/h on the foils · 155 with N₂O"], ["KAGE GT · GIRO DELL'AUTO CASUALE", "KAGE GT · RANDOM TURNAROUND"], ["SERBATOIO VUOTO · RIENTRA AI BOX", "TANK EMPTY · RETURN TO THE PITS"], ["Imposta una città o la posizione", "Set a city or the location"], ["Animazione continua, senza pause", "Continuous animation, no pauses"], ["SFUMATURA CROMATICA IN MOVIMENTO", "MOVING COLOUR GRADIENT"], ["DODICI FRAMMENTI · UN INDIRIZZO", "TWELVE SHARDS · ONE ADDRESS"], ["COMPOSIZIONE INDIRIZZO · BLOCCO", "DIALLING ADDRESS · LOCK"], ["TELEFONO ROVESCIATO · NOTIFICHE", "PHONE FACE DOWN · NOTIFICATIONS"], ["SPENTO (usa la pioggia manuale)", "OFF (use manual rain)"], ["SPEGNI (schermo nero, 3D fermo)", "TURN OFF (black screen, 3D paused)"], ["24 kWh · ricarica in 25 minuti", "24 kWh · 25-minute charge"], ["🌀 KAGE NEXUS · PORTALE PER ECO", "🌀 KAGE NEXUS · PORTAL TO ECO"], ["🌀 VAI AL PORTALE (N = componi)", "🌀 GO TO THE PORTAL (N = dial)"], ["Veicoli KAGE nello screensaver", "KAGE vehicles in the screensaver"], ["CONCEDI ACCESSO ALLE NOTIFICHE", "GRANT NOTIFICATION ACCESS"], ["FREQUENZA EFFETTI (ogni circa)", "EFFECT FREQUENCY (about every)"], ["LUMINOSITÀ IN PAUSA / NASCOSTO", "BRIGHTNESS PAUSED / HIDDEN"], ["22.000 giri/min (motori-sfera)", "22,000 rpm (sphere motors)"], ["QUESTA CITTÀ SI RICORDA DI TE", "THIS CITY REMEMBERS YOU"], [" · FERMATI NEL BOX ILLUMINATO", " · STOP IN THE GLOWING BOX"], ["PIT LANE · LIMITATORE 80 KM/H", "PIT LANE · 80 KM/H LIMITER"], ["USA LA POSIZIONE DEL TELEFONO", "USE THE PHONE'S LOCATION"], ["PERSONALIZZATA (usa la barra)", "CUSTOM (use the slider)"], ["130 km/h · 210 km/h in boost", "130 km/h · 210 km/h with boost"], ["Scene KAGE GT nel ciclo AUTO", "KAGE GT scenes in the AUTO cycle"], ["Scrivi la città per il meteo", "Type the city for the weather"], ["🏎 KAGE CIRCUIT · PISTA 11 KM", "🏎 KAGE CIRCUIT · 11 KM TRACK"], ["🏁 KAGE CIRCUIT · PISTA 11 KM", "🏁 KAGE CIRCUIT · 11 KM TRACK"], ["Sottomarino da esplorazione", "Exploration submarine"], ["ignifuga in fibra aramidica", "fire-proof aramid fibre"], ["NESSUNA POSIZIONE IMPOSTATA", "NO LOCATION SET"], ["LUMINOSITÀ CITTÀ / OROLOGIO", "CITY / CLOCK BRIGHTNESS"], ["LUMINOSITÀ DEL SALVASCHERMO", "SCREENSAVER BRIGHTNESS"], ["Cybercity 3D — salvaschermo", "Cybercity 3D — screensaver"], ["2 eliche intubate da 1,4 m", "2 ducted fans, 1.4 m"], ["32 km/h · 50 km/h in boost", "32 km/h · 50 km/h with boost"], ["4 motori brushless da 9 kW", "4 brushless motors, 9 kW each"], ["6 motori brushless da 8 kW", "6 brushless motors, 8 kW each"], ["8 motori coassiali da 7 kW", "8 coaxial motors, 7 kW each"], ["RISOLUZIONE MODELLI: BASSA", "MODEL RESOLUTION: LOW"], ["Meteo non ancora scaricato", "Weather not downloaded yet"], ["1 elica intubata da 2,2 m", "1 ducted fan, 2.2 m"], ["fari da 20.000 lm · sonar", "20,000 lm lights · sonar"], ["Motoscafo offshore · 10 m", "Offshore powerboat · 10 m"], [" (usa la pioggia manuale)", " (use manual rain)"], ["Lavoro / non disturbare: ", "Work / do not disturb: "], [" (fuori fascia: nascosto)", " (outside slots: hidden)"], ["CRONO · PRONTO A 300 KM/H", "CHRONO · READY AT 300 KM/H"], ["INCLINAZIONE DEL TELEFONO", "PHONE TILT"], ["IMPOSTA COME SALVASCHERMO", "SET AS SCREENSAVER"], ["PAUSA PRIMA CHE RICOMPAIA", "PAUSE BEFORE IT RETURNS"], ["pozzetto aperto, 2 posti", "open cockpit, 2 seats"], ["INVIO · scendi dall'auto", "ENTER · get out of the car"], ["elica intubata da 520 kW", "520 kW ducted fan"], ["ECO · UNIVERSO PARALLELO", "ECO · PARALLEL UNIVERSE"], ["KAGE GT · CORSA IN CITTÀ", "KAGE GT · CITY RUN"], ["AUTOMATICO (meteo reale)", "AUTOMATIC (real weather)"], ["3ª CIFRA (decine minuti)", "3rd DIGIT (tens of minutes)"], ["38 minuti in volo misto", "38 minutes of mixed flight"], ["25 kg nel vano ventrale", "25 kg in the belly bay"], ["⟲ TORNA SUBITO IN CITTÀ", "⟲ BACK TO THE CITY NOW"], ["🚁 DRONE · GARE IN CITTÀ", "🚁 DRONE · CITY RACES"], ["SERENO (nessun effetto)", "CLEAR (no effect)"], ["4ª CIFRA (unità minuti)", "4th DIGIT (minutes)"], ["EFFETTI GRAFICI CASUALI", "RANDOM GRAPHIC EFFECTS"], ["↺ RIPRENDI GARA SALVATA", "↺ RESUME SAVED RACE"], ["CAPOTE: APERTA (SPIDER)", "ROOF: OPEN (SPIDER)"], ["Solo quando è in carica", "Only while charging"], ["95 km/h · 130 in boost", "95 km/h · 130 with boost"], ["1.200 m (laguna: 24 m)", "1,200 m (lagoon: 24 m)"], ["SIAMO SEMPRE STATI QUI", "WE HAVE ALWAYS BEEN HERE"], ["112 km/h · 140 con N₂O", "112 km/h · 140 with N₂O"], ["Meteo sotto l'orologio", "Weather under the clock"], ["GLITCH (strappi + RGB)", "GLITCH (tears + RGB)"], ["CRONO · TIENI 300 KM/H", "CHRONO · HOLD 300 KM/H"], ["⏳ PRATERIA DEL PASSATO", "⏳ MEADOW OF THE PAST"], ["CARBOCERAMICA · GIALLO", "CARBON-CERAMIC · YELLOW"], ["SCRITTA PERSONALIZZATA", "CUSTOM LETTERING"], ["TI STAVAMO ASPETTANDO", "WE WERE WAITING FOR YOU"], ["9 m · pescaggio 3,0 m", "9 m · draft 3.0 m"], ["24 + 6 droni di bordo", "24 + 6 onboard drones"], ["NON MOSTRARE (chiudi)", "DON'T SHOW (close)"], ["Pioggia (senza meteo)", "Rain (without weather)"], ["1ª CIFRA (decine ore)", "1st DIGIT (tens of hours)"], ["COLORE PER OGNI CIFRA", "COLOUR PER DIGIT"], ["WebGL non disponibile", "WebGL not available"], ["ON (salto a 300 km/h)", "ON (jump at 300 km/h)"], ["luminosità di sistema", "system brightness"], ["ABERRAZIONE CROMATICA", "CHROMATIC ABERRATION"], ["GRAN GIRO DEL CENTRO", "GRAND DOWNTOWN LOOP"], ["APPARECCHIO ACUSTICO", "HEARING AID"], ["INVIO · sali in auto", "ENTER · get in the car"], ["VELE NEON A PANNELLI", "NEON PANEL SAILS"], ["SPENTO (usa pioggia)", "OFF (use rain)"], [" fasce orarie attive", " active time slots"], ["2ª CIFRA (unità ore)", "2nd DIGIT (hours)"], ["SFUMATURA · COLORE A", "GRADIENT · COLOUR A"], ["SFUMATURA · COLORE B", "GRADIENT · COLOUR B"], ["FERMO (anti burn-in)", "STILL (anti burn-in)"], ["RIMBALZO (stile DVD)", "BOUNCE (DVD style)"], ["CARBURANTE / ENERGIA", "FUEL / ENERGY"], ["AUTO HD NON CARICATA", "HD CAR NOT LOADED"], ["Auto HD non caricata", "HD car not loaded"], ["ACCIAIO · PINZE NEON", "STEEL · NEON CALIPERS"], ["INSEGUIMENTO LONTANO", "FAR CHASE"], ["QUALITÀ DI RENDERING", "RENDERING QUALITY"], ["FREQUENZA FOTOGRAMMI", "FRAME RATE"], ["Superbike elettrica", "Electric superbike"], ["0–100 km/h in 2,6 s", "0–100 km/h in 2.6 s"], ["ABISSI DELLA LAGUNA", "LAGOON DEPTHS"], ["A BORDO DEI VEICOLI", "ON BOARD THE VEHICLES"], ["IL FARO NON È VUOTO", "THE LIGHTHOUSE IS NOT EMPTY"], ["idrogetto da 600 kW", "600 kW water jet"], ["TU · KAGE LEVIATHAN", "YOU · KAGE LEVIATHAN"], ["RISOLUZIONE MODELLI", "MODEL RESOLUTION"], ["Risoluzione modelli", "Model resolution"], ["IN BASSO A SINISTRA", "BOTTOM LEFT"], ["🏁 SHOWROOM (garage)", "🏁 SHOWROOM (garage)"], ["DRONE A BASSA QUOTA", "LOW DRONE"], ["VELOCITÀ DEI COLORI", "COLOUR SPEED"], ["CHIUDI SALVASCHERMO", "CLOSE SCREENSAVER"], ["INDIRIZZO COMPLETO", "ADDRESS COMPLETE"], ["CHI GUIDA, ADESSO?", "WHO IS DRIVING NOW?"], ["CIRCUITO DEI VIALI", "AVENUES CIRCUIT"], ["⛵ GALEONE · REGATA", "⛵ GALLEON · REGATTA"], ["Aggiorno il meteo…", "Updating the weather…"], ["IN BASSO AL CENTRO", "BOTTOM CENTRE"], ["IN ALTO A SINISTRA", "TOP LEFT"], ["▶ GIOCA · NEON RUN", "▶ PLAY · NEON RUN"], ["WANKEL 4 ROTORI H₂", "QUAD-ROTOR WANKEL H₂"], ["VELOCITÀ MOVIMENTO", "MOVEMENT SPEED"], ["30 FPS (risparmio)", "30 FPS (saver)"], ["PIANTA DELLA CITTÀ", "CITY LAYOUT"], ["telecamera globale", "global camera"], ["luminosità globale", "global brightness"], ["2 bracci robotici", "2 robotic arms"], ["L 8,6 m · B 4,6 m", "L 8.6 m · W 4.6 m"], ["RUOTE SENZA MOZZO", "HUBLESS WHEELS"], ["CASUAL · MAGLIONE", "CASUAL · SWEATER"], ["TU · KAGE RIPTIDE", "YOU · KAGE RIPTIDE"], ["GIRO DELLA LAGUNA", "LAGOON LAP"], ["INVIO = rivincita", "ENTER = rematch"], ["Città non trovata", "City not found"], [" min dopo l'avvio", " min after start"], ["IN ALTO AL CENTRO", "TOP CENTRE"], ["TU · KAGE 2789 GT", "YOU · KAGE 2789 GT"], ["RISULTATI SALVATI", "SAVED RESULTS"], ["PERSONALIZZAZIONE", "CUSTOMISATION"], ["↺ RIPARTI DAL VIA", "↺ RESTART"], ["V8 BITURBO IBRIDO", "TWIN-TURBO HYBRID V8"], ["▶ ANTEPRIMA METEO", "▶ WEATHER PREVIEW"], ["+ AGGIUNGI FASCIA", "+ ADD SLOT"], ["GRAFICA (GLOBALE)", "GRAPHICS (GLOBAL)"], ["atmosfera globale", "global atmosphere"], ["STRADE SCIVOLOSE", "SLIPPERY STREETS"], ["MANI SUI FIANCHI", "HANDS ON HIPS"], ["BRACCIA CONSERTE", "ARMS CROSSED"], ["NON SEI IL PRIMO", "YOU ARE NOT THE FIRST"], ["🚤 BARCA · LAGUNA", "🚤 BOAT · LAGOON"], ["COME L'ATMOSFERA", "LIKE THE ATMOSPHERE"], ["CRONO · RICARICA", "CHRONO · RECHARGING"], ["NEON RUN · PAUSA", "NEON RUN · PAUSE"], ["LEVITA ELETTRICA", "LEVITA ELECTRIC"], ["VELOCITÀ DI VOLO", "FLIGHT SPEED"], ["Orario di lavoro", "Work hours"], ["GIORNI DI LAVORO", "WORK DAYS"], ["DURANTE LA PAUSA", "DURING THE PAUSE"], ["ORARIO DI LAVORO", "WORK HOURS"], ["BILANCIATA (85%)", "BALANCED (85%)"], ["Traffico volante", "Flying traffic"], ["DECODIFICA CIFRE", "DIGIT DECODE"], ["chiusa, 4 posti", "closed, 4 seats"], ["POZZETTO APERTO", "OPEN COCKPIT"], ["BRACCI ROBOTICI", "ROBOTIC ARMS"], ["👤 IL MIO PILOTA", "👤 MY PILOT"], ["il più vicino a", "nearest at"], ["TU · KAGE STRIX", "YOU · KAGE STRIX"], ["ANELLO DEL FARO", "LIGHTHOUSE RING"], ["REGATA DEL FARO", "LIGHTHOUSE REGATTA"], ["ASSIST. FUSIONE", "FUSION ASSIST"], ["EFFETTI CASUALI", "RANDOM EFFECTS"], ["10.500 giri/min", "10,500 rpm"], ["APERTA (SPIDER)", "OPEN (SPIDER)"], ["DOPPIA STRISCIA", "TWIN STRIPES"], ["Mostra orologio", "Show clock"], ["COME IL SISTEMA", "LIKE THE SYSTEM"], ["Icone notifiche", "Notification icons"], ["60 FPS (fluido)", "60 FPS (smooth)"], ["Orologio glitch", "Glitch clock"], ["SFARFALLIO NEON", "NEON FLICKER"], ["PROFONDITÀ MAX", "MAX DEPTH"], ["CERCHI A RAZZE", "SPOKED RIMS"], ["CARENATA SPORT", "SPORT FAIRING"], ["1 ELICA GRANDE", "1 LARGE FAN"], ["COLORE CAPELLI", "HAIR COLOUR"], ["GUARDA IN ALTO", "LOOK UP"], ["TORNA INDIETRO", "GO BACK"], ["CANNONI PRONTI", "CANNONS READY"], ["CANNONI A LUCE", "LIGHT CANNONS"], ["BATTERIA BOOST", "BOOST BATTERY"], ["COLORE ACCENTI", "ACCENT COLOUR"], ["ELICA INTUBATA", "DUCTED FAN"], ["VELE CLASSICHE", "CLASSIC SAILS"], ["BASSA (veloce)", "LOW (fast)"], ["CORSA IN CITTÀ", "CITY RUN"], ["In carica e no", "Charging or not"], ["Solo in carica", "Only while charging"], ["9.000 giri/min", "9,000 rpm"], ["🔧 SERVIZIO BOX", "🔧 PIT SERVICE"], ["BLU ANODIZZATO", "ANODISED BLUE"], ["🎨 PERSONALIZZA", "🎨 CUSTOMISE"], ["SCHEDA TECNICA", "SPECIFICATIONS"], ["VOLO SUL VIALE", "AVENUE FLIGHT"], ["PISTA ASCIUTTA", "DRY TRACK"], ["PISTA ALLAGATA", "FLOODED TRACK"], ["PROGRAMMAZIONE", "SCHEDULE"], ["PERSONALIZZATA", "CUSTOM"], ["NON DISTURBARE", "DO NOT DISTURB"], ["tutti i giorni", "every day"], ["BATTERIA (60%)", "BATTERY (60%)"], ["MASSIMA (100%)", "MAXIMUM (100%)"], ["LED integrati", "integrated LEDs"], ["SOSTENTAMENTO", "LIFT"], ["LAGUNA VELOCE", "FAST LAGOON"], ["CABINA CHIUSA", "CLOSED CABIN"], ["🤿 SOTTOMARINO", "🤿 SUBMARINE"], ["IL MIO PILOTA", "MY PILOT"], ["pronto al via", "ready to go"], ["CASTANO SCURO", "DARK BROWN"], ["BOX · SQUADRA", "PIT · CREW"], ["GIRO MIGLIORE", "BEST LAP"], ["SFIDA A TEMPO", "TIME ATTACK"], ["COLORE CERCHI", "RIM COLOUR"], ["COLORE LIVREA", "LIVERY COLOUR"], ["SOPRA I TETTI", "ABOVE THE ROOFTOPS"], ["PISTA BAGNATA", "WET TRACK"], ["EFFETTO METEO", "WEATHER EFFECT"], ["BAGLIORE NEON", "NEON GLOW"], ["CICLO E AVVIO", "CYCLE AND START"], ["Fascia attiva", "Slot active"], ["COSA MOSTRARE", "WHAT TO SHOW"], ["FASCIA ORARIA", "TIME SLOT"], ["SOLO OROLOGIO", "CLOCK ONLY"], ["nessun giorno", "no days"], ["Scanlines CRT", "CRT scanlines"], ["PIXEL SOTTILE", "THIN PIXEL"], ["NEON CONTORNO", "NEON OUTLINE"], ["LED A PUNTINI", "DOT LED"], ["ACCELERAZIONE", "ACCELERATION"], ["ATTREZZATURA", "EQUIPMENT"], ["SOPRACCIGLIA", "EYEBROWS"], ["CARICO UTILE", "PAYLOAD"], ["DISLOCAMENTO", "DISPLACEMENT"], ["MIGLIOR GIRO", "BEST LAP"], ["X8 COASSIALE", "X8 COAXIAL"], ["2 FUORIBORDO", "TWIN OUTBOARD"], ["↺ NUOVA GARA", "↺ NEW RACE"], ["PULSANTI ◀ ▶", "BUTTONS ◀ ▶"], ["🔥 SU DI GIRI", "🔥 REV IT"], ["MODULO CRONO", "CHRONO MODULE"], ["SUONO MOTORE", "ENGINE SOUND"], ["INSEGUIMENTO", "CHASE"], ["BIANCO PERLA", "PEARL WHITE"], ["IMPOSTAZIONI", "SETTINGS"], ["AGGIORNA ORA", "UPDATE NOW"], ["VELOCITÀ MAX", "TOP SPEED"], ["CAMPO VISIVO", "FIELD OF VIEW"], ["SCHERMO NERO", "BLACK SCREEN"], ["FUORI FASCIA", "OUTSIDE SLOTS"], ["COLORE UNICO", "SINGLE COLOUR"], ["DERIVA LENTA", "SLOW DRIFT"], ["AUTO (ciclo)", "AUTO (cycle)"], ["TRASMISSIONE", "TRANSMISSION"], ["AERODINAMICA", "AERODYNAMICS"], ["SOTTOMARINO", "SUBMARINE"], ["PILOTA KAGE", "KAGE PILOT"], ["CORPORATURA", "BUILD"], ["PRONUNCIATO", "PROMINENT"], ["RISOLUZIONE", "RESOLUTION"], ["GIRO LIBERO", "FREE ROAM"], ["FLOTTA KAGE", "KAGE FLEET"], ["VELE SOLARI", "SOLAR SAILS"], ["LEGNO SCURO", "DARK WOOD"], ["GIRO VELOCE", "FASTEST LAP"], ["ORO · ROSSO", "GOLD · RED"], ["COLORE AUTO", "CAR COLOUR"], ["ROSSO CORSA", "RACING RED"], ["PUNTI DRIFT", "DRIFT POINTS"], ["PISTA UMIDA", "DAMP TRACK"], ["PROPULSIONE", "POWER UNIT"], ["PIATTAFORMA", "PLATFORM"], ["SATURAZIONE", "SATURATION"], ["PIOGGERELLA", "DRIZZLE"], ["PROFONDITÀ", "DEPTH"], ["CARENATURA", "FAIRING"], ["PENSIEROSO", "THOUGHTFUL"], ["🧑‍🚀 PILOTA", "🧑‍🚀 PILOT"], ["CARNAGIONE", "SKIN TONE"], ["VIOLA NEON", "NEON VIOLET"], ["ORA LOCALE", "LOCAL TIME"], ["EQUIPAGGIO", "CREW"], ["PORTO NEON", "NEON HARBOUR"], ["IN PLANATA", "PLANING"], ["PROTEZIONI", "GUARDS"], ["COLORE LED", "LED COLOUR"], ["CATAMARANO", "CATAMARAN"], ["PARAELICHE", "PROP GUARDS"], ["MOTORE OFF", "ENGINE OFF"], ["CARBURANTE", "FUEL"], ["CINEMATICA", "CINEMATIC"], ["CLASSIFICA", "STANDINGS"], ["FRENO A M.", "HANDBRAKE"], ["luminosità", "brightness"], ["LUMINOSITÀ", "BRIGHTNESS"], ["Bilanciata", "Balanced"], ["Telecamera", "Camera"], ["CONDENSATO", "CONDENSED"], ["7 SEGMENTI", "7 SEGMENTS"], ["ARCOBALENO", "RAINBOW"], ["PULSAZIONE", "PULSE"], ["TELECAMERA", "CAMERA"], ["DIMENSIONE", "SIZE"], ["REGIME MAX", "REDLINE"], ["DIMENSIONI", "DIMENSIONS"], ["PNEUMATICI", "TYRES"], ["▶ RIPRENDI", "▶ RESUME"], ["IN STRADA", "ON ROAD"], ["BATISCAFO", "BATHYSCAPHE"], ["MUSCOLOSO", "MUSCULAR"], ["STEMPIATI", "RECEDING"], ["INDOSSATO", "ON"], ["OLIVASTRA", "OLIVE"], ["SQUADRATO", "SQUARE"], ["ALLUNGATO", "LONG"], ["ACCENNATA", "STUBBLE"], ["SQUADRATI", "SQUARE"], ["FRAMMENTI", "SHARDS"], ["FRAMMENTO", "SHARD"], ["AUTONOMIA", "ENDURANCE"], ["disarmato", "unarmed"], ["LUNGHEZZA", "LENGTH"], ["ALTISSIMA", "ULTRA"], ["ARMAMENTO", "ARMAMENT"], ["IDROGETTO", "WATER JET"], ["GIRO AUTO", "TURNAROUND"], ["MOTORE ON", "ENGINE ON"], ["DALL'ALTO", "TOP DOWN"], ["NERO NEON", "NEON BLACK"], ["AVVERSARI", "OPPONENTS"], ["SERBATOIO", "TANK"], ["ANTEPRIMA", "PREVIEW"], ["DUE PUNTI", "COLON"], ["Atmosfera", "Atmosphere"], ["AL CENTRO", "CENTRE"], ["MERCOLEDÌ", "WEDNESDAY"], ["ATMOSFERA", "ATMOSPHERE"], ["MOVIMENTO", "MOVEMENT"], ["POSIZIONE", "POSITION"], ["TEMPORALE", "STORM"], ["VARIABILE", "VARIABLE"], ["ABITACOLO", "COCKPIT"], ["ELABORATO", "SPORT"], ["▶ GUIDALA", "▶ DRIVE IT"], ["1.900 kg", "1,900 kg"], ["IN ACQUA", "ON WATER"], ["IN SELLA", "IN THE SADDLE"], ["OCCHIALI", "GLASSES"], ["ATLETICO", "ATHLETIC"], ["BLU NEON", "NEON BLUE"], ["PIZZETTO", "GOATEE"], ["NOCCIOLA", "HAZEL"], ["IN PIEDI", "STANDING"], ["VELATURA", "SAIL PLAN"], ["VELOCITÀ", "SPEED"], ["SUI FOIL", "ON FOILS"], ["in gara…", "racing…"], ["ALISCAFO", "HYDROFOIL"], ["INDIETRO", "BACK"], ["FORGED Y", "FORGED Y"], ["PARAURTI", "BUMPER"], ["MODALITÀ", "MODE"], ["MIGLIORE", "BEST"], ["ADERENZA", "GRIP"], ["Velocità", "Speed"], ["CITTÀ 3D", "3D CITY"], ["Batteria", "Battery"], ["DOMENICA", "SUNDAY"], ["OROLOGIO", "CLOCK"], ["NUVOLOSO", "CLOUDY"], ["PRATERIA", "MEADOW"], ["PORTIERE", "DOORS"], ["LATERALE", "SIDE STRIPE"], ["BATTERIA", "BATTERY"], ["NORMALI", "NORMAL"], ["SOTTILI", "THIN"], ["POLLICE", "THUMBS UP"], ["CAMMINA", "WALK"], ["con LED", "with LED"], ["LICENZE", "LICENCES"], ["ALTEZZA", "HEIGHT"], ["CAPELLI", "HAIR"], ["ROBUSTO", "STOCKY"], ["AMBRATA", "AMBER"], ["PICCOLO", "SMALL"], ["CASTANO", "BROWN"], ["MARRONI", "BROWN"], ["AZZURRI", "BLUE"], ["SENSORI", "SENSORS"], ["CASUALE", "RANDOM"], ["GALEONE", "GALLEON"], ["ARGENTO", "SILVER"], ["ARANCIO", "ORANGE"], ["CANNONI", "CANNONS"], ["LONTANA", "FAR"], ["PLANCIA", "BRIDGE"], ["PLANATA", "GLIDE"], ["ATTUALE", "CURRENT"], ["Massima", "Maximum"], ["Qualità", "Quality"], ["FLUTTUA", "FLOAT"], ["GIRO 3D", "3D SPIN"], ["MARTEDÌ", "TUESDAY"], ["GIOVEDÌ", "THURSDAY"], ["VENERDÌ", "FRIDAY"], ["NESSUNO", "NONE"], ["NESSUNA", "NONE"], ["ANNULLA", "CANCEL"], ["ELIMINA", "DELETE"], ["GLOBALE", "GLOBAL"], ["PIOGGIA", "RAIN"], ["INTERNI", "INTERIOR"], ["⟳ RUOTA", "⟳ ROTATE"], ["SCARICO", "EXHAUST"], ["SCRITTA", "LETTERING"], ["APPLICA", "APPLY"], ["POTENZA", "POWER"], ["FRENATA", "BRAKING"], ["ASFALTO", "ASPHALT"], ["CORDOLO", "KERB"], ["COLORE:", "COLOUR:"], ["14 ore", "14 hours"], ["CABINA", "CABIN"], ["SILURO", "TORPEDO"], ["GIALLO", "YELLOW"], ["🏍 MOTO", "🏍 MOTORBIKE"], ["SALUTO", "WAVE"], ["INDICA", "POINT"], ["ESULTA", "CHEER"], ["SNELLO", "SLIM"], ["CHIARA", "FAIR"], ["ROSATA", "ROSY"], ["RASATI", "BUZZ CUT"], ["CIUFFO", "QUIFF"], ["LUNGHI", "LONG HAIR"], ["CRESTA", "MOHAWK"], ["BIONDO", "BLOND"], ["GRIGIO", "GREY"], ["VISORE", "VISOR"], ["BAGLIO", "BEAM"], ["ARRIVO", "FINISH"], ["FLOTTA", "FLEET"], ["TELAIO", "FRAME"], ["SCOCCA", "SHELL"], ["ELICHE", "PROPELLERS"], ["PRONTI", "READY"], ["AVANTI", "FWD"], ["🔧 VAI!", "🔧 GO!"], ["PILOTA", "DRIVER"], ["ULTIMO", "LAST"], ["RECORD", "RECORD"], ["ORBITA", "ORBIT"], ["LUNEDÌ", "MONDAY"], ["SABATO", "SATURDAY"], ["COLORI", "COLOURS"], ["FASCIA", "SLOT"], ["MOSTRA", "SHOW"], ["IGNORA", "IGNORE"], ["SPENTO", "OFF"], ["SERENO", "CLEAR"], ["NEBBIA", "FOG"], ["GIORNO", "DAY"], ["ORARIO", "TIME"], ["NIENTE", "NONE"], ["COFANO", "BONNET"], ["MOTORE", "ENGINE"], ["STERZO", "STEERING"], ["COLORE", "COLOUR"], ["CAPOTE", "ROOF"], ["CHIUSA", "CLOSED"], ["CERCHI", "RIMS"], ["LIVREA", "LIVERY"], ["COPPIA", "TORQUE"], ["✕ ESCI", "✕ EXIT"], ["GHIAIA", "GRAVEL"], ["BIANCO", "WHITE"], ["CHIUDI", "CLOSE"], ["PIEGA", "LEAN"], ["RUOTE", "WHEELS"], ["GONNA", "SKIRT"], ["FOLTE", "THICK"], ["CORRE", "RUN"], ["RUOLO", "ROLE"], ["STATO", "STATUS"], ["CASCO", "HELMET"], ["BARBA", "BEARD"], ["OCCHI", "EYES"], ["TOLTO", "OFF"], ["SCURA", "DARK"], ["EBANO", "EBONY"], ["OVALE", "OVAL"], ["TONDO", "ROUND"], ["MEDIO", "MEDIUM"], ["CORTI", "SHORT"], ["RICCI", "CURLY"], ["CALVO", "BALD"], ["CORTA", "SHORT"], ["PIENA", "FULL"], ["BAFFI", "MOUSTACHE"], ["VERDI", "GREEN"], ["GRIGI", "GREY"], ["TONDI", "ROUND"], ["POSTI", "SEATS"], ["BARCA", "BOAT"], ["SCAFO", "HULL"], ["AMBRA", "AMBER"], ["VERDE", "GREEN"], ["VENTO", "WIND"], ["BORDO", "LEG"], ["RETRO", "REVERSE"], ["FUOCO", "FIRE"], ["BASSA", "LOW"], ["Parte", "Starts"], ["USURA", "WEAR"], ["Meteo", "Weather"], ["STILE", "STYLE"], ["TUTTI", "ALL"], ["TINTA", "HUE"], ["CITTÀ", "CITY"], ["CERCA", "SEARCH"], ["SALVA", "SAVE"], ["DALLE", "FROM"], ["NOTTE", "NIGHT"], ["GOMME", "TYRES"], ["PIENO", "FULL"], ["TIENI", "KEEP"], ["METEO", "WEATHER"], ["SFIDA", "CHALLENGE"], ["TEMPO", "TIME"], ["▶ VIA", "▶ GO"], ["FRENO", "BRAKE"], ["VISTA", "VIEW"], ["SERIE", "STOCK"], ["FRENI", "BRAKES"], ["TARGA", "PLATE"], ["ROSSO", "RED"], ["CIANO", "CYAN"], ["VIOLA", "PURPLE"], ["TUTA", "SUIT"], ["VISO", "FACE"], ["NASO", "NOSE"], ["POSA", "POSE"], ["CODA", "PONYTAIL"], ["TIPO", "TYPE"], ["PALE", "BLADES"], ["VELE", "SAILS"], ["RESA", "EFFICIENCY"], ["NODI", "KNOTS"], ["VIA!", "GO!"], ["GARE", "RACES"], ["GIRI", "LAPS"], ["ALTA", "HIGH"], ["ONDA", "WAVE"], ["ALLE", "TO"], ["SERA", "EVENING"], ["NEVE", "SNOW"], ["GIRO", "LAP"], ["GARA", "RACE"], ["giri", "laps"], ["LUCI", "LIGHTS"], ["VOLO", "FLIGHT"], ["PESO", "WEIGHT"], ["ERBA", "GRASS"], ["NERO", "BLACK"], ["BLU", "BLUE"], ["GIÙ", "DOWN"], ["PIT", "PIT"], ["ORO", "GOLD"], ["SU", "UP"], ["SÌ", "YES"]];
+  const PAIRS = [["W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi", "W/S forward-back · A/D turn · Q/E strafe · SPACE rise · X descend · F tractor beam · SHIFT boost · C view · ENTER leave the helm"], ["\"Quando avviarlo\" (in carica / sul dock) e il timeout dello schermo. Questo programma regola cosa fa Cybercity da lì in poi.", "\"When to start\" (charging / docked) and the screen timeout. This app controls what Cybercity does from there on."], ["P atmosfera · M meteo · V colore · E propulsione · T capote · X scarico · Q crono · F volo (LEVITA) · B suono · H aiuto", "P atmosphere · M weather · V colour · E power unit · T roof · X exhaust · Q chrono · F flight (LEVITA) · B sound · H help · L language"], ["Ogni fascia sceglie cosa mostrare (città con la sua atmosfera, solo orologio, nero o niente) e con che luminosità. ", "Each time slot chooses what to show (city with its atmosphere, clock only, black or nothing) and how bright. "], ["W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D yaw · Q/E strafe · SPACE up · X down · SHIFT boost · C view · G fleet · ENTER race"], ["A PIEDI · W/S cammina · A/D gira · Q/E laterale · SHIFT corri · SPAZIO salta · INVIO vicino all'auto per salire", "ON FOOT · W/S walk · A/D turn · Q/E sidestep · SHIFT run · SPACE jump · ENTER near the car to get in"], ["W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara", "W thrust · S reverse · A/D rudder · SHIFT boost · drive from road to water · C view · G fleet · ENTER race"], ["Ogni tanto: giro dell'auto con configurazioni casuali e corsa in città col pilota automatico (senza suono)", "Now and then: a turnaround of the car in random configurations and an autopilot run through the city (no sound)"], ["W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara", "W/S forward-back · A/D rudder · SPACE rise · X dive · SHIFT boost · C view · G fleet · ENTER race"], ["W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO regata", "W/S hoist-lower sails · A/D helm · SHIFT assist · SPACE cannons · C view · G fleet · ENTER regatta"], ["Scegli un effetto e lo vedi subito sulla città; nell'anteprima il tasto METEO li fa scorrere tutti", "Pick an effect and see it on the city right away; in the preview the WEATHER button cycles through all of them"], ["Wankel quadrirotore 2.616 cc (4 × 654 cc) a idrogeno · ibrido con motore elettrico assiale", "2,616 cc quad-rotor Wankel (4 × 654 cc) on hydrogen · hybrid with axial electric motor"], ["Propulsione elettromagnetica · 4 sfere a levitazione con motori a flusso assiale integrati", "Electromagnetic drive · 4 levitating spheres with integrated axial-flux motors"], ["Quando parte il salvaschermo lo decide Android: Impostazioni → Display → Salvaschermo → ", "When the screensaver starts is decided by Android: Settings → Display → Screen saver → "], ["2.400 Nm istantanei · vettorializzazione su 360° (le sfere rotolano in ogni direzione)", "2,400 Nm instant · 360° vectoring (the spheres roll in any direction)"], ["Anteprima dal vivo: ogni modifica si vede subito (gli effetti qui partono più spesso)", "Live preview: every change shows immediately (effects start more often here)"], ["Se la modalità Non disturbare (o una modalità Focus/Bedtime) è attiva, niente città", "If Do Not Disturb (or a Focus/Bedtime mode) is on, no city"], ["A BORDO DEL KAGE XENO · esplora la nave · plancia davanti, raggio dietro il nucleo", "ABOARD THE KAGE XENO · explore the ship · bridge ahead, beam behind the core"], ["Serve solo per leggere le icone delle app; nessun contenuto viene letto o salvato.", "Only used to read the app icons; no content is read or stored."], ["1.020 Nm combinati (rotori 640 Nm a 7.800 giri/min + coppia istantanea elettrica)", "1,020 Nm combined (rotors 640 Nm at 7,800 rpm + instant electric torque)"], ["W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara", "W throttle · S brake · A/D lean · SHIFT boost · C view · G fleet · ENTER race"], ["W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO gara", "W throttle · S reverse · A/D helm · SHIFT N₂O · C view · G fleet · ENTER race"], ["Doppia frizione 8 rapporti · trazione integrale e-AWD con torque vectoring", "8-speed dual clutch · e-AWD all-wheel drive with torque vectoring"], ["Droni KAGE STRIX al posto delle scie volanti, barche e galeone nel canale", "KAGE STRIX drones instead of the flying trails, boats and a galleon on the canal"], ["860 CV a idrogeno + 260 CV elettrici = 1120 CV (824 kW) a 10.200 giri/min", "860 hp hydrogen + 260 hp electric = 1120 hp (824 kW) at 10,200 rpm"], ["Fonte: Open-Meteo (gratuito, senza account). Si aggiorna ogni 30 minuti.", "Source: Open-Meteo (free, no account). Updates every 30 minutes."], ["P atmosfera · M meteo · V colore auto · B suono · R riparti · H aiuto", "P atmosphere · M weather · V car colour · B sound · R restart · H help"], ["780 CV termici + 220 CV elettrici = 1000 CV (735 kW) a 8.200 giri/min", "780 hp combustion + 220 hp electric = 1000 hp (735 kW) at 8,200 rpm"], ["Sotto l'orologio: un'icona per ogni app con notifiche, senza numeri", "Under the clock: one icon per app with notifications, no numbers"], ["Posizione non disponibile: apri Maps una volta o scrivi la città", "Location unavailable: open Maps once or type the city"], ["F = schermo intero · Spazio = cambia telecamera · P = atmosfera", "F = full screen · Space = change camera · P = atmosphere"], ["1.390 kg · serbatoi H₂ a 700 bar in fibra di carbonio (6,4 kg)", "1,390 kg · 700 bar carbon-fibre H₂ tanks (6.4 kg)"], ["Si sposta di poco ogni minuto per proteggere lo schermo OLED", "Moves slightly every minute to protect the OLED screen"], ["V8 4.0 L biturbo ibrido · motore elettrico assiale anteriore", "4.0 L twin-turbo hybrid V8 · front axial electric motor"], ["11 km · 31 curve · pit lane con rifornimento e cambio gomme", "11 km · 31 corners · pit lane with refuelling and tyre change"], ["QUANDO È NASCOSTO (lavoro / non disturbare / fuori fascia)", "WHEN HIDDEN (work / do not disturb / outside slots)"], ["Se stacchi il caricatore il salvaschermo si chiude subito", "Unplugging the charger closes the screensaver immediately"], ["INDIRIZZO PERDUTO RICOMPOSTO · PALETTE ECO SBLOCCATA (P)", "LOST ADDRESS RESTORED · ECO PALETTE UNLOCKED (P)"], ["Spento = fuori fascia usa atmosfera e luminosità globali", "Off = outside the slots the global atmosphere and brightness are used"], ["reattore a fusione compatto da 2 MW · eliche retrattili", "2 MW compact fusion reactor · retractable propellers"], ["0–100 km/h 2,4 s · 0–200 km/h 6,9 s · 0–300 km/h 17,8 s", "0–100 km/h 2.4 s · 0–200 km/h 6.9 s · 0–300 km/h 17.8 s"], ["0–100 km/h 2,3 s · 0–200 km/h 6,5 s · 0–300 km/h 16,4 s", "0–100 km/h 2.3 s · 0–200 km/h 6.5 s · 0–300 km/h 16.4 s"], ["0–100 km/h 1,8 s · 0–200 km/h 5,2 s · 0–300 km/h 12,9 s", "0–100 km/h 1.8 s · 0–200 km/h 5.2 s · 0–300 km/h 12.9 s"], ["Icona, temperatura e condizione (con meteo automatico)", "Icon, temperature and condition (with automatic weather)"], ["Sfere Ø 670 mm con battistrada in elastomero a grafene", "Ø 670 mm spheres with graphene elastomer tread"], ["28 kWh a stato solido · ronzio elettrostatico di serie", "28 kWh solid-state · electrostatic hum as standard"], ["VOLO LIBERO · F raggio traente sopra strade e persone", "FREE FLIGHT · F tractor beam over streets and people"], ["Vince la prima fascia attiva che corrisponde all'ora.", "The first active slot matching the time wins."], ["18 kWh allo stato solido · boost a supercondensatori", "18 kWh solid-state · supercapacitor boost"], ["RISOLUZIONE MODELLI (KAGE GT, DRONE, BARCA, GALEONE)", "MODEL RESOLUTION (KAGE GT, DRONE, BOAT, GALLEON)"], ["In questo orario il salvaschermo non mostra la città", "During these hours the screensaver doesn't show the city"], ["100–0 km/h in 29 m · dischi carboceramici 410/390 mm", "100–0 km/h in 29 m · 410/390 mm carbon-ceramic discs"], ["Deportanza 520 kg a 250 km/h · ala posteriore attiva", "520 kg downforce at 250 km/h · active rear wing"], ["6,2 kWh · boost elettrico 18 s · ricarica in frenata", "6.2 kWh · 18 s electric boost · regenerative braking"], ["QUANDO ROVESCI IL TELEFONO (schermo verso il basso)", "WHEN YOU TURN THE PHONE OVER (screen down)"], ["integrale in carbonio · visiera a realtà aumentata", "full-face carbon · augmented-reality visor"], ["1.150 Nm combinati (800 Nm a 3.200–6.500 giri/min)", "1,150 Nm combined (800 Nm from 3,200–6,500 rpm)"], ["plancia, nucleo, mappa stellare, capsule di stasi", "bridge, core, star map, stasis pods"], ["Presa diretta · controllo di campo per ogni sfera", "Direct drive · field control per sphere"], ["18 cannoni a luce (stordiscono, non distruggono)", "18 light cannons (they stun, they do not destroy)"], ["PORTALE APERTO · attraversalo per tornare a casa", "PORTAL OPEN · cross it to go home"], ["PORTALE APERTO · attraversalo per entrare in ECO", "PORTAL OPEN · cross it to enter ECO"], ["4 × 320 kW = 1280 kW (1740 CV) · nessuno scarico", "4 × 320 kW = 1280 kW (1740 hp) · no exhaust"], ["gimbal 8K · LiDAR a 360° · radar anticollisione", "8K gimbal · 360° LiDAR · collision radar"], ["KAGE GARAGE · premi G per scegliere il veicolo", "KAGE GARAGE · press G to pick a vehicle"], ["Scie luminose di auto e spinner su più livelli", "Light trails of cars and spinners on several levels"], ["KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"], ["Salvaschermo 3D · città cyberpunk procedurale", "3D screensaver · procedural cyberpunk city"], ["L 4.70 m · L 2.06 m · H 1.24 m · passo 2.87 m", "L 4.70 m · W 2.06 m · H 1.24 m · wheelbase 2.87 m"], ["380 km/h (boost di campo) · 290 km/h di serie", "380 km/h (field boost) · 290 km/h standard"], ["Pilota collaudatore KAGE · auto, drone, mare", "KAGE test pilot · cars, drones, sea"], ["Posizione approssimativa, solo per il meteo", "Approximate location, only for the weather"], ["1.420 kg · rapporto peso/potenza 1,42 kg/CV", "1,420 kg · power-to-weight 1.42 kg/hp"], ["cuscino d'aria a 0,5 m · gonna in neoprene", "0.5 m air cushion · neoprene skirt"], ["FASCE ORARIE · QUALE SALVASCHERMO E QUANDO", "TIME SLOTS · WHICH SCREENSAVER AND WHEN"], ["🛠 SHOWROOM FLOTTA · DRONE, BARCA, GALEONE", "🛠 FLEET SHOWROOM · DRONE, BOAT, GALLEON"], ["Anteprima dal vivo · tocca per nascondere", "Live preview · tap to hide"], ["W/↑ accelera · S/↓ frena · A D/← → sterza", "W/↑ throttle · S/↓ brake · A D/← → steer"], ["345 km/h (con N₂O) · 260 km/h senza boost", "345 km/h (with N₂O) · 260 km/h without boost"], ["352 km/h (con N₂O) · 268 km/h senza boost", "352 km/h (with N₂O) · 268 km/h without boost"], ["5,0 kWh · allo scarico solo vapore acqueo", "5.0 kWh · only water vapour from the exhaust"], ["Drone da corsa e da ripresa · classe 2 m", "Racing and filming drone · 2 m class"], ["Galeone a tre alberi · rifacimento cyber", "Three-masted galleon · cyber rebuild"], ["Fuori dalle fasce: non mostrare la città", "Outside the slots: don't show the city"], ["METEO · NEBBIA, PIOGGIA, NEVE, TEMPORALE", "WEATHER · FOG, RAIN, SNOW, STORM"], ["RITARDO DOPO LA MESSA IN CARICA / AVVIO", "DELAY AFTER PLUGGING IN / START"], ["SPAZIO derapata · SHIFT nitro · C vista", "SPACE drift · SHIFT nitro · C view"], ["due corone di ingranaggi controrotanti", "two counter-rotating gear crowns"], ["220 kWh · ricarica rapida in 30 minuti", "220 kWh · 30-minute fast charge"], ["GIRO LIBERO · premi INVIO per una gara", "FREE ROAM · press ENTER for a race"], ["KAGE GT · CORSA IN CITTÀ (SENZA SUONO)", "KAGE GT · CITY RUN (NO SOUND)"], ["1.480 kg · altezza di levitazione 4 cm", "1,480 kg · 4 cm hover height"], ["INVIO · KAGE EPOCH: viaggia nel tempo", "ENTER · KAGE EPOCH: travel in time"], ["Cybercity oggi ⇄ prateria del passato", "Cybercity today ⇄ meadow of the past"], ["grigio, piccolo verde, nordico, ombra", "grey, little green, Nordic, shadow"], ["Rispetta il Non disturbare di Android", "Respect Android's Do Not Disturb"], ["DURATA ANIMAZIONE (0 = sempre accesa)", "ANIMATION LENGTH (0 = always on)"], ["🔊 tocca / premi un tasto per il suono", "🔊 tap / press a key for sound"], ["LE STRADE CAMBIANO QUANDO NON GUARDI", "THE STREETS CHANGE WHEN YOU ARE NOT LOOKING"], ["L 10,0 m · B 2,7 m · pescaggio 0,6 m", "L 10.0 m · beam 2.7 m · draft 0.6 m"], ["KAGE XENO · mettiti sotto il raggio", "KAGE XENO · stand under the beam"], ["Hovercraft anfibio · strada e acqua", "Amphibious hovercraft · road and water"], ["12 nodi a vela · 21 nodi con assist", "12 knots under sail · 21 knots with assist"], ["AUTO (ciclo di tutte le telecamere)", "AUTO (cycle all cameras)"], ["INVIO · fatti prelevare dal raggio", "ENTER · let the beam take you up"], ["2 propulsori elettrici orientabili", "2 vectoring electric thrusters"], ["34 m di scafo · 44 m col bompresso", "34 m hull · 44 m with the bowsprit"], ["PARTENZA DA FERMO · TIENI IL FRENO", "STANDING START · WAIT FOR THE LIGHTS"], ["DURATA DI OGNI INQUADRATURA (AUTO)", "LENGTH OF EACH SHOT (AUTO)"], ["265/30 R21 ant. · 325/25 R22 post.", "265/30 R21 front · 325/25 R22 rear"], ["motore assiale da 160 kW · 300 Nm", "160 kW axial-flux motor · 300 Nm"], ["ORARIO DI LAVORO · NON DISTURBARE", "WORK HOURS · DO NOT DISTURB"], ["INVIO · ai comandi del KAGE XENO", "ENTER · take the KAGE XENO's helm"], ["2 fuoribordo elettrici da 330 kW", "twin 330 kW electric outboards"], ["128 km/h sulle ali · 155 con N₂O", "128 km/h on the foils · 155 with N₂O"], ["KAGE GT · GIRO DELL'AUTO CASUALE", "KAGE GT · RANDOM TURNAROUND"], ["SERBATOIO VUOTO · RIENTRA AI BOX", "TANK EMPTY · RETURN TO THE PITS"], ["Imposta una città o la posizione", "Set a city or the location"], ["Animazione continua, senza pause", "Continuous animation, no pauses"], ["SFUMATURA CROMATICA IN MOVIMENTO", "MOVING COLOUR GRADIENT"], ["KAGE GARAGE · INVIO per partire", "KAGE GARAGE · ENTER to depart"], ["fino a 90 m · persone e veicoli", "up to 90 m · people and vehicles"], ["DODICI FRAMMENTI · UN INDIRIZZO", "TWELVE SHARDS · ONE ADDRESS"], ["COMPOSIZIONE INDIRIZZO · BLOCCO", "DIALLING ADDRESS · LOCK"], ["TELEFONO ROVESCIATO · NOTIFICHE", "PHONE FACE DOWN · NOTIFICATIONS"], ["SPENTO (usa la pioggia manuale)", "OFF (use manual rain)"], ["SPEGNI (schermo nero, 3D fermo)", "TURN OFF (black screen, 3D paused)"], ["ammasso delle Pleiadi (dicono)", "the Pleiades cluster (so they say)"], ["24 kWh · ricarica in 25 minuti", "24 kWh · 25-minute charge"], ["🌀 KAGE NEXUS · PORTALE PER ECO", "🌀 KAGE NEXUS · PORTAL TO ECO"], ["🌀 VAI AL PORTALE (N = componi)", "🌀 GO TO THE PORTAL (N = dial)"], ["Veicoli KAGE nello screensaver", "KAGE vehicles in the screensaver"], ["CONCEDI ACCESSO ALLE NOTIFICHE", "GRANT NOTIFICATION ACCESS"], ["FREQUENZA EFFETTI (ogni circa)", "EFFECT FREQUENCY (about every)"], ["LUMINOSITÀ IN PAUSA / NASCOSTO", "BRIGHTNESS PAUSED / HIDDEN"], ["22.000 giri/min (motori-sfera)", "22,000 rpm (sphere motors)"], ["verso la PRATERIA DEL PASSATO", "to the MEADOW OF THE PAST"], ["nucleo a plasma · antigravità", "plasma core · antigravity"], ["QUESTA CITTÀ SI RICORDA DI TE", "THIS CITY REMEMBERS YOU"], [" · FERMATI NEL BOX ILLUMINATO", " · STOP IN THE GLOWING BOX"], ["PIT LANE · LIMITATORE 80 KM/H", "PIT LANE · 80 KM/H LIMITER"], ["USA LA POSIZIONE DEL TELEFONO", "USE THE PHONE'S LOCATION"], ["PERSONALIZZATA (usa la barra)", "CUSTOM (use the slider)"], ["130 km/h · 210 km/h in boost", "130 km/h · 210 km/h with boost"], ["Scene KAGE GT nel ciclo AUTO", "KAGE GT scenes in the AUTO cycle"], ["Scrivi la città per il meteo", "Type the city for the weather"], ["🏎 KAGE CIRCUIT · PISTA 11 KM", "🏎 KAGE CIRCUIT · 11 KM TRACK"], ["🏁 KAGE CIRCUIT · PISTA 11 KM", "🏁 KAGE CIRCUIT · 11 KM TRACK"], ["Sottomarino da esplorazione", "Exploration submarine"], ["ignifuga in fibra aramidica", "fire-proof aramid fibre"], ["NESSUNA POSIZIONE IMPOSTATA", "NO LOCATION SET"], ["LUMINOSITÀ CITTÀ / OROLOGIO", "CITY / CLOCK BRIGHTNESS"], ["LUMINOSITÀ DEL SALVASCHERMO", "SCREENSAVER BRIGHTNESS"], ["Cybercity 3D — salvaschermo", "Cybercity 3D — screensaver"], ["2 eliche intubate da 1,4 m", "2 ducted fans, 1.4 m"], ["32 km/h · 50 km/h in boost", "32 km/h · 50 km/h with boost"], ["4 motori brushless da 9 kW", "4 brushless motors, 9 kW each"], ["6 motori brushless da 8 kW", "6 brushless motors, 8 kW each"], ["8 motori coassiali da 7 kW", "8 coaxial motors, 7 kW each"], ["RISOLUZIONE MODELLI: BASSA", "MODEL RESOLUTION: LOW"], ["Meteo non ancora scaricato", "Weather not downloaded yet"], ["INVIO · scendi col raggio", "ENTER · ride the beam down"], ["chiudi la porta… si parte", "close the door… here we go"], ["Cabina del tempo Art Déco", "Art Deco time cabin"], ["1 elica intubata da 2,2 m", "1 ducted fan, 2.2 m"], ["fari da 20.000 lm · sonar", "20,000 lm lights · sonar"], ["Motoscafo offshore · 10 m", "Offshore powerboat · 10 m"], [" (usa la pioggia manuale)", " (use manual rain)"], ["Lavoro / non disturbare: ", "Work / do not disturb: "], [" (fuori fascia: nascosto)", " (outside slots: hidden)"], ["CRONO · PRONTO A 300 KM/H", "CHRONO · READY AT 300 KM/H"], ["INCLINAZIONE DEL TELEFONO", "PHONE TILT"], ["IMPOSTA COME SALVASCHERMO", "SET AS SCREENSAVER"], ["PAUSA PRIMA CHE RICOMPAIA", "PAUSE BEFORE IT RETURNS"], ["pozzetto aperto, 2 posti", "open cockpit, 2 seats"], ["INVIO · scendi dall'auto", "ENTER · get out of the car"], ["elica intubata da 520 kW", "520 kW ducted fan"], ["ECO · UNIVERSO PARALLELO", "ECO · PARALLEL UNIVERSE"], ["KAGE GT · CORSA IN CITTÀ", "KAGE GT · CITY RUN"], ["AUTOMATICO (meteo reale)", "AUTOMATIC (real weather)"], ["3ª CIFRA (decine minuti)", "3rd DIGIT (tens of minutes)"], ["210 km/h · 430 in boost", "210 km/h · 430 with boost"], ["38 minuti in volo misto", "38 minutes of mixed flight"], ["25 kg nel vano ventrale", "25 kg in the belly bay"], ["⟲ TORNA SUBITO IN CITTÀ", "⟲ BACK TO THE CITY NOW"], ["🚁 DRONE · GARE IN CITTÀ", "🚁 DRONE · CITY RACES"], ["SERENO (nessun effetto)", "CLEAR (no effect)"], ["4ª CIFRA (unità minuti)", "4th DIGIT (minutes)"], ["EFFETTI GRAFICI CASUALI", "RANDOM GRAPHIC EFFECTS"], ["↺ RIPRENDI GARA SALVATA", "↺ RESUME SAVED RACE"], ["CAPOTE: APERTA (SPIDER)", "ROOF: OPEN (SPIDER)"], ["Solo quando è in carica", "Only while charging"], ["verso CYBERCITY · OGGI", "to CYBERCITY · TODAY"], ["95 km/h · 130 in boost", "95 km/h · 130 with boost"], ["1.200 m (laguna: 24 m)", "1,200 m (lagoon: 24 m)"], ["SIAMO SEMPRE STATI QUI", "WE HAVE ALWAYS BEEN HERE"], ["112 km/h · 140 con N₂O", "112 km/h · 140 with N₂O"], ["Meteo sotto l'orologio", "Weather under the clock"], ["GLITCH (strappi + RGB)", "GLITCH (tears + RGB)"], ["CRONO · TIENI 300 KM/H", "CHRONO · HOLD 300 KM/H"], ["⏳ PRATERIA DEL PASSATO", "⏳ MEADOW OF THE PAST"], ["CARBOCERAMICA · GIALLO", "CARBON-CERAMIC · YELLOW"], ["SCRITTA PERSONALIZZATA", "CUSTOM LETTERING"], ["a bordo del KAGE XENO", "aboard the KAGE XENO"], ["TI STAVAMO ASPETTANDO", "WE WERE WAITING FOR YOU"], ["9 m · pescaggio 3,0 m", "9 m · draft 3.0 m"], ["24 + 6 droni di bordo", "24 + 6 onboard drones"], ["NON MOSTRARE (chiudi)", "DON'T SHOW (close)"], ["Pioggia (senza meteo)", "Rain (without weather)"], ["1ª CIFRA (decine ore)", "1st DIGIT (tens of hours)"], ["COLORE PER OGNI CIFRA", "COLOUR PER DIGIT"], ["WebGL non disponibile", "WebGL not available"], ["ON (salto a 300 km/h)", "ON (jump at 300 km/h)"], ["luminosità di sistema", "system brightness"], ["ABERRAZIONE CROMATICA", "CHROMATIC ABERRATION"], ["GRAN GIRO DEL CENTRO", "GRAND DOWNTOWN LOOP"], ["APPARECCHIO ACUSTICO", "HEARING AID"], ["INVIO · sali in auto", "ENTER · get in the car"], ["VELE NEON A PANNELLI", "NEON PANEL SAILS"], ["SPENTO (usa pioggia)", "OFF (use rain)"], [" fasce orarie attive", " active time slots"], ["2ª CIFRA (unità ore)", "2nd DIGIT (hours)"], ["SFUMATURA · COLORE A", "GRADIENT · COLOUR A"], ["SFUMATURA · COLORE B", "GRADIENT · COLOUR B"], ["FERMO (anti burn-in)", "STILL (anti burn-in)"], ["RIMBALZO (stile DVD)", "BOUNCE (DVD style)"], ["CARBURANTE / ENERGIA", "FUEL / ENERGY"], ["AUTO HD NON CARICATA", "HD CAR NOT LOADED"], ["Auto HD non caricata", "HD car not loaded"], ["ACCIAIO · PINZE NEON", "STEEL · NEON CALIPERS"], ["INSEGUIMENTO LONTANO", "FAR CHASE"], ["QUALITÀ DI RENDERING", "RENDERING QUALITY"], ["FREQUENZA FOTOGRAMMI", "FRAME RATE"], ["KAGE XENO · INTERNO", "KAGE XENO · INTERIOR"], ["sistema sconosciuto", "unknown system"], ["Superbike elettrica", "Electric superbike"], ["0–100 km/h in 2,6 s", "0–100 km/h in 2.6 s"], ["ABISSI DELLA LAGUNA", "LAGOON DEPTHS"], ["A BORDO DEI VEICOLI", "ON BOARD THE VEHICLES"], ["IL FARO NON È VUOTO", "THE LIGHTHOUSE IS NOT EMPTY"], ["idrogetto da 600 kW", "600 kW water jet"], ["TU · KAGE LEVIATHAN", "YOU · KAGE LEVIATHAN"], ["RISOLUZIONE MODELLI", "MODEL RESOLUTION"], ["Risoluzione modelli", "Model resolution"], ["IN BASSO A SINISTRA", "BOTTOM LEFT"], ["🏁 SHOWROOM (garage)", "🏁 SHOWROOM (garage)"], ["DRONE A BASSA QUOTA", "LOW DRONE"], ["VELOCITÀ DEI COLORI", "COLOUR SPEED"], ["CHIUDI SALVASCHERMO", "CLOSE SCREENSAVER"], ["INDIRIZZO COMPLETO", "ADDRESS COMPLETE"], ["CHI GUIDA, ADESSO?", "WHO IS DRIVING NOW?"], ["CIRCUITO DEI VIALI", "AVENUES CIRCUIT"], ["⛵ GALEONE · REGATA", "⛵ GALLEON · REGATTA"], ["Aggiorno il meteo…", "Updating the weather…"], ["IN BASSO AL CENTRO", "BOTTOM CENTRE"], ["IN ALTO A SINISTRA", "TOP LEFT"], ["▶ GIOCA · NEON RUN", "▶ PLAY · NEON RUN"], ["WANKEL 4 ROTORI H₂", "QUAD-ROTOR WANKEL H₂"], ["VELOCITÀ MOVIMENTO", "MOVEMENT SPEED"], ["30 FPS (risparmio)", "30 FPS (saver)"], ["PIANTA DELLA CITTÀ", "CITY LAYOUT"], ["telecamera globale", "global camera"], ["luminosità globale", "global brightness"], ["VORTICE TEMPORALE", "TIME VORTEX"], ["2 bracci robotici", "2 robotic arms"], ["L 8,6 m · B 4,6 m", "L 8.6 m · W 4.6 m"], ["RUOTE SENZA MOZZO", "HUBLESS WHEELS"], ["CASUAL · MAGLIONE", "CASUAL · SWEATER"], ["TU · KAGE RIPTIDE", "YOU · KAGE RIPTIDE"], ["GIRO DELLA LAGUNA", "LAGOON LAP"], ["INVIO = rivincita", "ENTER = rematch"], ["Città non trovata", "City not found"], [" min dopo l'avvio", " min after start"], ["IN ALTO AL CENTRO", "TOP CENTRE"], ["TU · KAGE 2789 GT", "YOU · KAGE 2789 GT"], ["RISULTATI SALVATI", "SAVED RESULTS"], ["PERSONALIZZAZIONE", "CUSTOMISATION"], ["↺ RIPARTI DAL VIA", "↺ RESTART"], ["V8 BITURBO IBRIDO", "TWIN-TURBO HYBRID V8"], ["▶ ANTEPRIMA METEO", "▶ WEATHER PREVIEW"], ["+ AGGIUNGI FASCIA", "+ ADD SLOT"], ["GRAFICA (GLOBALE)", "GRAPHICS (GLOBAL)"], ["atmosfera globale", "global atmosphere"], ["STRADE SCIVOLOSE", "SLIPPERY STREETS"], ["MANI SUI FIANCHI", "HANDS ON HIPS"], ["BRACCIA CONSERTE", "ARMS CROSSED"], ["NON SEI IL PRIMO", "YOU ARE NOT THE FIRST"], ["🚤 BARCA · LAGUNA", "🚤 BOAT · LAGOON"], ["COME L'ATMOSFERA", "LIKE THE ATMOSPHERE"], ["CRONO · RICARICA", "CHRONO · RECHARGING"], ["NEON RUN · PAUSA", "NEON RUN · PAUSE"], ["LEVITA ELETTRICA", "LEVITA ELECTRIC"], ["VELOCITÀ DI VOLO", "FLIGHT SPEED"], ["Orario di lavoro", "Work hours"], ["GIORNI DI LAVORO", "WORK DAYS"], ["DURANTE LA PAUSA", "DURING THE PAUSE"], ["ORARIO DI LAVORO", "WORK HOURS"], ["BILANCIATA (85%)", "BALANCED (85%)"], ["Traffico volante", "Flying traffic"], ["DECODIFICA CIFRE", "DIGIT DECODE"], ["RAGGIO TRAENTE…", "TRACTOR BEAM…"], ["cintura esterna", "outer belt"], ["chiusa, 4 posti", "closed, 4 seats"], ["POZZETTO APERTO", "OPEN COCKPIT"], ["BRACCI ROBOTICI", "ROBOTIC ARMS"], ["👤 IL MIO PILOTA", "👤 MY PILOT"], ["il più vicino a", "nearest at"], ["TU · KAGE STRIX", "YOU · KAGE STRIX"], ["ANELLO DEL FARO", "LIGHTHOUSE RING"], ["REGATA DEL FARO", "LIGHTHOUSE REGATTA"], ["ASSIST. FUSIONE", "FUSION ASSIST"], ["EFFETTI CASUALI", "RANDOM EFFECTS"], ["10.500 giri/min", "10,500 rpm"], ["APERTA (SPIDER)", "OPEN (SPIDER)"], ["DOPPIA STRISCIA", "TWIN STRIPES"], ["Mostra orologio", "Show clock"], ["COME IL SISTEMA", "LIKE THE SYSTEM"], ["Icone notifiche", "Notification icons"], ["60 FPS (fluido)", "60 FPS (smooth)"], ["Orologio glitch", "Glitch clock"], ["SFARFALLIO NEON", "NEON FLICKER"], ["RAGGIO TRAENTE", "TRACTOR BEAM"], ["25 m · 3 ponti", "25 m · 3 decks"], ["DISCO CLASSICO", "CLASSIC DISC"], ["ANELLO ROTANTE", "SPINNING RING"], ["PROFONDITÀ MAX", "MAX DEPTH"], ["CERCHI A RAZZE", "SPOKED RIMS"], ["CARENATA SPORT", "SPORT FAIRING"], ["1 ELICA GRANDE", "1 LARGE FAN"], ["COLORE CAPELLI", "HAIR COLOUR"], ["GUARDA IN ALTO", "LOOK UP"], ["TORNA INDIETRO", "GO BACK"], ["CANNONI PRONTI", "CANNONS READY"], ["CANNONI A LUCE", "LIGHT CANNONS"], ["BATTERIA BOOST", "BOOST BATTERY"], ["COLORE ACCENTI", "ACCENT COLOUR"], ["ELICA INTUBATA", "DUCTED FAN"], ["VELE CLASSICHE", "CLASSIC SAILS"], ["BASSA (veloce)", "LOW (fast)"], ["CORSA IN CITTÀ", "CITY RUN"], ["In carica e no", "Charging or not"], ["Solo in carica", "Only while charging"], ["9.000 giri/min", "9,000 rpm"], ["🔧 SERVIZIO BOX", "🔧 PIT SERVICE"], ["BLU ANODIZZATO", "ANODISED BLUE"], ["🎨 PERSONALIZZA", "🎨 CUSTOMISE"], ["SCHEDA TECNICA", "SPECIFICATIONS"], ["VOLO SUL VIALE", "AVENUE FLIGHT"], ["PISTA ASCIUTTA", "DRY TRACK"], ["PISTA ALLAGATA", "FLOODED TRACK"], ["PROGRAMMAZIONE", "SCHEDULE"], ["PERSONALIZZATA", "CUSTOM"], ["NON DISTURBARE", "DO NOT DISTURB"], ["tutti i giorni", "every day"], ["BATTERIA (60%)", "BATTERY (60%)"], ["MASSIMA (100%)", "MAXIMUM (100%)"], ["RAGGIO ATTIVO", "BEAM ON"], ["Disco volante", "Flying saucer"], ["nessuno lo sa", "nobody knows"], ["GRANDE CUPOLA", "GREAT DOME"], ["PICCOLO VERDE", "LITTLE GREEN"], ["LED integrati", "integrated LEDs"], ["SOSTENTAMENTO", "LIFT"], ["LAGUNA VELOCE", "FAST LAGOON"], ["CABINA CHIUSA", "CLOSED CABIN"], ["🤿 SOTTOMARINO", "🤿 SUBMARINE"], ["IL MIO PILOTA", "MY PILOT"], ["pronto al via", "ready to go"], ["CASTANO SCURO", "DARK BROWN"], ["BOX · SQUADRA", "PIT · CREW"], ["GIRO MIGLIORE", "BEST LAP"], ["SFIDA A TEMPO", "TIME ATTACK"], ["COLORE CERCHI", "RIM COLOUR"], ["COLORE LIVREA", "LIVERY COLOUR"], ["SOPRA I TETTI", "ABOVE THE ROOFTOPS"], ["PISTA BAGNATA", "WET TRACK"], ["EFFETTO METEO", "WEATHER EFFECT"], ["BAGLIORE NEON", "NEON GLOW"], ["CICLO E AVVIO", "CYCLE AND START"], ["Fascia attiva", "Slot active"], ["COSA MOSTRARE", "WHAT TO SHOW"], ["FASCIA ORARIA", "TIME SLOT"], ["SOLO OROLOGIO", "CLOCK ONLY"], ["nessun giorno", "no days"], ["Scanlines CRT", "CRT scanlines"], ["PIXEL SOTTILE", "THIN PIXEL"], ["NEON CONTORNO", "NEON OUTLINE"], ["LED A PUNTINI", "DOT LED"], ["ACCELERAZIONE", "ACCELERATION"], ["BRONZO SCURO", "DARK BRONZE"], ["DESTINAZIONI", "DESTINATIONS"], ["ATTREZZATURA", "EQUIPMENT"], ["SOPRACCIGLIA", "EYEBROWS"], ["CARICO UTILE", "PAYLOAD"], ["DISLOCAMENTO", "DISPLACEMENT"], ["MIGLIOR GIRO", "BEST LAP"], ["X8 COASSIALE", "X8 COAXIAL"], ["2 FUORIBORDO", "TWIN OUTBOARD"], ["↺ NUOVA GARA", "↺ NEW RACE"], ["PULSANTI ◀ ▶", "BUTTONS ◀ ▶"], ["🔥 SU DI GIRI", "🔥 REV IT"], ["MODULO CRONO", "CHRONO MODULE"], ["SUONO MOTORE", "ENGINE SOUND"], ["INSEGUIMENTO", "CHASE"], ["BIANCO PERLA", "PEARL WHITE"], ["IMPOSTAZIONI", "SETTINGS"], ["AGGIORNA ORA", "UPDATE NOW"], ["VELOCITÀ MAX", "TOP SPEED"], ["CAMPO VISIVO", "FIELD OF VIEW"], ["SCHERMO NERO", "BLACK SCREEN"], ["FUORI FASCIA", "OUTSIDE SLOTS"], ["COLORE UNICO", "SINGLE COLOUR"], ["DERIVA LENTA", "SLOW DRIFT"], ["AUTO (ciclo)", "AUTO (cycle)"], ["TRASMISSIONE", "TRANSMISSION"], ["AERODINAMICA", "AERODYNAMICS"], ["TRASPARENTE", "CLEAR"], ["SOTTOMARINO", "SUBMARINE"], ["PILOTA KAGE", "KAGE PILOT"], ["CORPORATURA", "BUILD"], ["PRONUNCIATO", "PROMINENT"], ["RISOLUZIONE", "RESOLUTION"], ["GIRO LIBERO", "FREE ROAM"], ["FLOTTA KAGE", "KAGE FLEET"], ["VELE SOLARI", "SOLAR SAILS"], ["LEGNO SCURO", "DARK WOOD"], ["GIRO VELOCE", "FASTEST LAP"], ["ORO · ROSSO", "GOLD · RED"], ["COLORE AUTO", "CAR COLOUR"], ["ROSSO CORSA", "RACING RED"], ["PUNTI DRIFT", "DRIFT POINTS"], ["PISTA UMIDA", "DAMP TRACK"], ["PROPULSIONE", "POWER UNIT"], ["PIATTAFORMA", "PLATFORM"], ["SATURAZIONE", "SATURATION"], ["PIOGGERELLA", "DRIZZLE"], ["MECCANISMO", "MECHANISM"], ["VISITATORI", "VISITORS"], ["PROFONDITÀ", "DEPTH"], ["CARENATURA", "FAIRING"], ["PENSIEROSO", "THOUGHTFUL"], ["🧑‍🚀 PILOTA", "🧑‍🚀 PILOT"], ["CARNAGIONE", "SKIN TONE"], ["VIOLA NEON", "NEON VIOLET"], ["ORA LOCALE", "LOCAL TIME"], ["EQUIPAGGIO", "CREW"], ["PORTO NEON", "NEON HARBOUR"], ["IN PLANATA", "PLANING"], ["PROTEZIONI", "GUARDS"], ["COLORE LED", "LED COLOUR"], ["CATAMARANO", "CATAMARAN"], ["PARAELICHE", "PROP GUARDS"], ["MOTORE OFF", "ENGINE OFF"], ["CARBURANTE", "FUEL"], ["CINEMATICA", "CINEMATIC"], ["CLASSIFICA", "STANDINGS"], ["FRENO A M.", "HANDBRAKE"], ["luminosità", "brightness"], ["LUMINOSITÀ", "BRIGHTNESS"], ["Bilanciata", "Balanced"], ["Telecamera", "Camera"], ["CONDENSATO", "CONDENSED"], ["7 SEGMENTI", "7 SEGMENTS"], ["ARCOBALENO", "RAINBOW"], ["PULSAZIONE", "PULSE"], ["TELECAMERA", "CAMERA"], ["DIMENSIONE", "SIZE"], ["REGIME MAX", "REDLINE"], ["DIMENSIONI", "DIMENSIONS"], ["PNEUMATICI", "TYRES"], ["▶ RIPRENDI", "▶ RESUME"], ["PRELEVATI", "ABDUCTED"], ["IN STRADA", "ON ROAD"], ["BATISCAFO", "BATHYSCAPHE"], ["MUSCOLOSO", "MUSCULAR"], ["STEMPIATI", "RECEDING"], ["INDOSSATO", "ON"], ["OLIVASTRA", "OLIVE"], ["SQUADRATO", "SQUARE"], ["ALLUNGATO", "LONG"], ["ACCENNATA", "STUBBLE"], ["SQUADRATI", "SQUARE"], ["FRAMMENTI", "SHARDS"], ["FRAMMENTO", "SHARD"], ["AUTONOMIA", "ENDURANCE"], ["disarmato", "unarmed"], ["LUNGHEZZA", "LENGTH"], ["ALTISSIMA", "ULTRA"], ["ARMAMENTO", "ARMAMENT"], ["IDROGETTO", "WATER JET"], ["GIRO AUTO", "TURNAROUND"], ["MOTORE ON", "ENGINE ON"], ["DALL'ALTO", "TOP DOWN"], ["NERO NEON", "NEON BLACK"], ["AVVERSARI", "OPPONENTS"], ["SERBATOIO", "TANK"], ["ANTEPRIMA", "PREVIEW"], ["DUE PUNTI", "COLON"], ["Atmosfera", "Atmosphere"], ["AL CENTRO", "CENTRE"], ["MERCOLEDÌ", "WEDNESDAY"], ["ATMOSFERA", "ATMOSPHERE"], ["MOVIMENTO", "MOVEMENT"], ["POSIZIONE", "POSITION"], ["TEMPORALE", "STORM"], ["VARIABILE", "VARIABLE"], ["ABITACOLO", "COCKPIT"], ["ELABORATO", "SPORT"], ["▶ GUIDALA", "▶ DRIVE IT"], ["CARRELLO", "LANDING GEAR"], ["DIAMETRO", "DIAMETER"], ["👽 ALIENI", "👽 ALIENS"], ["1.900 kg", "1,900 kg"], ["IN ACQUA", "ON WATER"], ["IN SELLA", "IN THE SADDLE"], ["OCCHIALI", "GLASSES"], ["ATLETICO", "ATHLETIC"], ["BLU NEON", "NEON BLUE"], ["PIZZETTO", "GOATEE"], ["NOCCIOLA", "HAZEL"], ["IN PIEDI", "STANDING"], ["VELATURA", "SAIL PLAN"], ["VELOCITÀ", "SPEED"], ["SUI FOIL", "ON FOILS"], ["in gara…", "racing…"], ["ALISCAFO", "HYDROFOIL"], ["INDIETRO", "BACK"], ["FORGED Y", "FORGED Y"], ["PARAURTI", "BUMPER"], ["MODALITÀ", "MODE"], ["MIGLIORE", "BEST"], ["ADERENZA", "GRIP"], ["Velocità", "Speed"], ["CITTÀ 3D", "3D CITY"], ["Batteria", "Battery"], ["DOMENICA", "SUNDAY"], ["OROLOGIO", "CLOCK"], ["NUVOLOSO", "CLOUDY"], ["PRATERIA", "MEADOW"], ["PORTIERE", "DOORS"], ["LATERALE", "SIDE STRIPE"], ["BATTERIA", "BATTERY"], ["A BORDO", "ON BOARD"], ["METALLO", "METAL"], ["NORDICO", "NORDIC"], ["ORIGINE", "ORIGIN"], ["PALLIDA", "PALE"], ["PLATINO", "PLATINUM"], ["⏳ EPOCH", "⏳ EPOCH"], ["ENERGIA", "ENERGY"], ["NORMALI", "NORMAL"], ["SOTTILI", "THIN"], ["POLLICE", "THUMBS UP"], ["CAMMINA", "WALK"], ["con LED", "with LED"], ["LICENZE", "LICENCES"], ["ALTEZZA", "HEIGHT"], ["CAPELLI", "HAIR"], ["ROBUSTO", "STOCKY"], ["AMBRATA", "AMBER"], ["PICCOLO", "SMALL"], ["CASTANO", "BROWN"], ["MARRONI", "BROWN"], ["AZZURRI", "BLUE"], ["SENSORI", "SENSORS"], ["CASUALE", "RANDOM"], ["GALEONE", "GALLEON"], ["ARGENTO", "SILVER"], ["ARANCIO", "ORANGE"], ["CANNONI", "CANNONS"], ["LONTANA", "FAR"], ["PLANCIA", "BRIDGE"], ["PLANATA", "GLIDE"], ["ATTUALE", "CURRENT"], ["Massima", "Maximum"], ["Qualità", "Quality"], ["FLUTTUA", "FLOAT"], ["GIRO 3D", "3D SPIN"], ["MARTEDÌ", "TUESDAY"], ["GIOVEDÌ", "THURSDAY"], ["VENERDÌ", "FRIDAY"], ["NESSUNO", "NONE"], ["NESSUNA", "NONE"], ["ANNULLA", "CANCEL"], ["ELIMINA", "DELETE"], ["GLOBALE", "GLOBAL"], ["PIOGGIA", "RAIN"], ["INTERNI", "INTERIOR"], ["⟳ RUOTA", "⟳ ROTATE"], ["SCARICO", "EXHAUST"], ["SCRITTA", "LETTERING"], ["APPLICA", "APPLY"], ["POTENZA", "POWER"], ["FRENATA", "BRAKING"], ["ASFALTO", "ASPHALT"], ["CORDOLO", "KERB"], ["COLORE:", "COLOUR:"], ["ARRIVO", "ARRIVAL"], ["OTTONE", "BRASS"], ["SPECIE", "SPECIES"], ["TUNICA", "TUNIC"], ["GRIGIO", "GREY"], ["14 ore", "14 hours"], ["CABINA", "CABIN"], ["SILURO", "TORPEDO"], ["GIALLO", "YELLOW"], ["🏍 MOTO", "🏍 MOTORBIKE"], ["SALUTO", "WAVE"], ["INDICA", "POINT"], ["ESULTA", "CHEER"], ["SNELLO", "SLIM"], ["CHIARA", "FAIR"], ["ROSATA", "ROSY"], ["RASATI", "BUZZ CUT"], ["CIUFFO", "QUIFF"], ["LUNGHI", "LONG HAIR"], ["CRESTA", "MOHAWK"], ["BIONDO", "BLOND"], ["VISORE", "VISOR"], ["BAGLIO", "BEAM"], ["FLOTTA", "FLEET"], ["TELAIO", "FRAME"], ["SCOCCA", "SHELL"], ["ELICHE", "PROPELLERS"], ["PRONTI", "READY"], ["AVANTI", "FWD"], ["🔧 VAI!", "🔧 GO!"], ["PILOTA", "DRIVER"], ["ULTIMO", "LAST"], ["RECORD", "RECORD"], ["ORBITA", "ORBIT"], ["LUNEDÌ", "MONDAY"], ["SABATO", "SATURDAY"], ["COLORI", "COLOURS"], ["FASCIA", "SLOT"], ["MOSTRA", "SHOW"], ["IGNORA", "IGNORE"], ["SPENTO", "OFF"], ["SERENO", "CLEAR"], ["NEBBIA", "FOG"], ["GIORNO", "DAY"], ["ORARIO", "TIME"], ["NIENTE", "NONE"], ["COFANO", "BONNET"], ["MOTORE", "ENGINE"], ["STERZO", "STEERING"], ["COLORE", "COLOUR"], ["CAPOTE", "ROOF"], ["CHIUSA", "CLOSED"], ["CERCHI", "RIMS"], ["LIVREA", "LIVERY"], ["COPPIA", "TORQUE"], ["✕ ESCI", "✕ EXIT"], ["GHIAIA", "GRAVEL"], ["BIANCO", "WHITE"], ["CHIUDI", "CLOSE"], ["OMBRA", "SHADOW"], ["VETRI", "GLASS"], ["UMANO", "HUMAN"], ["PIEGA", "LEAN"], ["RUOTE", "WHEELS"], ["GONNA", "SKIRT"], ["FOLTE", "THICK"], ["CORRE", "RUN"], ["RUOLO", "ROLE"], ["STATO", "STATUS"], ["CASCO", "HELMET"], ["BARBA", "BEARD"], ["OCCHI", "EYES"], ["TOLTO", "OFF"], ["SCURA", "DARK"], ["EBANO", "EBONY"], ["OVALE", "OVAL"], ["TONDO", "ROUND"], ["MEDIO", "MEDIUM"], ["CORTI", "SHORT"], ["RICCI", "CURLY"], ["CALVO", "BALD"], ["CORTA", "SHORT"], ["PIENA", "FULL"], ["BAFFI", "MOUSTACHE"], ["VERDI", "GREEN"], ["GRIGI", "GREY"], ["TONDI", "ROUND"], ["POSTI", "SEATS"], ["BARCA", "BOAT"], ["SCAFO", "HULL"], ["AMBRA", "AMBER"], ["VERDE", "GREEN"], ["VENTO", "WIND"], ["BORDO", "LEG"], ["RETRO", "REVERSE"], ["FUOCO", "FIRE"], ["BASSA", "LOW"], ["Parte", "Starts"], ["USURA", "WEAR"], ["Meteo", "Weather"], ["STILE", "STYLE"], ["TUTTI", "ALL"], ["TINTA", "HUE"], ["CITTÀ", "CITY"], ["CERCA", "SEARCH"], ["SALVA", "SAVE"], ["DALLE", "FROM"], ["NOTTE", "NIGHT"], ["GOMME", "TYRES"], ["PIENO", "FULL"], ["TIENI", "KEEP"], ["METEO", "WEATHER"], ["SFIDA", "CHALLENGE"], ["TEMPO", "TIME"], ["▶ VIA", "▶ GO"], ["FRENO", "BRAKE"], ["VISTA", "VIEW"], ["SERIE", "STOCK"], ["FRENI", "BRAKES"], ["TARGA", "PLATE"], ["ROSSO", "RED"], ["CIANO", "CYAN"], ["VIOLA", "PURPLE"], ["DOVE", "WHERE"], ["RAME", "COPPER"], ["FUMÉ", "SMOKED"], ["TUTA", "SUIT"], ["VISO", "FACE"], ["NASO", "NOSE"], ["POSA", "POSE"], ["CODA", "PONYTAIL"], ["TIPO", "TYPE"], ["PALE", "BLADES"], ["VELE", "SAILS"], ["RESA", "EFFICIENCY"], ["NODI", "KNOTS"], ["VIA!", "GO!"], ["GARE", "RACES"], ["GIRI", "LAPS"], ["ALTA", "HIGH"], ["ONDA", "WAVE"], ["ALLE", "TO"], ["SERA", "EVENING"], ["NEVE", "SNOW"], ["GIRO", "LAP"], ["GARA", "RACE"], ["giri", "laps"], ["LUCI", "LIGHTS"], ["VOLO", "FLIGHT"], ["PESO", "WEIGHT"], ["ERBA", "GRASS"], ["NERO", "BLACK"], ["BLU", "BLUE"], ["GIÙ", "DOWN"], ["PIT", "PIT"], ["ORO", "GOLD"], ["SU", "UP"], ["SÌ", "YES"]];
   const map = new Map(PAIRS), LET = 'A-Za-z\u00C0-\u00FF';
   const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), isL = c => /[A-Za-z\u00C0-\u00FF]/.test(c);
   const re = new RegExp(PAIRS.map(([k]) => (isL(k[0]) ? '(?<![' + LET + '])' : '') + esc(k) + (isL(k[k.length - 1]) ? '(?![' + LET + '])' : '')).join('|'), 'g');
@@ -127,14 +127,14 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /* ---------------- mesh builder ---------------- */
-function MB() { this.p = []; this.c = []; this.a = []; this.i = []; this.m = I3(); this.stack = []; this.flatN = []; }
+function MB() { this.p = []; this.c = []; this.a = []; this.i = []; this.m = I3(); this.stack = []; this.flatN = []; this.pt = []; this.part = ''; }
 MB.prototype.push = function (m) { this.stack.push(this.m); this.m = mul(this.m, m); return this; };
 MB.prototype.pop = function () { this.m = this.stack.pop(); return this; };
 MB.prototype.tp = function (p) { return ap(this.m, p); };
 /** material: { c:[r,g,b], e: emissive, slot, mode, a:[a,b,c] } — a can also be a function of the local point */
 MB.prototype.v = function (p, mat, lp) {
   const w = this.tp(p), n = this.p.length / 3;
-  this.p.push(w[0], w[1], w[2]);
+  this.p.push(w[0], w[1], w[2]); this.pt.push(this.part || this.tag || '');
   this.c.push(mat.c[0], mat.c[1], mat.c[2], mat.e || 0);
   const an = typeof mat.a === 'function' ? mat.a(lp || p, w) : (mat.a || [0, 0, 0]);
   this.a.push((mat.mode || 0) + 8 * (mat.slot || 0), an[0], an[1], an[2]);
@@ -213,7 +213,7 @@ MB.prototype.finish = function () {
   for (let k = 0; k < N.length; k += 3) { const l = Math.hypot(N[k], N[k + 1], N[k + 2]) || 1; N[k] /= l; N[k + 1] /= l; N[k + 2] /= l; }
   let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
   for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); y0 = Math.min(y0, P[k + 1]); y1 = Math.max(y1, P[k + 1]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
-  return { pos: new Float32Array(P), norm: N, col: new Float32Array(this.c), anim: new Float32Array(this.a), idx: I, verts: P.length / 3, bounds: [x0, y0, z0, x1, y1, z1] };
+  return { pos: new Float32Array(P), norm: N, col: new Float32Array(this.c), anim: new Float32Array(this.a), idx: I, verts: P.length / 3, bounds: [x0, y0, z0, x1, y1, z1], parts: this.pt };
 };
 
 /* ---------------- colours shared with the KAGE GT ---------------- */
@@ -244,6 +244,7 @@ function buildDrone(o) {
   const shell = o.shell;
   const L = shell === 'cargo' ? 1.45 : 1.3, Hk = shell === 'cargo' ? 1.35 : shell === 'stealth' ? 0.8 : 1;
   // fuselage: superellipse sections along z
+  mb.part = 'fusoliera';
   const ex = shell === 'stealth' ? 1.0 : shell === 'cargo' ? 4.0 : 2.6, ns = lo ? 8 : (shell === 'stealth' ? 8 : 18 * U);
   const st = lo ? [0, 0.3, 0.6, 1] : U > 1 ? Array.from({ length: 23 }, (_, k) => 0.5 - 0.5 * Math.cos(k / 22 * Math.PI)) : [0, 0.08, 0.22, 0.42, 0.6, 0.76, 0.9, 1];
   const prof = t => { // half width, half height, centre y
@@ -255,16 +256,20 @@ function buildDrone(o) {
   const rows = st.map(t => { const [w, h, cy] = prof(t), z = -L * 0.47 + t * L; const r = []; for (let k = 0; k <= ns; k++) { const q = se(k / ns * Math.PI * 2, ex); r.push([q[0] * w, cy + q[1] * h, z]); } return r; });
   mb.grid(rows, paint, true);
   // canopy / sensor glass on the top front
+  mb.part = 'vetro_sensori';
   { const cr = []; for (const t of (lo ? [0.45, 0.85] : [0.42, 0.55, 0.68, 0.8, 0.9])) { const [w, h, cy] = prof(t), z = -L * 0.47 + t * L, r = [];
       for (let k = 0; k <= 8; k++) { const a = -0.9 + k / 8 * 1.8; r.push([Math.sin(a) * w * 0.62, cy + h * (0.55 + 0.5 * Math.cos(a)) + 0.012, z]); } cr.push(r); }
     mb.grid(cr, glass, true); }
   // LED side strips and under-glow
+  mb.part = 'strisce_led';
   for (const sx of [-1, 1]) mb.box(sx * 0.27, 0.02, 0.0, 0.012, 0.022, L * 0.55, led);
   if (!lo) { mb.push(T(0, -0.13 * Hk, 0)); mb.torus(0.2, 0.012, 16 * U, 4 * U, mat(col(o.led, LEDS), 0.8, 3)); mb.pop(); }
   // tail fin
+  mb.part = 'deriva';
   mb.box(0, 0.14 * Hk, -L * 0.36, 0.02, 0.14, 0.22, acc, [1, 0.4]);
   mb.box(0, 0.2 * Hk, -L * 0.38, 0.024, 0.012, 0.2, led);
   // arms + motors + rotors
+  mb.part = 'bracci_motori';
   const frame = o.frame, nArm = frame === 'hexa' ? 6 : 4, R = DRONE_RIG.armR * (frame === 'hexa' ? 1.05 : 1);
   const angs = []; for (let k = 0; k < nArm; k++) angs.push(frame === 'hexa' ? (30 + k * 60) * Math.PI / 180 : (45 + k * 90) * Math.PI / 180);
   angs.forEach((a, k) => {
@@ -281,6 +286,7 @@ function buildDrone(o) {
       mb.push(T(0, lv > 0 ? 0.1 : -0.1, 0)); mb.cyl(-0.008, 0.008, 0.083, 0.083, lo ? 6 : 14 * U, led, false); mb.pop();
       const py = lv > 0 ? 0.135 : -0.135, dir = ((k + (lv > 0 ? 0 : 1)) % 2) ? 2 : 1, pv = [mx, mz];
       // hub + blades
+      mb.part = 'mozzo_pale';
       const rot = mat([0.06, 0.06, 0.07], 0, 0, dir, pv), tip = mat(col(o.accent), 0, 2, dir, pv);
       mb.push(T(0, py, 0)); mb.cyl(-0.02, 0.02, 0.03, 0.025, lo ? 4 : 8 * U, rot); mb.pop();
       const nb = lo ? 2 : o.blades;
@@ -296,15 +302,18 @@ function buildDrone(o) {
         for (const ga of [a + Math.PI * 0.75, a - Math.PI * 0.75]) mb.rod([0, 0.06, 0], [Math.sin(ga) * 0.46, py, Math.cos(ga) * 0.46], 0.01, 4, acc);
       }
       // nav lights on the outer side of the motor
+      mb.part = 'luci_navigazione';
       const navC = mz > 0 ? (mx > 0 ? [1, 0.08, 0.06] : [0.1, 1, 0.3]) : [1, 1, 1];
       mb.box(Math.sin(a) * 0.09, 0.05, Math.cos(a) * 0.09, 0.03, 0.03, 0.03, mz > 0 ? mat(navC, 1.2) : mat(navC, 1.6, 0, 7, [k * 0.37, 0, 0]));
       mb.pop();
     }
   });
   // gimbal camera under the nose
+  mb.part = 'gimbal_camera';
   mb.ellipsoid(0, -0.11 * Hk, L * 0.36, 0.075, 0.075, 0.075, lo ? 6 : 14 * U, lo ? 4 : 8 * U, carbon);
   if (!lo) { mb.push(M(T(0, -0.11 * Hk, L * 0.36 + 0.06), RX(Math.PI / 2))); mb.cyl(0, 0.03, 0.04, 0.035, 12 * U, glass); mb.cyl(0.029, 0.034, 0.02, 0.02, 8 * U, mat([0.1, 0.9, 1.0], 1.4)); mb.pop(); }
   // skids
+  mb.part = 'pattini';
   for (const sx of [-1, 1]) {
     if (!lo) { mb.rod([sx * 0.12, -0.1 * Hk, 0.2], [sx * 0.22, -0.3, 0.22], 0.012, 5, carbon);
     mb.rod([sx * 0.12, -0.1 * Hk, -0.2], [sx * 0.22, -0.3, -0.22], 0.012, 5, carbon); }
@@ -313,6 +322,7 @@ function buildDrone(o) {
   if (shell === 'cargo') { mb.box(0, -0.2, -0.02, 0.36, 0.14, 0.62, mat(col(o.accent), 0, 2)); mb.box(0, -0.2, -0.02, 0.37, 0.02, 0.5, led); }
   if (shell === 'stealth') { for (const sx of [-1, 1]) mb.box(sx * 0.18, 0.06, -0.32, 0.18, 0.01, 0.25, acc, [0.4, 1]); }
   // headlights
+  mb.part = 'fari';
   if (lo) mb.box(0, 0.0, L * 0.5 - 0.02, 0.2, 0.02, 0.02, mat([1, 0.97, 0.9], 1.6)); else for (const sx of [-1, 1]) mb.box(sx * 0.07, 0.0, L * 0.5 - 0.02, 0.06, 0.02, 0.02, mat([1, 0.97, 0.9], 1.6));
   const m = mb.finish(); m.kind = 'drone'; m.opts = o; return m;
 }
@@ -343,14 +353,17 @@ function buildBoat(o) {
     }
     const P = (x, y, z) => [ox + x, y, z];
     // bottom panels (keel → chine), sides (chine → rail → sheer) — separate so the chine stays a crisp edge
+    mb.part = 'carena';
     for (const sd of [-1, 1]) {
       mb.grid(secs.map(q => [P(0, q.k, q.z), P(sd * q.b * 0.92, q.kc, q.z)]), bottom, sd < 0);
       mb.grid(secs.map(q => [P(sd * q.b * 0.92, q.kc, q.z), P(sd * q.b, q.kc + 0.07, q.z), P(sd * q.b * 0.985, q.s - 0.18, q.z), P(sd * q.b * 0.96, q.s, q.z)]), paint, sd < 0);
       // neon waterline at the spray rail + livery stripe under the sheer
+      mb.part = 'linea_galleggiamento_neon';
       mb.grid(secs.slice(1, -2).map(q => [P(sd * (q.b + 0.012), q.kc + 0.06, q.z), P(sd * (q.b + 0.012), q.kc + 0.1, q.z)]), led, sd < 0);
       mb.grid(secs.slice(2, -1).map(q => [P(sd * (q.b * 0.99 + 0.01), q.s - 0.3, q.z), P(sd * (q.b * 0.975 + 0.01), q.s - 0.2, q.z)]), acc, sd < 0);
     }
     // transom
+    mb.part = 'specchio_poppa';
     const q = secs[0];
     mb.poly([P(-q.b * 0.96, q.s, q.z), P(q.b * 0.96, q.s, q.z), P(q.b * 0.985, q.s - 0.18, q.z), P(q.b, q.kc + 0.07, q.z), P(q.b * 0.92, q.kc, q.z), P(0, q.k, q.z), P(-q.b * 0.92, q.kc, q.z), P(-q.b, q.kc + 0.07, q.z), P(-q.b * 0.985, q.s - 0.18, q.z)].reverse(), paint);
     return secs;
@@ -360,28 +373,35 @@ function buildBoat(o) {
     const sL = hull(-0.95, 0.42, nst), sR = hull(0.95, 0.42, nst);
     deckL = sL.map(q => [-0.95 - q.b * 0.96, q.s, q.z]); deckR = sR.map(q => [0.95 + q.b * 0.96, q.s, q.z]);
     // tunnel between the hulls
+    mb.part = 'tunnel_scafi';
     mb.grid(sL.map((q, j) => [[-0.95 + q.b * 0.96, q.s - 0.1, q.z], [0.95 - sR[j].b * 0.96, sR[j].s - 0.1, q.z]]), bottom, true);
     // bridge deck covers the full width up to the bow of the hulls
+    mb.part = 'ponte';
   } else {
     const s = hull(0, 1, nst);
     deckL = s.map(q => [-q.b * 0.96, q.s, q.z]); deckR = s.map(q => [q.b * 0.96, q.s, q.z]);
   }
   // crowned deck
+  mb.part = 'coperta';
   mb.grid(deckL.map((l, j) => { const r = deckR[j], w = (r[0] - l[0]) / 2, cx = (r[0] + l[0]) / 2, y = l[1]; return [[l[0], y, l[2]], [cx - w * 0.5, y + 0.07, l[2]], [cx, y + 0.1, l[2]], [cx + w * 0.5, y + 0.07, l[2]], [r[0], y, r[2]]]; }), paint, false);
   // deck stripes
+  mb.part = 'strisce_coperta';
   mb.grid(deckL.slice(Math.round(nst * 0.15), Math.round(nst * 0.94)).map((l, j) => { const z = l[2], y = Sh((z - z0) / Lh) + 0.105; return [[-0.18, y, z], [0.18, y, z]]; }), acc, false);
   // cockpit canopy (glass bubble) + frame
+  mb.part = 'cupola_pozzetto';
   { const rows = []; const tz = lo ? [0.32, 0.45, 0.6] : U > 1 ? Array.from({ length: 14 }, (_, k) => 0.3 + k / 13 * 0.31) : [0.3, 0.36, 0.43, 0.5, 0.56, 0.61];
     for (const t of tz) { const z = z0 + t * Lh, w = (o.hull === 'catamaran' ? 1.15 : B(t) * 0.78), y = Sh(t) + 0.08, hgt = 0.62 * Math.sin((t - 0.29) / 0.33 * Math.PI) + 0.02, r = [];
       const nk = 10 * U; for (let k = 0; k <= nk; k++) { const a = -Math.PI / 2 + k / nk * Math.PI; r.push([Math.sin(a) * w, y + Math.cos(a) * hgt, z]); } rows.push(r); }
     mb.grid(rows, glass, true);
     const zf = z0 + 0.61 * Lh; mb.box(0, Sh(0.61) + 0.12, zf, (o.hull === 'catamaran' ? 2.3 : B(0.61) * 1.56), 0.06, 0.08, acc); }
   // radar arch with LED bar
+  mb.part = 'arco_radar';
   { const z = z0 + 0.25 * Lh, w = o.hull === 'catamaran' ? 1.55 : B(0.25) * 0.85, y = Sh(0.25);
     for (const sx of [-1, 1]) mb.rod([sx * w, y, z], [sx * w * 0.8, y + 1.05, z - 0.35], 0.06, lo ? 5 : 8, acc);
     mb.box(0, y + 1.07, z - 0.37, w * 1.7, 0.1, 0.32, acc); mb.box(0, y + 1.0, z - 0.2, w * 1.5, 0.03, 0.03, led);
     mb.box(0, y + 1.3, z - 0.42, 0.04, 0.4, 0.04, dark); mb.box(0, y + 1.52, z - 0.42, 0.07, 0.07, 0.07, mat([1, 1, 1], 1.6, 0, 7, [0.3, 0, 0])); }
   // engines
+  mb.part = 'motori';
   const zt = z0;
   if (o.engine === 'outboard') {
     for (const sx of (o.hull === 'catamaran' ? [-0.95, 0.95] : [-0.55, 0.55])) {
@@ -409,6 +429,7 @@ function buildBoat(o) {
     mb.box(0, y, z - 0.25, 0.04, 1.4, 0.6, acc, [1, 0.6]);
   }
   // hydrofoil struts and wings
+  mb.part = 'aliscafi';
   if (o.hull === 'hydrofoil') {
     for (const [z, w] of [[z0 + 0.72 * Lh, 2.3], [z0 + 0.12 * Lh, 1.7]]) {
       for (const sx of [-1, 1]) mb.box(sx * w * 0.42, -0.75, z, 0.06, 1.1, 0.4, acc);
@@ -417,6 +438,7 @@ function buildBoat(o) {
     }
   }
   // bow lights + nav
+  mb.part = 'luci_prua';
   const zb = z0 + 0.86 * Lh;
   for (const sx of [-1, 1]) {
     mb.box(sx * B(0.86) * 0.9, Sh(0.86) - 0.12, zb, 0.04, 0.05, 0.35, mat(sx > 0 ? [1, 0.1, 0.08] : [0.1, 1, 0.3], 1.2));
@@ -451,10 +473,12 @@ function buildGalleon(o) {
   for (const sd of [-1, 1]) {
     mb.grid(secs.map(q => sect(q).map(p => [sd * p[0], p[1], q.z])), paint, sd < 0);
     // wales (accent) and neon waterline
+    mb.part = 'cinte';
     for (const [y0, y1, m] of [[0.55, 0.75, acc], [2.25, 2.45, acc], [-0.05, 0.08, led]])
       mb.grid(secs.slice(1, -1).map(q => { const f = y => { const s = sect(q); for (let i = 0; i + 1 < s.length; i++) if (y >= s[i][1] && y <= s[i + 1][1]) return lerp(s[i][0], s[i + 1][0], (y - s[i][1]) / (s[i + 1][1] - s[i][1] || 1)); return q.b; };
         return [[sd * (f(y0) + 0.04), y0, q.z], [sd * (f(y1) + 0.04), y1, q.z]]; }), m, sd < 0);
     // gun ports: emissive light-cannon ports in a row
+    mb.part = 'portelli_cannoni';
     if (!lo || true) for (let g = 0; g < 9; g++) {
       const t = 0.3 + g * 0.055, z = z0 + t * Lh, x = sd * (B(t) * 0.995 + 0.05);
       mb.box(x, 1.45, z, 0.06, 0.5, 0.55, mat(col(o.led, LEDS), 1.2, 3));
@@ -462,11 +486,14 @@ function buildGalleon(o) {
     }
   }
   // transom with lit stern windows
+  mb.part = 'specchio_poppa_finestre';
   { const q = secs[0], s = sect(q); mb.poly(s.map(p => [-p[0], p[1], q.z]).reverse().concat(s.map(p => [p[0], p[1], q.z])).reverse(), paint); }
   // decks
+  mb.part = 'ponti';
   const deckAt = (t0, t1, y, m) => mb.grid(secs.filter(q => q.t >= t0 - 1e-6 && q.t <= t1 + 1e-6).map(q => [[-q.b * 0.88, y, q.z], [0, y + 0.05, q.z], [q.b * 0.88, y, q.z]]), m, false);
   deckAt(0, 1, GALLEON_RIG.deckY, wood);
   // stern castle (quarterdeck) and forecastle
+  mb.part = 'castelli';
   { const zA = z0 - 0.2, zB = z0 + 0.3 * Lh, yB = 4.3, yT = 6.6, wA = 3.3, wB = 4.2;
     const C = [[-wA, yB, zA], [wA, yB, zA], [wA, yT + 0.6, zA], [-wA, yT + 0.6, zA], [-wB, yB, zB], [wB, yB, zB], [wB, yT, zB], [-wB, yT, zB]];
     for (const f of [[1, 5, 6, 2], [4, 0, 3, 7], [3, 2, 6, 7], [5, 4, 7, 6], [0, 1, 2, 3]]) mb.poly(f.map(k => C[k]), f[0] === 0 ? paint : f[0] === 3 ? wood : paint);
@@ -475,17 +502,21 @@ function buildGalleon(o) {
     mb.box(0, yT + 0.75, zA + 0.05, wA * 2 + 0.3, 0.2, 0.3, acc);
     for (const sx of [-1, 1]) mb.box(sx * (wB + 0.05), yT - 0.3, (zA + zB) / 2, 0.08, 0.15, zB - zA, led);
     // stern lanterns
+    mb.part = 'fanali_poppa';
     for (const sx of [-2.6, 0, 2.6]) { mb.rod([sx, yT + 0.8, zA + 0.1], [sx, yT + 2.0, zA - 0.4], 0.05, 5, dark); mb.ellipsoid(sx, yT + 2.2, zA - 0.45, 0.3, 0.42, 0.3, 8, 6, mat([1, 0.8, 0.45], 1.6)); }
     const zF = z0 + 0.84 * Lh, zG = z0 + 0.98 * Lh; deckAt(0.84, 0.97, 4.4, wood);
     mb.box(0, 3.9, zF, 7.2, 1.0, 0.25, paint);
   }
   // bulwark rails (accent caps)
+  mb.part = 'parapetti';
   for (const sd of [-1, 1]) mb.grid(secs.slice(Math.round(nst * 0.28), nst).map(q => [[sd * q.b * 0.9, q.s, q.z], [sd * q.b * 0.9, q.s + 0.18, q.z]]), acc, sd < 0);
   // bowsprit + neon spire figurehead
+  mb.part = 'bompresso_polena';
   const zBow = z0 + Lh;
   mb.rod([0, 4.2, zBow - 3], [0, 8.2, zBow + 9], 0.32, 8, wood, 0.14);
   mb.rod([0, 2.6, zBow - 0.4], [0, 3.6, zBow + 2.2], 0.25, 8, mat(col(o.led, LEDS), 1.4, 3), 0.02);
   // masts, tops, yards, sails
+  mb.part = 'alberi';
   const D = GALLEON_RIG.deckY, sailM = o.sails;
   const sailCol = sailM === 'classic' ? [0.86, 0.81, 0.69] : sailM === 'solar' ? [0.04, 0.09, 0.2] : [0.05, 0.055, 0.08];
   function squareSail(mz, yTop, yBot, wTop, wBot, nu, nv) {
@@ -494,6 +525,7 @@ function buildGalleon(o) {
     const sm = (c, e, slot) => mat(c, e || 0, slot || 0, 4, lp => { const u = (lp[0] / lerp(wTop, wBot, (yTop - lp[1]) / (yTop - yBot)) + 0.5), v = (yTop - lp[1]) / (yTop - yBot); return [u, v, mz]; });
     if (sailM === 'solar' && !lo) {
       // solar cells: each cell its own quad with a slightly different tint, silver seams
+      mb.part = 'vele_celle_solari';
       for (let j = 0; j < nv; j++) for (let k = 0; k < nu; k++) {
         const h = Math.sin((j * 7 + k * 13 + mz) * 12.9898) * 43758.5453, f = h - Math.floor(h);
         const c = [0.03 + f * 0.04, 0.08 + f * 0.06, 0.2 + f * 0.12];
@@ -505,6 +537,7 @@ function buildGalleon(o) {
       mb.grid(rows.map(r => r.map(p => [p[0], p[1], p[2] - 0.01])), sm(sailCol, 0), true);
     }
     // seams / neon panel lines (follow the billow because they carry the same u, v)
+    mb.part = 'cuciture_neon';
     if (sailM !== 'classic' || !lo) {
       const lm = sailM === 'neon' ? sm(col(o.led, LEDS), 1.3, 3) : sailM === 'solar' ? sm([0.7, 0.75, 0.8], 0.2) : sm([0.55, 0.5, 0.42], 0);
       const th = sailM === 'neon' ? 0.09 : 0.05, step = (sailM === 'neon' ? 2 : 1) * U;
@@ -520,6 +553,7 @@ function buildGalleon(o) {
   GALLEON_RIG.masts.forEach(([mz, h], mi) => {
     mb.push(T(0, D, mz)); mb.cyl(0, h, 0.42, 0.16, lo ? 6 : 12 * U, wood); mb.pop();
     // tops (platforms) with LED rim
+    mb.part = 'coffe';
     for (const f of [0.42, 0.72]) { if (mi === 2 && f > 0.6) continue; mb.push(T(0, D + h * f, mz)); mb.cyl(-0.1, 0.1, 1.3 - f, 1.3 - f, lo ? 6 : 14, dark); mb.cyl(0.1, 0.16, 1.32 - f, 1.32 - f, lo ? 6 : 14, led, false); mb.pop(); }
     const yawm = (mat0) => Object.assign({}, mat0, { mode: 4, a: lp => [0.5, 0, mz] });
     if (mi < 2) {
@@ -528,11 +562,13 @@ function buildGalleon(o) {
       for (let s = 0; s + 1 < yards.length; s++) squareSail(mz, yards[s + 1][0] - 0.3, yards[s][0] + 0.5 - (s === 0 ? -0.0 : 0), yards[s + 1][1] * 0.95, yards[s][1] * 0.98, nu, nv);
       squareSail(mz, yards[0][0] - 0.3, D + h * 0.12, yards[0][1] * 0.98, yards[0][1] * 1.02, nu, nv);
       // flag
+      mb.part = 'bandiera';
       { const fy = D + h + 0.2; mb.rod([0, D + h - 0.2, mz], [0, fy + 1.2, mz], 0.05, 5, dark);
         mb.grid([0, 1, 2, 3, 4].map(k => [[0, fy + 1.1, mz - k * 0.5], [0, fy + 0.4, mz - k * 0.5]]), mat(col(o.accent), 0.15, 2, 5, lp => [(mz - lp[2]) / 2, 0, 0.35]), false);
         mb.grid([0, 1, 2, 3, 4].map(k => [[0.01, fy + 1.1, mz - k * 0.5], [0.01, fy + 0.4, mz - k * 0.5]]), mat(col(o.accent), 0.15, 2, 5, lp => [(mz - lp[2]) / 2, 0, 0.35]), true); }
     } else {
       // mizzen: lateen sail (fore-aft) on a diagonal yard
+      mb.part = 'vela_mezzana';
       const yA = D + h * 0.95, yB = D + h * 0.25, zA = mz + 4.5, zB = mz - 6;
       mb.rod([0, yB - 0.6, zB - 0.4], [0, yA + 0.8, zA + 0.6], 0.15, lo ? 5 : 8, wood);
       const rows = []; for (let j = 0; j <= nv; j++) { const v = j / nv, r = []; for (let k = 0; k <= nu; k++) { const u = k / nu, za = lerp(zB, zA, u), ya = lerp(yB, yA, u); r.push([0.0, lerp(ya, D + 1.6 + (za - zB) * 0.02, v * (1 - Math.abs(u - 0.35) * 0.6)), za]); } rows.push(r); }
@@ -542,6 +578,7 @@ function buildGalleon(o) {
     }
   });
   // jibs from the foremast to the bowsprit (fore-aft sails, flutter)
+  mb.part = 'fiocchi';
   for (const [ya, yb, zb] of [[D + 19, D + 5.6, zBow + 6.8], [D + 15, D + 4.0, zBow + 3.0]]) {
     const zA = GALLEON_RIG.masts[0][0] + 0.6, rows = [];
     for (let j = 0; j <= (lo ? 1 : 3); j++) { const v = j / (lo ? 1 : 3), r = []; for (let k = 0; k <= nu; k++) { const u = k / nu; r.push([0, lerp(lerp(ya, D + 3.2, u * 0.9), yb, v * u), lerp(zA, zb, u)]); } rows.push(r); }
@@ -550,6 +587,7 @@ function buildGalleon(o) {
     if (sailM === 'neon') mb.grid(rows[rows.length - 1].map(p => [[0.03, p[1] - 0.08, p[2]], [0.03, p[1] + 0.08, p[2]]]), fm(col(o.led, LEDS), 1.3, 3), true);
   }
   // rigging: shrouds to the rails and stays between mast tops
+  mb.part = 'sartiame';
   if (!lo) {
     for (const [mz, h] of GALLEON_RIG.masts) for (const sd of [-1, 1]) for (let r = 0; r < 3; r++) {
       const t = (mz - z0) / Lh, b = B(Math.max(0, Math.min(1, t))) * 0.9;
@@ -560,6 +598,7 @@ function buildGalleon(o) {
     mb.rod([0, D + m2[1] * 0.95, m2[0]], [0, D + f[1] * 0.8, f[0]], 0.04, 3, rope);
     mb.rod([0, D + z3[1] * 0.95, z3[0]], [0, D + m2[1] * 0.7, m2[0]], 0.04, 3, rope);
     // rudder + bow lamps
+    mb.part = 'timone_lanterne';
     mb.box(0, -0.8, z0 - 0.4, 0.3, 4.2, 1.4, dark);
   }
   for (const sd of [-1, 1]) mb.box(sd * 3.0, 5.2, z0 + 0.9 * Lh, 0.25, 0.25, 0.25, mat(sd > 0 ? [1, 0.1, 0.08] : [0.1, 1, 0.3], 1.4));
@@ -579,26 +618,32 @@ function buildMoto(o) {
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), metal = mat([0.5, 0.52, 0.56]), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const R = MOTO_RIG.wheelR, zf = MOTO_RIG.wb / 2, zr = -MOTO_RIG.wb / 2;
   // wheels (rotate as propellers about x: built in the yz plane, mode 3 uses x/y pivot → we spin them with a z-axis rotated frame instead)
+  mb.part = 'ruote';
   for (const [z, w] of [[zf, 0.12], [zr, 0.18]]) {
     const pv = [0, R, 0];
     mb.push(M(T(0, R, z), RY(PI / 2)));      // wheel plane: local xy, axis local z (= world x)
     const tyre = mat([0.03, 0.03, 0.03], 0, 0, 3, [0, 0, 0]), rim = mat(col(o.accent), 0, 2, 3, [0, 0, 0]), ring = mat(col(o.led, LEDS), 1.1, 3, 3, [0, 0, 0]);
     mb.torus2 = null;
     // tyre: torus about local z
+    const wn = z > 0 ? 'anteriore' : 'posteriore'; mb.part = 'ruota_' + wn;
     mb.push(RX(PI / 2)); mb.torus(R - 0.05, 0.055 + w * 0.15, lo ? 14 : 32 * U, lo ? 5 : 10 * U, tyre); mb.pop();
     if (o.wheels === 'hubless') { mb.push(RX(PI / 2)); mb.torus(R - 0.12, 0.022, lo ? 14 : 32 * U, 4, ring); mb.torus(R - 0.1, 0.035, lo ? 12 : 28 * U, 4, rim); mb.pop(); }
     else { mb.push(RX(PI / 2)); mb.torus(R - 0.1, 0.03, lo ? 12 : 28 * U, 4, rim); mb.pop(); for (let k = 0; k < 6; k++) { mb.push(RZ(k / 6 * TAU)); mb.box(0, (R - 0.1) / 2, 0, 0.025, R - 0.1, 0.02, rim); mb.pop(); }
       mb.cyl2 = null; mb.push(RX(PI / 2)); mb.cyl(-0.05, 0.05, 0.05, 0.05, 10, rim); mb.pop(); }
     // brake disc
+    mb.part = 'disco_freno_' + wn;
     mb.push(T(0, 0, 0.06)); mb.push(RX(PI / 2)); mb.cyl(-0.004, 0.004, 0.16, 0.16, lo ? 10 : 24, mat([0.55, 0.56, 0.6], 0, 0, 3, [0, 0, 0])); mb.pop(); mb.pop();
     mb.pop(); void pv;
   }
   // frame / swingarm / fork
+  mb.part = 'telaio_forcellone_forcella';
   mb.rod([0, R, zr], [0, 0.52, -0.1], 0.04, 8, acc);
   mb.rod([0.08, R, zf], [0.06, 1.0, zf - 0.22], 0.028, 8, metal); mb.rod([-0.08, R, zf], [-0.06, 1.0, zf - 0.22], 0.028, 8, metal);
   // battery / motor block
+  mb.part = 'batteria_motore';
   mb.box(0, 0.5, 0.0, 0.26, 0.32, 0.6, dark); mb.box(0, 0.5, 0.0, 0.27, 0.04, 0.5, led);
   // tank + seat + tail
+  mb.part = 'serbatoio_sella_coda';
   const shell = [];
   const prof = o.fairing === 'naked' ? [[0.55, 0.62, 0.1], [0.25, 0.86, 0.15], [-0.15, 0.82, 0.13], [-0.5, 0.88, 0.07], [-0.75, 0.92, 0.02]]
     : o.fairing === 'cafe' ? [[0.6, 0.78, 0.12], [0.3, 0.9, 0.16], [-0.05, 0.84, 0.14], [-0.4, 0.84, 0.13], [-0.65, 0.86, 0.1], [-0.75, 0.86, 0.04]]
@@ -608,18 +653,22 @@ function buildMoto(o) {
   mb.box(0, 0.9, -0.32, 0.2, 0.05, 0.42, mat([0.06, 0.05, 0.05]));                     // seat
   if (o.fairing === 'sport') {
     // lower fairing panels + windscreen
+    mb.part = 'carenatura_parabrezza';
     for (const sx of [-1, 1]) mb.box(sx * 0.17, 0.6, 0.45, 0.03, 0.36, 0.6, paint, [0.6, 0.8]);
     mb.box(0, 1.08, 0.62, 0.22, 0.2, 0.02, glass, [0.6, 0.6]);
     for (const sx of [-1, 1]) mb.box(sx * 0.171, 0.63, 0.45, 0.012, 0.05, 0.5, led);
   }
   if (o.fairing === 'cafe') { mb.push(T(0, 0.92, 0.72)); mb.push(RX(PI / 2)); mb.cyl(-0.05, 0.05, 0.11, 0.11, 16, dark); mb.pop(); mb.pop(); }
   // headlight (LED bar) + tail light
+  mb.part = 'fari';
   mb.box(0, 0.86, o.fairing === 'sport' ? 0.88 : 0.78, 0.18, 0.04, 0.03, mat([1, 0.97, 0.9], 1.6));
   mb.box(0, 0.96, -0.82, 0.2, 0.03, 0.03, mat([1, 0.1, 0.15], 1.5));
   // handlebars
+  mb.part = 'manubrio';
   mb.rod([-0.34, 1.02, zf - 0.28], [0.34, 1.02, zf - 0.28], 0.016, 6, dark);
   for (const sx of [-1, 1]) mb.rod([sx * 0.3, 1.02, zf - 0.28], [sx * 0.36, 1.02, zf - 0.28], 0.024, 6, mat([0.06, 0.06, 0.06]));
   // foot pegs
+  mb.part = 'pedane';
   for (const sx of [-1, 1]) mb.box(sx * 0.17, 0.4, -0.3, 0.08, 0.02, 0.04, metal);
   const m = mb.finish(); m.kind = 'moto'; m.opts = o; return m;
 }
@@ -635,17 +684,21 @@ function buildHover(o) {
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const skirt = mat(col(o.skirt).map(v => v * 0.7), 0, 0);
   // inflatable skirt: a rounded rectangle tube (superellipse) around the hull
+  mb.part = 'gonna';
   const ring = (rx, rz, n) => { const pts = []; for (let k = 0; k <= n; k++) { const a = k / n * TAU, c = Math.cos(a), s2 = Math.sin(a); pts.push([Math.sign(s2) * Math.pow(Math.abs(s2), 0.5) * rx, Math.sign(c) * Math.pow(Math.abs(c), 0.5) * rz]); } return pts; };
   const n = lo ? 16 : 40 * U, outer = ring(2.0, 4.0, n);
   const rows = []; for (let j = 0; j <= (lo ? 4 : 8 * U); j++) { const a = j / (lo ? 4 : 8 * U) * TAU, r = 0.32, row = [];
     for (const [x, z] of outer) { const L = Math.hypot(x, z) || 1, nx = x / L, nz = z / L; row.push([x + nx * Math.cos(a) * r, 0.34 + Math.sin(a) * r, z + nz * Math.cos(a) * r]); } rows.push(row); }
   mb.grid(rows, skirt, true);
   // deck
+  mb.part = 'ponte';
   const deck = ring(1.95, 3.95, n); { const c = mb.v([0, 0.62, 0], paint); const ix = deck.map(([x, z]) => mb.v([x, 0.62, z], paint)); for (let k = 0; k < ix.length - 1; k++) mb.tri(c, ix[k + 1], ix[k]); }
   for (let k = 0; k < deck.length - 1; k++) { const [x0, z0] = deck[k], [x1, z1] = deck[k + 1]; mb.poly([[x0, 0.62, z0], [x1, 0.62, z1], [x1 * 1.0, 0.5, z1], [x0, 0.5, z0]], paint); }
   // LED trim around the deck
+  mb.part = 'bordo_led';
   { const tr = []; for (const [x, z] of ring(1.97, 3.97, n)) tr.push([[x, 0.6, z], [x, 0.64, z]]); mb.grid(tr, led, false); }
   // cabin
+  mb.part = 'cabina';
   if (o.cabin === 'chiusa') {
     const cr = []; for (const [t, w, h] of [[1.6, 0.9, 0.0], [1.2, 1.25, 0.85], [0.2, 1.35, 1.05], [-0.8, 1.3, 1.0], [-1.3, 1.1, 0.0]]) { const r = []; for (let k = 0; k <= 12; k++) { const a = -PI / 2 + k / 12 * PI; r.push([Math.sin(a) * w, 0.62 + Math.cos(a) * h, t]); } cr.push(r); }
     mb.grid(cr, glass, true); mb.box(0, 1.69, -0.2, 0.06, 0.06, 2.2, acc); mb.box(0, 1.72, -0.2, 0.03, 0.02, 2.0, led);
@@ -654,6 +707,7 @@ function buildHover(o) {
     for (const sx of [-0.4, 0.4]) { mb.box(sx, 0.85, -0.4, 0.5, 0.45, 0.5, mat([0.08, 0.08, 0.09])); }
   }
   // rear fans in ducts (spin about z: mode 3 pivot (x, y))
+  mb.part = 'eliche_intubate';
   const fans = o.fans === 1 ? [[0, 1.75, 1.1]] : [[-0.95, 1.35, 0.7], [0.95, 1.35, 0.7]];
   for (const [fx, fy, fr] of fans) {
     const zf = -3.0;
@@ -662,9 +716,11 @@ function buildHover(o) {
     for (let b = 0; b < 5; b++) { mb.push(M(T(fx, fy, zf + 0.05), RZ(b / 5 * TAU), RY(0.4))); mb.box(0, fr * 0.48, 0, 0.16, fr * 0.9, 0.02, mat([0.12, 0.12, 0.14], 0, 0, 3, pv)); mb.pop(); }
     for (const sx of [-1, 1]) mb.rod([fx + sx * fr * 0.7, 0.62, zf + 0.4], [fx + sx * fr * 0.5, fy - fr * 0.5, zf], 0.05, 6, acc);
     // rudders behind the fan
+    mb.part = 'timoni';
     for (const rx of [-fr * 0.4, fr * 0.4]) mb.box(fx + rx, fy, zf - 0.35, 0.03, fr * 1.6, 0.4, dark);
   }
   // lights
+  mb.part = 'luci';
   for (const sx of [-1, 1]) { mb.box(sx * 1.2, 0.66, 3.75, 0.4, 0.06, 0.06, mat([1, 0.97, 0.9], 1.5)); mb.box(sx * 1.7, 0.66, -3.6, 0.2, 0.06, 0.06, mat(sx > 0 ? [1, 0.1, 0.08] : [0.1, 1, 0.3], 1.4)); }
   const m = mb.finish(); m.kind = 'hover'; m.opts = o; return m;
 }
@@ -691,25 +747,31 @@ function buildSub(o) {
   }
   mb.grid(rows, paint, true);
   // glass bubble cockpit at the bow
+  mb.part = 'cupola_vetro';
   const bz = o.hull === 'batiscafo' ? 0 : L / 2 - 1.2, br = o.hull === 'batiscafo' ? 1.0 : 0.75;
   mb.ellipsoid(0, o.hull === 'manta' ? 0.35 : 0.15, bz + (o.hull === 'batiscafo' ? 1.05 : 0.3), br, br * 0.85, br, lo ? 10 : 22 * U, lo ? 8 : 14 * U, glass);
   // tail fins + LED rings
+  mb.part = 'pinne_coda';
   for (const a of [0, PI / 2, PI, PI * 1.5]) { mb.push(M(T(0, 0, -L / 2 + 0.6), RZ(a))); mb.box(0, 0.65, 0, 0.05, 0.6, 0.8, acc, [0.4, 1]); mb.pop(); }
   for (const z of [-L / 2 + 1.3, 0.2]) { const t = (z + L / 2) / L; const r0 = rows[Math.round(t * st)][0][1]; mb.push(M(T(0, 0, z), RX(PI / 2))); mb.torus(Math.abs(r0) + 0.01, 0.025, lo ? 12 : 28, 3, led); mb.pop(); }
   // thrusters (spinning props in shrouds)
+  mb.part = 'propulsori';
   const thr = o.hull === 'manta' ? [[1.3, 0], [-1.3, 0]] : [[0.95, -0.3], [-0.95, -0.3]];
   for (const [tx, ty] of thr) { mb.push(M(T(tx, ty, -L * 0.3), RX(PI / 2))); mb.cyl(-0.35, 0.35, 0.28, 0.28, lo ? 10 : 20, acc, false); mb.cyl(-0.36, -0.3, 0.25, 0.25, lo ? 10 : 20, led, false); mb.pop();
     for (let b = 0; b < 4; b++) { mb.push(M(T(tx, ty, -L * 0.3), RZ(b / 4 * TAU), RY(0.5))); mb.box(0, 0.12, 0, 0.08, 0.22, 0.015, mat([0.6, 0.62, 0.66], 0, 0, 3, [tx, ty])); mb.pop(); }
     mb.rod([tx * 0.6, ty * 0.5, -L * 0.3], [tx, ty, -L * 0.3], 0.06, 6, dark); }
   // floodlights (pointing forward) + skids
+  mb.part = 'fari_pattini';
   for (const sx of [-1, 1]) { mb.box(sx * 0.55, -0.45, L / 2 - 1.4, 0.2, 0.2, 0.15, dark); mb.box(sx * 0.55, -0.45, L / 2 - 1.32, 0.16, 0.16, 0.02, mat([1, 0.95, 0.8], 1.8)); }
   for (const sx of [-1, 1]) mb.rod([sx * 0.6, -1.0, -L * 0.3], [sx * 0.6, -1.0, L * 0.3], 0.05, 6, acc);
   for (const sx of [-1, 1]) for (const z of [-L * 0.25, L * 0.25]) mb.rod([sx * 0.4, -0.5, z], [sx * 0.6, -1.0, z], 0.035, 5, acc);
   // manipulator arms
+  mb.part = 'bracci_robotici';
   if (o.arms) for (const sx of [-1, 1]) { const a0 = [sx * 0.55, -0.55, L / 2 - 1.6], a1 = [sx * 0.8, -0.9, L / 2 - 0.9], a2 = [sx * 0.6, -0.95, L / 2 - 0.2];
     mb.rod(a0, a1, 0.06, 6, metalM()); mb.rod(a1, a2, 0.045, 6, metalM()); mb.ellipsoid(...a1, 0.08, 0.08, 0.08, 8, 6, dark);
     for (const d of [-1, 1]) mb.rod(a2, [a2[0] + d * 0.08, a2[1], a2[2] + 0.14], 0.02, 4, dark); }
   // sail / conning tower for the torpedo hull
+  mb.part = 'torretta';
   if (o.hull === 'siluro') { mb.box(0, 0.95, -0.4, 0.3, 0.5, 1.4, paint, [1, 0.6]); mb.box(0, 1.22, -0.4, 0.06, 0.06, 1.1, led); }
   const m = mb.finish(); m.kind = 'sub'; m.opts = o; return m;
   function metalM() { return mat([0.45, 0.46, 0.5]); }
@@ -765,15 +827,19 @@ function buildGarage() {
   mb.box(G.x1 - 0.5, G.h / 2, cz, 1, G.h, D, wall); mb.box(cx, G.h / 2, G.z0 + 0.5, W, G.h, 1, wall); mb.box(cx, G.h / 2, G.z1 - 0.5, W, G.h, 1, wall);
   mb.box(cx, G.h + 0.3, cz, W + 1, 0.6, D + 1, wall);
   // roof light strips and LED trims
+  mb.part = 'luci_soffitto';
   for (let k = 0; k < 5; k++) mb.box(cx, G.h - 0.05, G.z0 + 6 + k * 10, W - 6, 0.1, 0.5, mat([0.9, 0.95, 1], 1.4));
   mb.box(G.x0 + 0.2, G.h + 0.62, cz, 0.3, 0.12, D + 1, led); mb.box(G.x0 + 0.2, 0.15, cz, 0.2, 0.3, D, led);
   // parking bays
+  mb.part = 'stalli';
   for (let k = 0; k < 6; k++) { const z = G.z0 + 5 + k * 8.4; mb.box(G.x1 - 12, 0.05, z, 18, 0.02, 0.18, mat([0.9, 0.9, 0.95], 0.5)); }
   for (let k = 0; k < 5; k++) { const x = G.x0 + 10 + k * 8.4; mb.box(x, 0.05, G.z0 + 9, 0.18, 0.02, 14, mat([0.9, 0.9, 0.95], 0.5)); mb.box(x, 0.05, G.z1 - 9, 0.18, 0.02, 14, mat([0.9, 0.9, 0.95], 0.5)); }
   // drone pad + galleon pedestal
+  mb.part = 'piattaforme';
   mb.push(T(G.x0 + 26, 0.05, G.z1 - 10)); mb.cyl(0, 0.3, 3, 3, 24, dark); mb.cyl(0.3, 0.34, 3, 3, 24, led, false); mb.pop();
   mb.push(T(cx, 0, cz)); mb.cyl(0, 1.2, 2.6, 2.4, 16, wall); mb.cyl(1.2, 1.26, 2.45, 2.45, 16, led, false); mb.pop();
   // sign above the opening (pixel font, facing the street)
+  mb.part = 'insegna';
   const text = 'KAGE GARAGE', px = 0.42, y0 = G.h - 0.9, z0 = cz + text.length * 6 * px / 2;
   [...text].forEach((ch, i) => { const g = FONT5[ch] || FONT5[' '];
     g.forEach((row, r) => [...row].forEach((b, c) => { if (b === '1') mb.box(G.x0 - 0.1, y0 + (6 - r) * px * 0.95 - 5.5 * px, z0 - (i * 6 + c) * px, 0.12, px * 0.85, px * 0.85, mat([1, 0.3, 0.8], 1.4, 3)); })); });
@@ -825,6 +891,7 @@ function buildNexus() {
   const mb = new MB(), dark = mat([0.05, 0.055, 0.065]), metal = mat([0.16, 0.17, 0.19]), led = mat([0, 1, 0.9], 0.9, 3);
   const R = NEXUS.R, cy = NEXUS.cy, segs = 42;
   // outer ring: faceted segments with a groove, LED lining on the inner edge
+  mb.part = 'anello_esterno';
   for (let k = 0; k < segs; k++) {
     const a = (k + 0.5) / segs * TAU;
     mb.push(M(T(Math.cos(a) * (R - 0.3), cy + Math.sin(a) * (R - 0.3), 0), RZ(a)));
@@ -833,6 +900,7 @@ function buildNexus() {
     mb.pop();
   }
   // inner glyph ring (rotates about z while dialing: mode 3 pivot (0, cy))
+  mb.part = 'anello_glifi';
   const rot = c => mat(c[0], c[1] || 0, c[2] || 0, 3, [0, cy, 0]);
   for (let k = 0; k < 21; k++) {
     const a = k / 21 * TAU;
@@ -842,6 +910,7 @@ function buildNexus() {
     mb.pop();
   }
   // seven lock clamps: their lights carry the lock index in aAnim.a (lit when uLocks >= index)
+  mb.part = 'sette_morse';
   for (let k = 0; k < 7; k++) {
     const a = PI / 2 - k / 7 * TAU, x = Math.cos(a) * R, y = cy + Math.sin(a) * R, lk = { c: [1, 0.3, 0.8], e: 0.85, slot: 3, mode: 0, a: [k + 1, 0, 0] };
     mb.push(M(T(x, y, 0), RZ(a - PI / 2)));
@@ -850,8 +919,10 @@ function buildNexus() {
     mb.pop();
   }
   // footing: two buttress blocks sunk into the street
+  mb.part = 'basamento';
   for (const sx of [-1, 1]) { mb.box(sx * 7.4, 0.2, 0, 2.2, 1.6, 2.6, dark, [0.8, 1]); mb.box(sx * 7.4, 1.02, 0, 1.8, 0.05, 2.2, led); }
   // the surface (event membrane): slot 5 is shaded procedurally in vehicle.frag (uPortal opens it from the rim inwards)
+  mb.part = 'membrana';
   const memb = { c: [0.2, 1, 0.8], e: 1, slot: 5, mode: 0, a: [0, 0, 0] }, n = 48, ri = NEXUS.inner;
   const c0 = mb.v([0, cy, 0], memb), o = []; for (let k = 0; k <= n; k++) { const a = k / n * TAU; o.push(mb.v([Math.cos(a) * ri, cy + Math.sin(a) * ri, 0], memb)); }
   for (let k = 0; k < n; k++) mb.tri(c0, o[k], o[k + 1]);
@@ -861,6 +932,7 @@ function buildConsole() {
   const mb = new MB(), dark = mat([0.05, 0.05, 0.06]), metal = mat([0.2, 0.21, 0.24]), led = mat([0, 1, 0.9], 0.8, 3);
   mb.cyl(0, 0.35, 1.2, 1.15, 6, dark); mb.cyl(0.35, 0.95, 0.75, 0.6, 6, metal); mb.cyl(0.95, 1.05, 0.62, 1.15, 6, dark);
   // sloped hexagonal face with 7 key plates (index in aAnim.a → lit while dialing) and a central dome
+  mb.part = 'console';
   mb.push(M(T(0, 1.12, 0), RX(-0.28)));
   mb.cyl(-0.04, 0.04, 1.18, 1.18, 6, metal);
   for (let k = 0; k < 7; k++) {
@@ -959,6 +1031,254 @@ function bakeTraffic(m, inst, maxV) {
 root.KageFleet = { GARAGE, buildGarage, buildKelp, buildRock, buildJelly, buildFish, buildMoto, buildHover, buildSub, bakeTraffic, buildEye, buildShard, buildSerpentSeg, buildNexus, buildConsole, buildWatcher, buildMonolith, NEXUS, MB, buildDrone, buildBoat, buildGalleon, buildLighthouse, buildGate, KINDS, COLORS, LEDS, COLOR_NAMES, OPT_TITLES, optLabel, loadCfg, saveCfg, randomCfg, DRONE_RIG, BOAT_RIG, GALLEON_RIG, M, T, RX, RY, RZ, S, ap };
 })(typeof window !== 'undefined' ? window : globalThis);
 
+/* KAGE XENO: the UFO (outside + walkable inside), its tractor beam, the CHRONO time cabin and the time vortex.
+ * Original designs, same vertex layout as web/vehicles.js (aPos aNorm aCol aAnim). Every primitive carries a part name (mb.part)
+ * so tools/export_obj.js can write each assembly as separate OBJ objects. */
+(function (root) {
+'use strict';
+const KF = root.KageFleet, MB = KF.MB, T = KF.T, RX = KF.RX, RY = KF.RY, RZ = KF.RZ, M = KF.M, PI = Math.PI, TAU = PI * 2;
+const mat = (c, e, slot, mode, a) => ({ c, e: e || 0, slot: slot || 0, mode: mode || 0, a: a || [0, 0, 0] });
+const lerp = (a, b, t) => a + (b - a) * t;
+const Q = lod => lod === 'lo' ? 0.5 : lod === 'ultra' ? 2 : 1;
+
+/** surface of revolution about local y: prof = [[r, y], ...] bottom → top; colf(j, k, seg) → material; inward = normals point to the axis */
+function lathe(mb, prof, seg, colf, inward, a0, a1) {
+  a0 = a0 || 0; a1 = a1 === undefined ? TAU : a1;
+  const g = prof.map(([r, y], j) => { const row = []; for (let k = 0; k <= seg; k++) { const a = lerp(a0, a1, k / seg); row.push(mb.v([Math.sin(a) * r, y, Math.cos(a) * r], typeof colf === 'function' ? colf(j, k, seg, a) : colf)); } return row; });
+  for (let j = 0; j + 1 < g.length; j++) for (let k = 0; k < seg; k++) {
+    const a = g[j][k], b = g[j + 1][k], c = g[j + 1][k + 1], d = g[j][k + 1];
+    if (inward) { mb.tri(a, b, c); mb.tri(a, c, d); } else { mb.tri(a, c, b); mb.tri(a, d, c); }
+  }
+}
+
+/* ---------------- UFO ---------------- */
+const UFO_OPTS = { hull: ['disco', 'cupola', 'anello'], paint: ['argento', 'nero', 'bianco', 'oro', 'verde', 'viola'], accent: ['nero', 'argento', 'oro', 'ciano'], led: Object.keys(KF.LEDS), legs: [true, false] };
+const UFO_NAMES = { hull: { disco: 'DISCO CLASSICO', cupola: 'GRANDE CUPOLA', anello: 'ANELLO ROTANTE' } };
+const UFO_DEF = { hull: 'disco', paint: 'argento', accent: 'nero', led: 'lime', legs: true };
+/** rig (local metres): deck floor, interior radius, lift pad, pilot seat, emitter */
+const UFO_RIG = { floor: 2.0, ceil: 5.2, rIn: 7.8, core: 1.25, lift: [0, -4.2], liftR: 1.3, seat: [0, 5.3], emitY: 1.15, R: 12, legY: 1.15 };
+function buildUfo(o, lod) {
+  o = Object.assign({}, UFO_DEF, o || {}); lod = lod || o.lod;
+  const mb = new MB(), q = Q(lod), N = k => Math.max(8, Math.round(k * q));
+  const paint = KF.COLORS[o.paint] || KF.COLORS.argento, acc = KF.COLORS[o.accent] || KF.COLORS.nero, led = KF.LEDS[o.led] || KF.LEDS.lime;
+  const P = mat(paint, 0, 1), A = mat(acc, 0, 2), L = mat(led, 1.2, 3), G = mat([0.06, 0.1, 0.12], 0, 4), dark = mat([0.04, 0.045, 0.05]);
+  const R = UFO_RIG.R, seg = N(64);
+  // lower hull: a shallow lens from the emitter ring out to the rim (panel lines every 30°)
+  mb.part = 'scafo_inferiore';
+  const panel = (j, k, s, a) => (Math.abs(((a / TAU * 12) % 1) - 0.5) > 0.485 ? mat(paint.map(v => v * 0.55), 0, 1) : P);
+  mb.disc(7.2, seg, 1.15, mat(paint.map(v => v * 0.8), 0, 1));
+  lathe(mb, [[7.2, 1.15], [8.0, 1.35], [8.9, 1.7], [10.4, 2.35], [11.5, 2.85], [12, 3.15]], seg, panel, true);
+  // rim: thick ring, accent band and the running lights (they spin with uRotA: mode 1 about the axis)
+  mb.part = 'bordo';
+  lathe(mb, [[12, 3.15], [12.35, 3.3], [12.45, 3.55], [12.35, 3.8], [12, 3.95]], seg, A, true);
+  mb.part = 'luci_bordo';
+  const nl = 24; for (let k = 0; k < nl; k++) { const a = k / nl * TAU; mb.ellipsoid(Math.sin(a) * 12.47, 3.55, Math.cos(a) * 12.47, 0.28, 0.18, 0.28, N(8), 6, mat(k % 2 ? led : [1, 1, 1], 1.4, 3, 1, [0, 0, 0])); }
+  // upper hull
+  mb.part = 'scafo_superiore';
+  const dome = o.hull === 'cupola';
+  lathe(mb, [[12, 3.95], [11.2, 4.35], [9.8, 4.95], [8.2, 5.5], [6.6, 5.9], [dome ? 6.2 : 4.8, dome ? 6.05 : 6.25]], seg, panel, true);
+  // portholes (emissive, the interior lights) on the upper hull
+  mb.part = 'oblo';
+  for (let k = 0; k < 16; k++) { const a = (k + 0.5) / 16 * TAU, r = 9.95, y = 4.92;
+    mb.push(M(T(Math.sin(a) * r, y, Math.cos(a) * r), RY(a), RX(-0.62))); mb.cyl(-0.02, 0.06, 0.42, 0.36, N(12), mat([0.85, 1, 0.75], 0.9, 3)); mb.pop(); }
+  // dome: glass over the bridge, with a cap
+  mb.part = 'cupola';
+  const dr = dome ? 6.2 : 4.8, dh = dome ? 3.2 : 2.1, dy = dome ? 6.05 : 6.25, dp = [];
+  for (let j = 0; j <= 8; j++) { const t = j / 8, a = t * PI / 2; dp.push([Math.cos(a) * dr, dy + Math.sin(a) * dh]); }
+  lathe(mb, dp.slice(0, 7), seg, G, true);
+  mb.part = 'antenna';
+  mb.push(T(0, dy + dh - 0.15, 0)); mb.cyl(0, 0.35, 1.1, 0.7, N(24), A); mb.cyl(0.35, 1.4, 0.12, 0.05, N(10), A); mb.pop();
+  mb.ellipsoid(0, dy + dh + 1.3, 0, 0.22, 0.22, 0.22, N(10), 8, mat(led, 1.6, 3, 7));
+  // the outer ring of the 'anello' hull: a separate counter-rotating band around the rim
+  if (o.hull === 'anello') { mb.part = 'anello_rotante';
+    mb.push(T(0, 3.55, 0)); mb.torus(13.5, 0.38, N(72), N(10), mat(acc, 0, 2, 1, [0, 0, 0])); mb.pop();
+    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; mb.box(Math.sin(a) * 12.9, 3.55, Math.cos(a) * 12.9, 1.1, 0.16, 0.3, mat(acc, 0, 2, 1, [0, 0, 0])); mb.part = 'anello_rotante'; } }
+  // emitter: recessed ring + lens under the lift (the beam comes out of it)
+  mb.part = 'emettitore';
+  const lx = UFO_RIG.lift[0], lz = UFO_RIG.lift[1];
+  mb.push(T(lx, UFO_RIG.emitY, lz)); mb.cyl(-0.12, 0.0, 2.0, 2.0, N(40), dark); mb.pop();
+  mb.push(T(lx, UFO_RIG.emitY - 0.13, lz)); mb.torus(1.85, 0.12, N(40), 8, L); mb.disc(1.7, N(40), 0.0, mat(led.map(v => v * 0.7 + 0.2), 1.0, 3)); mb.pop();
+  // central drive ring (decor)
+  mb.push(T(0, UFO_RIG.emitY - 0.02, 0)); mb.torus(5.2, 0.14, N(64), 6, mat(led, 0.9, 3, 1, [0, 0, 0])); mb.torus(2.4, 0.1, N(40), 6, mat(led, 0.7, 3, 2, [0, 0, 0])); mb.pop();
+  // landing legs (tripod, with pads)
+  if (o.legs) { mb.part = 'carrello';
+    for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + PI / 3, ax = Math.sin(a), az = Math.cos(a);
+      mb.rod([ax * 6.8, 1.75, az * 6.8], [ax * 8.6, 0.12, az * 8.6], 0.26, N(10), A, 0.18);
+      mb.rod([ax * 5.2, 1.4, az * 5.2], [ax * 8.0, 0.6, az * 8.0], 0.12, N(8), A);
+      mb.push(T(ax * 8.6, 0, az * 8.6)); mb.cyl(0, 0.14, 0.75, 0.6, N(16), dark); mb.cyl(0.14, 0.2, 0.6, 0.6, N(16), L, false); mb.pop(); } }
+  const m = mb.finish(); m.kind = 'ufo'; return m;
+}
+
+/** the walkable inside (separate mesh, drawn when you're near or inside the ship) */
+function buildUfoInterior(o, lod) {
+  o = Object.assign({}, UFO_DEF, o || {}); lod = lod || o.lod;
+  const mb = new MB(), q = Q(lod), N = k => Math.max(8, Math.round(k * q)), R = UFO_RIG;
+  const led = KF.LEDS[o.led] || KF.LEDS.lime, wall = mat([0.34, 0.36, 0.4]), rib = mat([0.16, 0.17, 0.19]), floorC = [0.2, 0.21, 0.23], dark = mat([0.03, 0.032, 0.036]);
+  const L = mat(led, 1.1, 3), soft = mat(led.map(v => v * 0.6 + 0.25), 0.55, 3), glass = mat([0.1, 0.16, 0.16], 0, 4), seg = N(64);
+  // deck: hex-pattern floor (tinted per tile) with a glowing ring path
+  mb.part = 'pavimento';
+  const rings = 10; for (let j = 0; j < rings; j++) { const r0 = j / rings * R.rIn, r1 = (j + 1) / rings * R.rIn, n = Math.max(6, Math.round(seg * (j + 1) / rings));
+    for (let k = 0; k < n; k++) { const a0 = k / n * TAU, a1 = (k + 1) / n * TAU, tint = 0.85 + 0.15 * ((j + k) % 2), c = floorC.map(v => v * tint);
+      const ring = j === 6 ? soft : mat(c, 0, 0);
+      mb.poly([[Math.sin(a0) * r0, R.floor, Math.cos(a0) * r0], [Math.sin(a0) * r1, R.floor, Math.cos(a0) * r1], [Math.sin(a1) * r1, R.floor, Math.cos(a1) * r1], [Math.sin(a1) * r0, R.floor, Math.cos(a1) * r0]].reverse(), ring); } }
+  // curved wall, ceiling dome, ribs
+  mb.part = 'pareti';
+  lathe(mb, [[R.rIn, R.floor], [R.rIn, R.floor + 0.25], [R.rIn - 0.1, R.floor + 2.2], [R.rIn - 0.6, R.ceil - 0.2], [R.rIn - 1.4, R.ceil]], seg, (j, k, s, a) => {
+    const front = Math.cos(a) > 0.82 && j >= 1 && j <= 2; return front ? glass : wall; }, false);
+  mb.part = 'soffitto';
+  lathe(mb, [[R.rIn - 1.4, R.ceil], [4.5, R.ceil + 0.35], [1.6, R.ceil + 0.5], [0.01, R.ceil + 0.5]], seg, wall, false);
+  mb.part = 'costole';
+  for (let k = 0; k < 16; k++) { const a = (k + 0.5) / 16 * TAU; if (Math.cos(a) > 0.8) continue;
+    mb.push(RY(a)); mb.box(0, R.floor + 1.6, R.rIn - 0.25, 0.35, 3.2, 0.3, rib); mb.box(0, R.floor + 0.08, R.rIn - 0.4, 0.5, 0.06, 0.2, L); mb.box(0, R.ceil - 0.1, R.rIn - 1.3, 0.3, 0.2, 1.6, rib); mb.pop(); }
+  mb.part = 'luci_soffitto';
+  mb.push(T(0, R.ceil + 0.32, 0)); mb.torus(4.2, 0.09, N(48), 6, mat([0.9, 1, 0.9], 1.3, 3)); mb.torus(2.4, 0.07, N(40), 6, soft); mb.pop();
+  // the power core: glass column, glowing plasma, spinning rings
+  mb.part = 'nucleo';
+  mb.push(T(0, R.floor, 0)); mb.cyl(0, 0.5, R.core + 0.35, R.core + 0.2, N(32), dark); mb.cyl(R.ceil - R.floor - 0.4, R.ceil - R.floor + 0.5, R.core + 0.2, R.core + 0.5, N(32), dark);
+  mb.cyl(0.5, R.ceil - R.floor - 0.4, R.core * 0.55, R.core * 0.55, N(24), mat(led, 1.8, 3, 7), false);
+  mb.cyl(0.5, R.ceil - R.floor - 0.4, R.core, R.core, N(32), glass, false); mb.pop();
+  mb.part = 'anelli_nucleo';
+  for (let k = 0; k < 3; k++) { mb.push(M(T(0, R.floor + 1.2 + k * 0.9, 0), RX(0.3 * (k - 1)))); mb.torus(R.core + 0.12, 0.05, N(36), 6, mat(led, 1.4, 3, k % 2 ? 2 : 1, [0, 0, 0])); mb.pop(); }
+  // lift pad (the beam drops you here) + its glow ring
+  mb.part = 'pedana_raggio';
+  mb.push(T(R.lift[0], R.floor, R.lift[1])); mb.cyl(0, 0.06, R.liftR + 0.25, R.liftR + 0.2, N(32), dark); mb.disc(R.liftR, N(32), 0.065, mat(led.map(v => v * 0.6 + 0.3), 1.2, 3)); mb.torus(R.liftR + 0.1, 0.05, N(32), 6, L); mb.pop();
+  // bridge: curved console, three seats facing the front window, holo screens
+  mb.part = 'plancia';
+  lathe(mb, [[R.seat[1] + 0.75, R.floor], [R.seat[1] + 0.8, R.floor + 0.85], [R.seat[1] + 1.25, R.floor + 1.0], [R.seat[1] + 1.35, R.floor + 0.95]], N(24), (j) => j === 2 ? mat([0.12, 0.13, 0.14]) : dark, true, -0.6, 0.6);
+  for (let k = -3; k <= 3; k++) { const a = k * 0.16; mb.push(RY(a)); mb.box(0, R.floor + 1.0, R.seat[1] + 1.05, 0.34, 0.02, 0.24, mat(k % 2 ? led : [0.3, 0.8, 1], 1.1, 3)); mb.pop(); }
+  mb.part = 'schermi_olografici';
+  for (const k of [-1, 0, 1]) { mb.push(M(RY(k * 0.45), T(0, R.floor + 1.75, R.seat[1] + 1.6), RX(-0.15))); mb.box(0, 0, 0, 1.3, 0.7, 0.02, mat(led.map(v => v * 0.5 + 0.2), 0.8, 3)); mb.pop(); }
+  mb.part = 'sedili';
+  for (const k of [-1, 0, 1]) { mb.push(M(RY(k * 0.42), T(0, R.floor, R.seat[1] - 0.15))); mb.cyl(0, 0.42, 0.12, 0.1, N(10), dark); mb.box(0, 0.48, 0, 0.55, 0.1, 0.55, mat([0.2, 0.21, 0.23])); mb.box(0, 0.95, -0.27, 0.55, 0.9, 0.1, mat([0.2, 0.21, 0.23]), [0.85, 1]); mb.box(0, 0.5, 0, 0.6, 0.02, 0.6, L); mb.pop(); }
+  // star-map table with a holographic galaxy (spinning)
+  mb.part = 'mappa_stellare';
+  mb.push(T(-4.4, R.floor, 0.6)); mb.cyl(0, 0.9, 0.5, 0.7, N(20), dark); mb.cyl(0.9, 1.0, 1.1, 1.1, N(28), mat([0.12, 0.13, 0.14])); mb.disc(1.0, N(28), 1.005, soft); mb.pop();
+  mb.part = 'ologramma_galassia';
+  for (let k = 0; k < 90; k++) { const arm = k % 3, t = (k / 90), a = arm / 3 * TAU + t * 5, r = 0.1 + t * 0.85;
+    mb.ellipsoid(-4.4 + Math.sin(a) * r, R.floor + 1.35 + Math.sin(k * 1.7) * 0.03, 0.6 + Math.cos(a) * r, 0.03, 0.03, 0.03, 4, 3, mat(k % 7 ? [0.7, 0.9, 1] : led, 1.6, 3, 1, [-4.4, 0.6, 0])); }
+  // specimen tubes (stasis pods) along the right wall
+  mb.part = 'capsule_stasi';
+  for (let k = 0; k < 4; k++) { const a = -PI / 2 + (k - 1.5) * 0.36, x = Math.sin(a) * (R.rIn - 1.2), z = Math.cos(a) * (R.rIn - 1.2);
+    mb.push(T(x, R.floor, z)); mb.cyl(0, 0.3, 0.75, 0.75, N(20), dark); mb.cyl(0.3, 2.5, 0.6, 0.6, N(20), glass, false); mb.cyl(0.32, 2.48, 0.56, 0.56, N(16), mat([0.4, 1, 0.75], 0.35, 3), false);
+    mb.cyl(2.5, 2.85, 0.75, 0.6, N(20), dark); mb.torus(0.62, 0.04, N(20), 6, L); mb.pop(); }
+  // engine room grilles + conduits on the left
+  mb.part = 'condotti';
+  for (let k = 0; k < 5; k++) { const a = PI / 2 + (k - 2) * 0.3; mb.push(RY(a)); mb.box(0, R.floor + 1.2, R.rIn - 0.3, 0.9, 2.0, 0.2, mat([0.1, 0.11, 0.12])); for (let i = 0; i < 6; i++) mb.box(0, R.floor + 0.45 + i * 0.3, R.rIn - 0.42, 0.75, 0.05, 0.04, soft); mb.pop(); }
+  mb.push(T(0, R.ceil + 0.15, 0)); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; mb.rod([Math.sin(a) * 1.6, 0, Math.cos(a) * 1.6], [Math.sin(a) * (R.rIn - 1.6), -0.1, Math.cos(a) * (R.rIn - 1.6)], 0.09, N(8), rib); } mb.pop();
+  const m = mb.finish(); m.kind = 'ufo_interno'; return m;
+}
+
+/** tractor beam: open cone (glow-only) with spiral bands that turn with uRotA; height h, radius r0 at the emitter, r1 at the ground */
+function buildBeam(o) {
+  o = o || {}; const mb = new MB(), led = KF.LEDS[o.led] || KF.LEDS.lime, H = 30, r0 = 1.8, r1 = 5.5, seg = 40, rows = 24;
+  mb.part = 'raggio';
+  for (let j = 0; j < rows; j++) for (let k = 0; k < seg; k++) {
+    const t0 = j / rows, t1 = (j + 1) / rows, a0 = k / seg * TAU, a1 = (k + 1) / seg * TAU;
+    const band = 0.5 + 0.5 * Math.sin((a0 + t0 * 9) * 3), e = (0.35 + 0.65 * band) * (1 - t0 * 0.55);
+    const m = mat(led.map(v => v * 0.6 + 0.35), e, 3, 1, [0, 0, 0]), R0 = lerp(r0, r1, t0), R1 = lerp(r0, r1, t1);
+    mb.poly([[Math.sin(a0) * R0, -t0 * H, Math.cos(a0) * R0], [Math.sin(a1) * R0, -t0 * H, Math.cos(a1) * R0], [Math.sin(a1) * R1, -t1 * H, Math.cos(a1) * R1], [Math.sin(a0) * R1, -t1 * H, Math.cos(a0) * R1]], m);
+  }
+  mb.part = 'anelli_raggio';
+  for (let k = 0; k < 6; k++) { const t = (k + 0.5) / 6; mb.push(T(0, -t * H, 0)); mb.torus(lerp(r0, r1, t) * 0.92, 0.06, 40, 4, mat([1, 1, 1], 0.9, 3, 1, [0, 0, 0])); mb.pop(); }
+  const m = mb.finish(); m.H = H; return m;
+}
+
+/* ---------------- EPOCH (kind 'chrono'): Art Deco time cabin (brass, glass, dials, counter-rotating gear crowns) ---------------- */
+const CHRONO_OPTS = { metal: ['ottone', 'rame', 'argento', 'bronzo_scuro'], glass: ['trasparente', 'ambra', 'fumé'], led: ['ambra', 'ciano', 'magenta', 'bianco'] };
+const CHRONO_NAMES = { metal: { ottone: 'OTTONE', rame: 'RAME', argento: 'ARGENTO', bronzo_scuro: 'BRONZO SCURO' }, glass: { trasparente: 'TRASPARENTE', ambra: 'AMBRA', 'fumé': 'FUMÉ' } };
+const CHRONO_DEF = { metal: 'ottone', glass: 'ambra', led: 'ambra' };
+const METALS = { ottone: [0.78, 0.6, 0.26], rame: [0.72, 0.38, 0.22], argento: [0.7, 0.72, 0.75], bronzo_scuro: [0.36, 0.27, 0.16] };
+const CHRONO_RIG = { r: 1.05, h: 2.75, door: [0, 1.05] };
+function buildChrono(o, lod) {
+  o = Object.assign({}, CHRONO_DEF, o || {}); lod = lod || o.lod;
+  const mb = new MB(), q = Q(lod), N = k => Math.max(6, Math.round(k * q));
+  const met = METALS[o.metal] || METALS.ottone, Mt = mat(met, 0, 2), Md = mat(met.map(v => v * 0.55), 0, 2), led = KF.LEDS[o.led] || KF.LEDS.ambra, L = mat(led, 1.2, 3);
+  const gl = { trasparente: [0.08, 0.1, 0.11], ambra: [0.22, 0.13, 0.04], 'fumé': [0.04, 0.04, 0.045] }[o.glass] || [0.08, 0.1, 0.11], Gl = mat(gl, 0, 4), wood = mat([0.2, 0.1, 0.045]);
+  const R = CHRONO_RIG.r, H = CHRONO_RIG.h, oct = k => k / 8 * TAU + PI / 8;
+  // stepped base and floor
+  mb.part = 'basamento';
+  mb.push(RY(PI / 8)); mb.cyl(0, 0.12, R * 1.32, R * 1.3, 8, Md); mb.cyl(0.12, 0.22, R * 1.18, R * 1.14, 8, Mt); mb.pop();
+  mb.push(RY(PI / 8)); mb.cyl(0.22, 0.24, R * 1.05, R * 1.05, 8, wood); mb.pop();
+  mb.push(T(0, 0.245, 0)); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; mb.rod([0, 0, 0], [Math.sin(a) * R * 0.95, 0, Math.cos(a) * R * 0.95], 0.012, 4, Mt); } mb.torus(R * 0.5, 0.012, N(24), 4, Mt); mb.pop();
+  // eight pilasters with stepped capitals
+  mb.part = 'colonne';
+  for (let k = 0; k < 8; k++) { const a = oct(k) - PI / 8 + 0.0, x = Math.sin(a) * R * 1.07, z = Math.cos(a) * R * 1.07;
+    mb.push(M(T(x, 0.22, z), RY(a))); mb.box(0, (H - 0.6) / 2, 0, 0.11, H - 0.6, 0.11, Mt); mb.box(0, H - 0.6, 0, 0.16, 0.08, 0.16, Mt); mb.box(0, H - 0.53, 0, 0.13, 0.06, 0.13, Md);
+    for (let i = 0; i < 3; i++) mb.box(0, 0.25 + i * 0.05, 0, 0.14 - i * 0.015, 0.03, 0.14 - i * 0.015, Md); mb.pop(); }
+  // glass panels with Deco sunburst mullions; the front one is the door (hinged frame + handle)
+  mb.part = 'vetrate';
+  for (let k = 0; k < 8; k++) { const a = oct(k), w = 2 * R * Math.tan(PI / 8) * 0.95, rr = R * Math.cos(PI / 8) * 1.06;
+    mb.push(M(RY(a), T(0, 0.22, rr))); mb.box(0, (H - 0.62) / 2 + 0.02, 0, w * 0.92, H - 0.68, 0.02, Gl);
+    mb.part = 'telai'; mb.box(0, 0.09, 0.01, w, 0.12, 0.04, Mt); mb.box(0, H - 0.68, 0.01, w, 0.06, 0.04, Mt); mb.box(0, 0.95, 0.012, w, 0.035, 0.03, Mt);
+    for (let i = -2; i <= 2; i++) { const ang = i * 0.32; mb.push(M(T(0, 0.95, 0.014), RZ(ang))); mb.box(0, 0.38, 0, 0.018, 0.76, 0.02, Md); mb.pop(); }
+    if (k === 0) { mb.part = 'porta'; mb.box(w * 0.4, 0.95, 0.04, 0.03, 0.22, 0.03, Mt); mb.ellipsoid(w * 0.4, 1.08, 0.055, 0.03, 0.03, 0.03, N(8), 6, Mt); }
+    mb.part = 'vetrate'; mb.pop(); }
+  // cornice, clock faces on four sides, roof lantern
+  mb.part = 'cornicione';
+  mb.push(M(T(0, H - 0.5, 0), RY(PI / 8))); mb.cyl(0, 0.12, R * 1.18, R * 1.24, 8, Mt); mb.cyl(0.12, 0.3, R * 1.22, R * 1.22, 8, Md); mb.cyl(0.3, 0.38, R * 1.24, R * 1.12, 8, Mt); mb.pop();
+  mb.part = 'quadranti';
+  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU, rr = R * 1.23;
+    mb.push(M(RY(a), T(0, H - 0.29, rr), RX(PI / 2))); mb.cyl(0, 0.02, 0.14, 0.14, N(20), mat([0.95, 0.9, 0.78], 0.15)); mb.torus(0.145, 0.012, N(20), 4, Mt);
+    for (let i = 0; i < 12; i++) { const b = i / 12 * TAU; mb.box(Math.sin(b) * 0.115, 0.022, Math.cos(b) * 0.115, 0.008, 0.004, 0.02, mat([0.1, 0.08, 0.05])); } mb.pop();
+    mb.push(M(RY(a), T(0, H - 0.29, rr + 0.028), RZ(0.9 + k))); mb.box(0, 0.045, 0, 0.012, 0.09, 0.004, mat([0.05, 0.04, 0.03])); mb.pop();
+    mb.push(M(RY(a), T(0, H - 0.29, rr + 0.03), RZ(-1.4 + k * 2))); mb.box(0, 0.06, 0, 0.008, 0.12, 0.004, mat([0.05, 0.04, 0.03])); mb.pop(); }
+  mb.part = 'cupola';
+  const cp = []; for (let j = 0; j <= 8; j++) { const t = j / 8; cp.push([R * 0.82 * Math.cos(t * PI / 2) + 0.02, H - 0.12 + Math.sin(t * PI / 2) * 0.55]); }
+  lathe(mb, cp, N(32), (j) => j % 3 === 2 ? Md : Mt, false);
+  // two gear crowns spinning in opposite directions (mode 1 / 2 about the axis)
+  mb.part = 'corone_ingranaggi';
+  for (const [y, r, dir, teeth] of [[H - 0.04, R * 0.98, 1, 32], [H + 0.2, R * 0.74, 2, 24]]) {
+    const G = mat(met, 0, 2, dir, [0, 0, 0]); mb.push(T(0, y, 0)); mb.torus(r, 0.035, N(48), 6, G);
+    for (let i = 0; i < teeth; i++) { const b = i / teeth * TAU; mb.push(RY(b)); mb.box(0, 0, r + 0.05, 0.05, 0.06, 0.08, G); mb.pop(); }
+    for (let i = 0; i < 4; i++) { const b = i / 4 * TAU; mb.rod([0, 0, 0], [Math.sin(b) * r, 0, Math.cos(b) * r], 0.018, 4, G); } mb.pop(); }
+  mb.part = 'lanterna';
+  mb.push(T(0, H + 0.42, 0)); mb.cyl(0, 0.3, 0.16, 0.12, N(12), Mt); mb.cyl(0.05, 0.28, 0.11, 0.11, N(12), L, false); mb.cyl(0.3, 0.42, 0.14, 0.02, N(12), Mt); mb.pop();
+  mb.ellipsoid(0, H + 0.9, 0, 0.05, 0.05, 0.05, N(8), 6, mat(led, 1.8, 3, 7));
+  mb.rod([0, H + 0.72, 0], [0, H + 0.86, 0], 0.012, 5, Mt);
+  // inside: a leather seat, the time lever on a brass console, glowing date wheels
+  mb.part = 'sedile';
+  mb.push(T(0, 0.24, -0.35)); mb.box(0, 0.24, 0, 0.5, 0.06, 0.45, mat([0.35, 0.12, 0.08])); mb.box(0, 0.6, -0.21, 0.5, 0.7, 0.06, mat([0.35, 0.12, 0.08])); mb.cyl(0, 0.22, 0.05, 0.05, 8, Mt); mb.pop();
+  mb.part = 'console_temporale';
+  mb.push(T(0, 0.24, 0.45)); mb.box(0, 0.42, 0, 0.62, 0.84, 0.18, Md, [0.9, 1]); mb.box(0, 0.86, -0.04, 0.66, 0.05, 0.3, Mt);
+  for (let i = 0; i < 4; i++) mb.box(-0.21 + i * 0.14, 0.7, -0.095, 0.1, 0.12, 0.01, mat(led, 1.1, 3));
+  mb.rod([0.22, 0.88, -0.05], [0.26, 1.18, -0.16], 0.014, 6, Mt); mb.ellipsoid(0.26, 1.2, -0.17, 0.035, 0.035, 0.035, N(8), 6, mat([0.5, 0.05, 0.05])); mb.pop();
+  const m = mb.finish(); m.kind = 'chrono'; return m;
+}
+
+/* ---------------- time vortex: a long glowing tunnel along local -z (spiral bands; two layers that turn opposite ways) ---------------- */
+function buildVortex(lod) {
+  const mb = new MB(), q = Q(lod), seg = Math.round(48 * q), rows = Math.round(90 * q), Lz = 600;
+  const cols = [[0.2, 0.45, 1], [0.7, 0.25, 1], [1, 0.45, 0.2], [0.25, 1, 0.85]];
+  for (const [layer, R, mode] of [[0, 16, 1], [1, 11, 2]]) {
+    mb.part = layer ? 'vortice_interno' : 'vortice_esterno';
+    // the tube runs along local y (so the rotor modes spin it about its own axis); the game turns it to face the flight
+    const g = []; for (let j = 0; j <= rows; j++) { const t = j / rows, y = -t * Lz, row = [];
+      for (let k = 0; k <= seg; k++) { const a = k / seg * TAU, sw = a * 2 + t * 40 * (layer ? -1 : 1), b = Math.pow(0.5 + 0.5 * Math.sin(sw), 3);
+        const c = cols[(Math.floor((sw / TAU) + 8) + layer) % 4], rr = R * (1 + 0.18 * Math.sin(t * 30 + a * 3)), e = 0.25 + 1.3 * b;
+        row.push(mb.v([Math.sin(a) * rr, y, Math.cos(a) * rr], mat(c.map(v => v * (0.4 + 0.6 * b)), e, 3, mode, [0, 0, 0]))); }
+      g.push(row); }
+    for (let j = 0; j < rows; j++) for (let k = 0; k < seg; k++) { mb.tri(g[j][k], g[j + 1][k], g[j + 1][k + 1]); mb.tri(g[j][k], g[j + 1][k + 1], g[j][k + 1]); }
+  }
+  // drifting sparks along the axis
+  mb.part = 'scintille';
+  for (let k = 0; k < 160; k++) { const a = k * 2.39, r = 2 + (k * 37 % 80) / 10, y = -(k * 97 % 600);
+    mb.ellipsoid(Math.sin(a) * r, y, Math.cos(a) * r, 0.12, 0.6, 0.12, 4, 3, mat([1, 0.95, 0.85], 1.6, 3, 1, [0, 0, 0])); }
+  const m = mb.finish(); m.kind = 'vortex'; m.L = Lz; return m;
+}
+
+Object.assign(KF.KINDS, {
+  ufo: { build: buildUfo, opts: UFO_OPTS, names: UFO_NAMES, def: UFO_DEF, rig: UFO_RIG, title: 'KAGE XENO', extra: true },
+  chrono: { build: buildChrono, opts: CHRONO_OPTS, names: CHRONO_NAMES, def: CHRONO_DEF, rig: CHRONO_RIG, title: 'KAGE EPOCH', extra: true },
+  ufoin: { build: buildUfoInterior, opts: UFO_OPTS, names: UFO_NAMES, def: UFO_DEF, rig: UFO_RIG, title: 'KAGE XENO · INTERNO', hidden: true },
+  vortex: { build: (o, lod) => buildVortex(lod || (o && o.lod)), opts: {}, names: {}, def: {}, rig: {}, title: 'VORTICE TEMPORALE', hidden: true },
+  beam: { build: buildBeam, opts: {}, names: {}, def: {}, rig: {}, title: 'RAGGIO TRAENTE', hidden: true }
+});
+KF.KINDS.alien = { build: (o, lod) => root.KagePilot.build(o, lod || (o && o.lod)), opts: { species: ['grigio', 'verde', 'nordico', 'scuro'], pose: ['in piedi', 'saluto', 'indica', 'braccia conserte', 'mani sui fianchi', 'pensieroso', 'esulta', 'cammina'] },
+  names: { species: { grigio: 'GRIGIO', verde: 'PICCOLO VERDE', nordico: 'NORDICO', scuro: 'OMBRA' } }, def: { species: 'grigio', pose: 'in piedi' }, rig: {}, title: 'VISITATORI', extra: true };
+Object.assign(KF.OPT_TITLES, { legs: 'CARRELLO', metal: 'METALLO', glass: 'VETRI', species: 'SPECIE', pose: 'POSA' });
+root.KageXeno = { buildUfo, buildUfoInterior, buildBeam, buildChrono, buildVortex, lathe, UFO_RIG, CHRONO_RIG, UFO_DEF, CHRONO_DEF };
+})(typeof window !== 'undefined' ? window : globalThis);
+
 /* KAGE pilot v2: a realistic, skinned, animated person.
  * Sculpted head (skull, jaw, cheekbones, eye sockets, eyes with lids, nose, lips, ears), anatomical body lofts (torso, shoulders,
  * arms, hands with fingers, legs, shoes), hair / beard as volumes with strand noise, racing suit with LED piping, optional helmet.
@@ -968,7 +1288,7 @@ root.KageFleet = { GARAGE, buildGarage, buildKelp, buildRock, buildJelly, buildF
 'use strict';
 const KF = root.KageFleet;
 const { MB } = KF;
-const PI = Math.PI;
+const PI = Math.PI, TAU = PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], scl = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], len = a => Math.hypot(a[0], a[1], a[2]), nrm = a => scl(a, 1 / (len(a) || 1));
@@ -978,28 +1298,30 @@ function hash(x) { const s = Math.sin(x * 127.1) * 43758.5453; return s - Math.f
 function noise3(x, y, z) { return (Math.sin(x * 1.7 + Math.sin(y * 2.3) * 1.3) + Math.sin(y * 1.9 + Math.sin(z * 2.1) * 1.1) + Math.sin(z * 2.2 + Math.sin(x * 1.6) * 1.2)) / 3; }
 
 /* ---------------- options ---------------- */
-const SKIN = { chiara: [0.92, 0.76, 0.66], rosata: [0.9, 0.67, 0.57], olivastra: [0.76, 0.58, 0.43], ambrata: [0.64, 0.45, 0.31], scura: [0.43, 0.29, 0.2], ebano: [0.27, 0.18, 0.13] };
-const HAIRC = { nero: [0.025, 0.022, 0.02], castano_scuro: [0.11, 0.065, 0.035], castano: [0.26, 0.15, 0.07], biondo: [0.7, 0.53, 0.28], rosso: [0.5, 0.17, 0.06], grigio: [0.45, 0.45, 0.46], bianco: [0.82, 0.82, 0.8], blu_neon: [0.08, 0.35, 0.95], viola_neon: [0.55, 0.18, 0.95] };
+const SKIN = { pallida: [0.95, 0.85, 0.8], chiara: [0.92, 0.76, 0.66], rosata: [0.9, 0.67, 0.57], olivastra: [0.76, 0.58, 0.43], ambrata: [0.64, 0.45, 0.31], scura: [0.43, 0.29, 0.2], ebano: [0.27, 0.18, 0.13] };
+const HAIRC = { platino: [0.92, 0.9, 0.82], nero: [0.025, 0.022, 0.02], castano_scuro: [0.11, 0.065, 0.035], castano: [0.26, 0.15, 0.07], biondo: [0.7, 0.53, 0.28], rosso: [0.5, 0.17, 0.06], grigio: [0.45, 0.45, 0.46], bianco: [0.82, 0.82, 0.8], blu_neon: [0.08, 0.35, 0.95], viola_neon: [0.55, 0.18, 0.95] };
 const EYEC = { marroni: [0.24, 0.12, 0.05], nocciola: [0.4, 0.26, 0.1], verdi: [0.2, 0.4, 0.2], azzurri: [0.25, 0.48, 0.78], grigi: [0.43, 0.48, 0.5] };
 const OPTS = {
+  species: ['umano', 'nordico', 'grigio', 'verde', 'scuro'],
   height: [1.62, 1.68, 1.72, 1.76, 1.80, 1.84, 1.88, 1.94], build: ['snello', 'atletico', 'muscoloso', 'robusto'], skin: Object.keys(SKIN),
   face: ['ovale', 'tondo', 'squadrato', 'allungato'], nose: ['piccolo', 'medio', 'pronunciato'],
   hair: ['corti', 'stempiati', 'rasati', 'ciuffo', 'ricci', 'lunghi', 'coda', 'cresta', 'calvo'], hairColor: Object.keys(HAIRC),
   beard: ['nessuna', 'accennata', 'corta', 'piena', 'pizzetto', 'baffi'], brows: ['normali', 'folte', 'sottili'], eyes: Object.keys(EYEC), glasses: ['nessuno', 'tondi', 'squadrati', 'visore'],
-  suit: ['casual', 'nero', 'bianco', 'rosso', 'blu', 'oro', 'viola', 'argento'], accent: ['ciano', 'magenta', 'ambra', 'lime', 'bianco', 'rosso'], helmet: [false, true], hearing: [false, true],
+  suit: ['casual', 'tunica', 'nero', 'bianco', 'rosso', 'blu', 'oro', 'viola', 'argento'], accent: ['ciano', 'magenta', 'ambra', 'lime', 'bianco', 'rosso'], helmet: [false, true], hearing: [false, true],
   pose: ['in piedi', 'saluto', 'indica', 'pollice', 'braccia conserte', 'mani sui fianchi', 'esulta', 'pensieroso', 'cammina', 'corre']
 };
 /** "IL MIO PILOTA": the owner's likeness (from his photos) — also the default */
-const MINE = { height: 1.80, build: 'muscoloso', skin: 'chiara', face: 'allungato', nose: 'pronunciato', hair: 'stempiati', hairColor: 'castano_scuro', beard: 'corta', brows: 'folte', eyes: 'nocciola',
+const MINE = { species: 'umano', height: 1.80, build: 'muscoloso', skin: 'chiara', face: 'allungato', nose: 'pronunciato', hair: 'stempiati', hairColor: 'castano_scuro', beard: 'corta', brows: 'folte', eyes: 'nocciola',
   glasses: 'nessuno', suit: 'casual', accent: 'ciano', helmet: false, hearing: false };
 const DEF = Object.assign({}, MINE, { pose: 'in piedi', inVehicle: true });
-const TITLES = { height: 'ALTEZZA', build: 'CORPORATURA', skin: 'CARNAGIONE', face: 'VISO', nose: 'NASO', hair: 'CAPELLI', hairColor: 'COLORE CAPELLI', beard: 'BARBA',
+const TITLES = { species: 'SPECIE', height: 'ALTEZZA', build: 'CORPORATURA', skin: 'CARNAGIONE', face: 'VISO', nose: 'NASO', hair: 'CAPELLI', hairColor: 'COLORE CAPELLI', beard: 'BARBA',
   brows: 'SOPRACCIGLIA', eyes: 'OCCHI', glasses: 'OCCHIALI', suit: 'TUTA', accent: 'COLORE LED', helmet: 'CASCO', hearing: 'APPARECCHIO ACUSTICO', pose: 'POSA' };
 function label(key, v) {
   if (key === 'height') return v.toFixed(2).replace('.', ',') + ' m';
   if (key === 'helmet') return v ? 'INDOSSATO' : 'TOLTO';
   if (key === 'hearing') return v ? 'SÌ' : 'NO';
   if (key === 'suit' && v === 'casual') return 'CASUAL · MAGLIONE';
+  if (key === 'suit' && v === 'tunica') return 'TUNICA';
   if (key === 'suit' || key === 'accent') return KF.COLOR_NAMES[v] || String(v).toUpperCase();
   return String(v).replace('_', ' ').toUpperCase();
 }
@@ -1031,18 +1353,22 @@ const mat = (c, e, slot) => ({ c, e: e || 0, slot: slot || 0, mode: 0 });
 
 /* ---------------- the person ---------------- */
 function build(cfg, lod) {
-  const o = Object.assign({}, DEF, cfg || {}), mb = tagged();
+  const o = Object.assign({}, DEF, cfg || {});
+  if (o.species === 'grigio' || o.species === 'verde' || o.species === 'scuro') return buildAlien(o, lod);
+  if (o.species === 'nordico') Object.assign(o, { suit: 'tunica', skin: 'pallida', hair: 'lunghi', hairColor: 'platino', eyes: 'azzurri', beard: 'nessuna', brows: 'sottili', glasses: 'nessuno', helmet: false,
+    face: 'allungato', nose: 'medio', build: 'atletico', height: Math.max(o.height, 1.96) });
+  const mb = tagged();
   const Q = lod === 'lo' ? 0.45 : lod === 'ultra' ? 1.7 : 1;
   const N = k => Math.max(6, Math.round(k * Q));
   const S = o.height / 1.78, W = { snello: 0.9, atletico: 1, muscoloso: 1.06, robusto: 1.17 }[o.build] || 1;
-  const MU = o.build === 'muscoloso', CAS = o.suit === 'casual';
+  const MU = o.build === 'muscoloso', TUN = o.suit === 'tunica', CAS = o.suit === 'casual' || TUN;
   // muscular build: broad shoulders + chest, V taper to the waist, thick arms and thighs
   const SH = y => MU ? (y >= 1.25 ? 1.1 : y >= 1.17 ? 1.04 : y > 0.92 ? 0.97 : 1) : 1, ARM = MU ? 1.16 : 1, LEG = MU ? 1.07 : 1;
   const J = BIND.map(p => scl(p, S));
   const skinC = SKIN[o.skin] || SKIN.chiara, hairC = HAIRC[o.hairColor] || HAIRC.nero, suitC = KF.COLORS[o.suit] || [0.05, 0.05, 0.06], ledC = KF.LEDS[o.accent] || [0, 1, 0.9];
   const SK = c => mat(c, 0, 6), HR = c => mat(c, /neon/.test(o.hairColor) ? 0.25 : 0, 7);
   // casual: knitted dark sweater (rib texture), dark jeans, brown leather shoes, tan suede shoulder patches
-  const knitC = [0.075, 0.08, 0.095], jeansC = [0.07, 0.09, 0.14], suedeC = [0.46, 0.32, 0.2];
+  const knitC = TUN ? [0.86, 0.87, 0.9] : [0.075, 0.08, 0.095], jeansC = TUN ? [0.8, 0.81, 0.85] : [0.07, 0.09, 0.14], suedeC = TUN ? [0.62, 0.64, 0.7] : [0.46, 0.32, 0.2];
   const knit = (t, u) => mat(knitC.map(v => v * (0.86 + 0.14 * Math.sin(u * PI * 2 * 70)) * (t < 0.07 || t > 0.95 ? 0.8 : 1)), 0, 1);
   const suitCol0 = (t, u, panel) => { const sideBand = Math.min(Math.abs(u - 0.25), Math.abs(u - 0.75));
     if (sideBand < 0.022) return mat(ledC, 0.9, 3); if (sideBand < 0.05) return mat(ledC.map(v => v * 0.35 + suitC[0] * 0.2), 0.05, 1);
@@ -1059,10 +1385,11 @@ function build(cfg, lod) {
   // collar ring and chest emblem
   mb.tag = 'neck'; mb.push(KF.T(0, 1.47 * S, -0.008 * S)); mb.torus((CAS ? 0.068 : 0.062) * S * (MU ? 1.04 : 1), (CAS ? 0.014 : 0.012) * S, N(18), 5, CAS ? mat(knitC.map(v => v * 0.8), 0, 1) : mat(suitC.map(v => v * 0.6), 0, 1)); mb.pop();
   mb.tag = 'chest'; if (!CAS) mb.box(0.075 * S, 1.36 * S, 0.123 * W * S, 0.05 * S, 0.028 * S, 0.006, mat(ledC, 1.1, 3)); if (!CAS) mb.box(-0.075 * S, 1.36 * S, 0.122 * W * S, 0.04 * S, 0.012 * S, 0.004, mat([0.8, 0.8, 0.82]));
+  if (TUN) { mb.tag = 'torso'; mb.push(KF.T(0, 0.99 * S, 0)); mb.torus(0.15 * S, 0.012 * S, N(24), 5, mat([0.75, 0.78, 0.85], 0, 2)); mb.pop(); mb.box(0, 0.99 * S, 0.15 * S, 0.06 * S, 0.04 * S, 0.012, mat([0.6, 0.85, 1], 0.9, 3)); }
   // ---- deltoids
   for (const s of [1, -1]) { mb.tag = s > 0 ? 'deltL' : 'deltR'; const dx = s * 0.178 * S * (0.6 + 0.4 * W) * (MU ? 1.06 : 1), dm = MU ? 1.1 : 1;
     mb.ellipsoid(dx, 1.405 * S, -0.01 * S, 0.062 * W * S * dm, 0.068 * S * dm, 0.068 * W * S * dm, N(14), N(10), CAS ? knit(0.5, 0.3) : mat(suitC, 0, 1));
-    if (CAS) mb.ellipsoid(dx - s * 0.004 * S, 1.418 * S, -0.01 * S, 0.064 * W * S * dm, 0.066 * S * dm, 0.07 * W * S * dm, N(14), N(10), mat(suedeC.map(v => v * 0.92)));   // suede patch
+    mb.part = 'toppe_spalle'; if (CAS) mb.ellipsoid(dx - s * 0.004 * S, 1.418 * S, -0.01 * S, 0.064 * W * S * dm, 0.066 * S * dm, 0.07 * W * S * dm, N(14), N(10), mat(suedeC.map(v => v * 0.92))); mb.part = '';   // suede patch
   }
   // ---- arms
   for (const s of [1, -1]) {
@@ -1102,7 +1429,7 @@ function build(cfg, lod) {
     loftPath(mb, kn, add(an, [0, 0.02 * S, 0]), [{ t: 0, rx: 0.056 * W * S, rz: 0.058 * W * S }, { t: 0.28, rx: 0.058 * W * S, rz: 0.064 * W * S, back: 1.15 }, { t: 0.75, rx: 0.04 * S, rz: 0.042 * S }, { t: 1, rx: 0.036 * S, rz: 0.04 * S }],
       N(16), (t, u) => suitCol(t, u), [0, 0, 1]);
     mb.tag = 'foot' + L; legPart = false;
-    const sole = mat(CAS ? [0.16, 0.12, 0.09] : [0.04, 0.04, 0.045]), up = CAS ? mat([0.2, 0.11, 0.06]) : mat(suitC.map(v => v * 0.5 + 0.03), 0, 2);
+    const sole = mat(TUN ? [0.7, 0.72, 0.76] : CAS ? [0.16, 0.12, 0.09] : [0.04, 0.04, 0.045]), up = TUN ? mat([0.82, 0.83, 0.86]) : CAS ? mat([0.2, 0.11, 0.06]) : mat(suitC.map(v => v * 0.5 + 0.03), 0, 2);
     const F = (z, w, h, y0) => ({ t: (z + 0.07) / 0.27, rx: w * S, rz: h * S, dz: 0, ex: 2.6 });
     // shoe as a loft along +z from heel to toe, sections: half width, half height
     const heel = add(an, [0, -0.035 * S, -0.07 * S]), toe = add(an, [0, -0.05 * S, 0.2 * S]);
@@ -1167,6 +1494,7 @@ function build(cfg, lod) {
         const [p, c] = headPt(x, y, z); row.push(mb.v(p, SK(c))); }
       g.push(row); }
     for (let j = 0; j < hv; j++) for (let k = 0; k < hu; k++) { mb.tri(g[j][k], g[j + 1][k], g[j + 1][k + 1]); mb.tri(g[j][k], g[j + 1][k + 1], g[j][k + 1]); } }
+  mb.part = 'naso';
   // nose: its own loft from the bridge between the eyes to the tip, with nostril wings
   { const top = headPt(0, 0.16, 0.985)[0], tip = headPt(0, -0.28, 0.99)[0], out = noseL * hs;
     const P = t => { const y = lerp(top[1], tip[1], t), zb = lerp(top[2], tip[2], t) - 0.004; return [0, y, zb]; };
@@ -1181,16 +1509,19 @@ function build(cfg, lod) {
     for (const sx of [1, -1]) mb.ellipsoid(sx * 0.012 * hs, tip[1] - 0.001, tip[2] - 0.002, 0.0065 * hs, 0.0055 * hs, 0.008 * hs, N(8), 6, SK(skinC.map(v => v * 0.97)));
     for (const sx of [1, -1]) mb.ellipsoid(sx * 0.005 * hs, tip[1] - 0.0075 * hs, tip[2] + out * 0.25, 0.0026 * hs, 0.0012 * hs, 0.0035 * hs, 6, 4, mat([0.2, 0.09, 0.08])); }
   // lips
+  mb.part = 'labbra';
   { const up = headPt(0, -0.495, 0.99)[0], lo = headPt(0, -0.585, 0.985)[0], lc = SK(lipC);
     mb.ellipsoid(0, up[1], up[2] - 0.0045, 0.019 * hs, 0.0045 * hs, 0.007 * hs, N(14), 6, lc);
     mb.ellipsoid(0, lo[1], lo[2] - 0.0055, 0.017 * hs, 0.0055 * hs, 0.0075 * hs, N(14), 6, lc);
     mb.box(0, (up[1] + lo[1]) / 2, Math.max(up[2], lo[2]) - 0.004, 0.036 * hs, 0.0015, 0.004, mat(lipC.map(v => v * 0.35))); }
   // ears
+  mb.part = 'orecchie';
   for (const s of [1, -1]) { const e = headPt(s * 0.98, 0.0, -0.08)[0];
     mb.push(KF.M(KF.T(e[0] + s * 0.004, e[1] - 0.004, e[2]), KF.RY(s * 0.25)));
     mb.ellipsoid(0, 0, 0, 0.009 * hs, 0.031 * hs, 0.021 * hs, N(10), N(8), SK(skinC.map(v => v * 0.96)));
     mb.ellipsoid(s * 0.004, 0, 0.002, 0.005 * hs, 0.02 * hs, 0.012 * hs, N(8), 6, SK(skinC.map(v => v * 0.8))); mb.pop(); }
   // eyes with lids + brows
+  mb.part = 'occhi_sopracciglia';
   const eyeCol = EYEC[o.eyes] || EYEC.marroni;
   for (const s of [1, -1]) {
     const ec = add(headPt(s * 0.36, 0.12, 0.93)[0], [0, 0, -0.0055 * hs]), r = 0.0118 * hs;
@@ -1211,6 +1542,7 @@ function build(cfg, lod) {
       const out = nrm(sub(a, HC)); brow.push([add(a, scl(out, bt)), add(b, scl(out, bt * 0.8))]); }
     mb.grid(brow, HR(hairC.map((v, i) => lerp(v * 1.25, skinC[i], 0.12))), s < 0);
   }
+  mb.part = '';
   // ---- hair / beard volumes over the scalp parameterisation
   const shellOver = (mask, thick, colf, su, sv) => {
     const g = [], ok = [];
@@ -1225,7 +1557,7 @@ function build(cfg, lod) {
   const strands = (x, y, z) => 0.5 + 0.5 * Math.sin(Math.atan2(x, z) * 60 + y * 9 + noise3(x * 8, y * 8, z * 8) * 3);
   const hairCol = (x, y, z, m) => HR(hairC.map(v => v * (0.75 + 0.5 * strands(x, y, z) * 0.6)));
   if (!o.helmet && o.hair !== 'calvo') {
-    const st = o.hair;
+    const st = o.hair; mb.part = 'capelli';
     // hairline: forehead, temples, above the ears, nape
     const recede = st === 'stempiati' ? 0.2 : 0;   // M hairline: temples pushed back, a widow's peak left in the middle
     const mask = (x, y, z) => { const ax = Math.abs(x), front = z > 0.2 ? sstep(0.24, 0.42, y + 0.12 * ax * ax - (ax > 0.45 && ax < 0.75 ? 0.06 : 0) - recede * (0.4 + gauss((ax - 0.55) ** 2, 0.17)) * sstep(0.2, 0.6, z)) : 1;
@@ -1252,17 +1584,19 @@ function build(cfg, lod) {
       mb.push(KF.T(a[0], a[1], a[2] - 0.006)); mb.torus(0.016 * hs, 0.005 * hs, N(10), 4, mat(ledC, 0.8, 3)); mb.pop(); }
   }
   if (!o.helmet && o.beard !== 'nessuna' && o.beard !== 'accennata') {
-    const b = o.beard;
+    const b = o.beard; mb.part = 'barba';
     const mask = (x, y, z) => beardMask(x, y, z, b);
     const tk = { accennata: 0.0012, corta: 0.0045, piena: 0.009, pizzetto: 0.005, baffi: 0.005 }[b];
     const bc = hairC.map((v, i) => lerp(v * 1.5, skinC[i], 0.08));
     shellOver(mask, (x, y, z) => tk * (b === 'piena' ? 1 + 0.6 * sstep(-0.6, -0.95, y) : 1) * (0.7 + 0.3 * strands(x, y, z)), (x, y, z) => HR(bc.map(v => v * (0.85 + 0.3 * strands(x, y, z)))), N(46), N(34));
   }
+  mb.part = '';
   // hearing aid behind the right ear (skin-toned shell + thin clear tube over the top of the ear)
-  if (!o.helmet && o.hearing) { const e = headPt(-0.98, 0.0, -0.08)[0], hc = [0.62, 0.55, 0.5];
+  if (!o.helmet && o.hearing) { mb.part = 'apparecchio_acustico'; const e = headPt(-0.98, 0.0, -0.08)[0], hc = [0.62, 0.55, 0.5];
     mb.push(KF.M(KF.T(e[0] - 0.006, e[1] + 0.004, e[2] - 0.022 * hs), KF.RX(0.25))); mb.ellipsoid(0, 0, 0, 0.0055 * hs, 0.02 * hs, 0.007 * hs, N(8), 6, mat(hc)); mb.pop();
     mb.rod(add(e, [-0.006, 0.024 * hs, -0.016 * hs]), add(e, [-0.008, 0.03 * hs, 0.004]), 0.0011, 5, mat([0.75, 0.75, 0.75], 0, 4)); }
   // glasses
+  mb.part = 'occhiali';
   if (!o.helmet && o.glasses !== 'nessuno') {
     const fr = mat([0.04, 0.04, 0.045]), lens = mat([0.05, 0.07, 0.09], 0, 4);
     const ecL = headPt(0.36, 0.12, 0.93)[0], ecR = headPt(-0.36, 0.12, 0.93)[0], gz = Math.max(ecL[2], ecR[2]) + 0.012 * hs;
@@ -1275,6 +1609,7 @@ function build(cfg, lod) {
       for (const s of [1, -1]) mb.box(s * 0.079 * hs, ecL[1] + 0.005, gz - 0.05 * hs, 0.003, 0.004, 0.1 * hs, fr); }
   }
   // helmet
+  mb.part = 'casco';
   if (o.helmet) {
     const hc = add(HC, [0, 0.008 * S, -0.006 * S]);
     mb.ellipsoid(hc[0], hc[1], hc[2], RX * 1.48, RY * 1.32, RZ * 1.36, N(30), N(22), mat(suitC, 0, 1));
@@ -1284,6 +1619,79 @@ function build(cfg, lod) {
     mb.box(0, hc[1] + RY * 1.28, hc[2] - 0.01, 0.018, 0.012, RZ * 2.2, mat(ledC, 1, 3));
     for (const s of [1, -1]) mb.box(s * RX * 1.47, hc[1] - 0.01, hc[2], 0.004, 0.03, 0.06, mat(ledC, 1, 3));
   }
+  mb.part = '';
+  return skinMesh(mb, S, o);
+}
+
+/* ---------------- non-human visitors: grey, green and the tall dark one ---------------- */
+const ALIEN = {
+  grigio: { h: 1.24, skin: [0.6, 0.62, 0.62], head: [0.15, 0.175, 0.16], limb: 0.62, eye: [0.012, 0.012, 0.016], eyeE: 0, glow: 0 },
+  verde: { h: 1.38, skin: [0.32, 0.62, 0.28], head: [0.155, 0.17, 0.16], limb: 0.7, eye: [0.01, 0.012, 0.01], eyeE: 0, glow: 0 },
+  scuro: { h: 2.08, skin: [0.035, 0.035, 0.045], head: [0.085, 0.135, 0.13], limb: 0.6, eye: [1, 0.35, 0.08], eyeE: 1.6, glow: 1 } };
+function buildAlien(o, lod) {
+  const A = ALIEN[o.species], mb = tagged(), Q = lod === 'lo' ? 0.45 : lod === 'ultra' ? 1.7 : 1, N = k => Math.max(6, Math.round(k * Q));
+  const S = A.h / 1.78, J = BIND.map(p => scl(p, S)), th = A.limb, sk = mat(A.skin, 0, 6), skD = mat(A.skin.map(v => v * 0.82), 0, 6);
+  const glossy = o.species === 'scuro' ? mat(A.skin, 0.02, 6) : sk;
+  // torso: narrow chest, small waist (dark one: a long ribbed carapace)
+  mb.tag = 'torso';
+  const sec = (y, rx, rz) => ({ t: (y - 0.86) / (1.5 - 0.86), rx: rx * S * th * 1.25, rz: rz * S * th * 1.25, ex: 2.3 });
+  loftPath(mb, scl([0, 0.86, 0], S), scl([0, 1.5, -0.01], S), [sec(0.86, 0.12, 0.08), sec(0.92, 0.13, 0.085), sec(1.02, 0.1, 0.07), sec(1.12, 0.105, 0.075), sec(1.25, 0.13, 0.09), { t: (1.35 - 0.86) / 0.64, rx: 0.15 * S, rz: 0.088 * S * th * 1.25, ex: 2.3 }, { t: (1.42 - 0.86) / 0.64, rx: 0.165 * S, rz: 0.07 * S * th * 1.25, ex: 2.6 }, sec(1.49, 0.06, 0.05)], N(18),
+    (t, u) => o.species === 'scuro' && Math.sin(t * 40) > 0.6 ? mat(A.skin.map(v => v * 1.8), 0, 6) : glossy, [0, 0, 1]);
+  if (o.species === 'scuro') { mb.tag = 'chest'; mb.box(0, 1.33 * S, 0.11 * S * th * 1.25, 0.03 * S, 0.12 * S, 0.01, mat(A.eye, 1.0, 3)); }
+  // limbs: thin, long-handed; three fingers and a thumb
+  for (const s of [1, -1]) {
+    const L = s > 0 ? 'L' : 'R', sh = J[B['arm' + L]], el = J[B['fore' + L]], wr = J[B['hand' + L]];
+    mb.tag = 'delt' + L; mb.ellipsoid(sh[0] - s * 0.01 * S, sh[1], sh[2], 0.045 * S * th, 0.045 * S, 0.045 * S * th, N(10), N(8), sk);
+    mb.tag = 'arm' + L;
+    loftPath(mb, sh, el, [{ t: 0, rx: 0.04 * S * th, rz: 0.04 * S * th }, { t: 0.5, rx: 0.034 * S * th, rz: 0.036 * S * th }, { t: 1, rx: 0.028 * S * th, rz: 0.03 * S * th }], N(10), () => sk, [1, 0, 0]);
+    mb.ellipsoid(el[0], el[1], el[2], 0.03 * S * th, 0.032 * S, 0.03 * S * th, N(8), N(6), sk);
+    loftPath(mb, el, wr, [{ t: 0, rx: 0.028 * S * th, rz: 0.03 * S * th }, { t: 1, rx: 0.02 * S, rz: 0.017 * S }], N(10), () => sk, [1, 0, 0]);
+    mb.tag = 'hand' + L;
+    const d = nrm(sub(wr, el)), side = nrm(cross([0, 0, 1], d)).map(v => v * s), fwd = nrm(cross(d, side)).map(v => v * s);
+    const P = (a, b, c) => add(wr, add(add(scl(d, a * S), scl(side, b * S)), scl(fwd, c * S)));
+    mb.ellipsoid(...P(0.04, 0, 0.004), 0.03 * S, 0.045 * S, 0.012 * S, N(8), 6, sk);
+    for (let f = 0; f < 3; f++) { let p = P(0.075, -0.022 + f * 0.022, 0.004), dir = nrm(add(d, scl(side, (f - 1) * 0.15)));
+      for (let k = 0; k < 3; k++) { dir = nrm(add(scl(dir, Math.cos(0.2)), scl(fwd, Math.sin(0.2)))); const qq = add(p, scl(dir, 0.045 * S)), r = (0.0085 - k * 0.0014) * S;
+        mb.rod(p, qq, r, N(6), sk, r * 0.9); mb.ellipsoid(qq[0], qq[1], qq[2], r * (k === 2 ? 1.5 : 1), r * (k === 2 ? 1.5 : 1), r * (k === 2 ? 1.5 : 1), N(6), 4, k === 2 ? skD : sk); p = qq; } }
+    { const p = P(0.02, 0.03, 0.01), qq = P(0.06, 0.06, 0.03); mb.rod(p, qq, 0.009 * S, N(6), sk, 0.007 * S); }
+    // legs + long bare feet
+    const hp = J[B['thigh' + L]], kn = J[B['shin' + L]], an = J[B['foot' + L]];
+    mb.tag = 'leg' + L;
+    loftPath(mb, add(hp, [0, 0.03 * S, 0]), kn, [{ t: 0, rx: 0.065 * S * th, rz: 0.07 * S * th }, { t: 1, rx: 0.042 * S * th, rz: 0.045 * S * th }], N(12), () => glossy, [0, 0, 1]);
+    mb.ellipsoid(kn[0], kn[1], kn[2] + 0.005 * S, 0.042 * S * th, 0.045 * S, 0.046 * S * th, N(8), N(6), sk);
+    loftPath(mb, kn, add(an, [0, 0.02 * S, 0]), [{ t: 0, rx: 0.042 * S * th, rz: 0.046 * S * th }, { t: 0.3, rx: 0.044 * S * th, rz: 0.05 * S * th }, { t: 1, rx: 0.026 * S, rz: 0.028 * S }], N(12), () => glossy, [0, 0, 1]);
+    mb.tag = 'foot' + L;
+    mb.ellipsoid(an[0], an[1] - 0.06 * S, an[2] + 0.05 * S, 0.04 * S, 0.028 * S, 0.12 * S, N(10), N(6), sk);
+    for (let f = -1; f <= 1; f++) mb.ellipsoid(an[0] + f * 0.022 * S, an[1] - 0.075 * S, an[2] + 0.165 * S, 0.012 * S, 0.012 * S, 0.025 * S, 6, 4, skD);
+  }
+  // neck: long and thin
+  mb.tag = 'neck';
+  loftPath(mb, scl([0, 1.45, -0.012], S), scl([0, 1.62, 0.0], S), [{ t: 0, rx: 0.045 * S * th * 1.3, rz: 0.04 * S * th * 1.3 }, { t: 1, rx: 0.03 * S * 1.3, rz: 0.03 * S * 1.3 }], N(10), () => sk, [0, 0, 1]);
+  // head: big cranium tapering to a tiny chin (the dark one: tall, narrow, swept back)
+  mb.tag = 'head';
+  const [hx, hy, hz] = A.head, HC = [0, 1.6 * S + hy * 0.95, 0.01];
+  const rows = [], sv = N(28), su = N(36);
+  for (let j = 0; j <= sv; j++) { const v = j / sv * PI, y = Math.cos(v), sr = Math.sin(v), row = [];
+    for (let k = 0; k <= su; k++) { const u = k / su * TAU, x = Math.sin(u) * sr, z = Math.cos(u) * sr;
+      const low = Math.max(0, -y), taper = 1 - 0.62 * Math.pow(low, 1.4), back = o.species === 'scuro' && z < 0 ? 1 + 0.5 * Math.max(0, y + 0.2) : 1;
+      let px = x * hx * taper, py = y * hy, pz = z * hz * (z > 0 ? 1 - 0.25 * Math.pow(low, 1.2) : back);
+      if (o.species === 'scuro') py += Math.max(0, -z) * Math.max(0, y) * hy * 0.35;
+      row.push(add(HC, [px, py, pz])); }
+    rows.push(row); }
+  mb.grid(rows, sk, true);
+  mb.part = 'occhi';
+  // eyes: large tilted almonds (black glossy; glowing for the dark one)
+  for (const s of [1, -1]) {
+    const ec = add(HC, [s * hx * 0.45, -hy * 0.12, hz * 0.84]);
+    mb.push(KF.M(KF.T(ec[0], ec[1], ec[2]), KF.RY(s * 0.42), KF.RZ(s * 0.42)));
+    mb.ellipsoid(0, 0, 0, hx * 0.34, hy * 0.16, hz * 0.18, N(14), N(10), mat(A.eye, A.eyeE, A.glow ? 3 : 0));
+    if (!A.glow) mb.ellipsoid(hx * 0.12, hy * 0.05, hz * 0.17, hx * 0.04, hy * 0.025, 0.003, 6, 4, mat([0.9, 0.95, 1], 0.6));
+    mb.pop(); }
+  // nostrils + mouth slit
+  for (const s of [1, -1]) mb.ellipsoid(HC[0] + s * hx * 0.07, HC[1] - hy * 0.48, HC[2] + hz * 0.67, hx * 0.025, hy * 0.012, 0.004, 6, 4, mat(A.skin.map(v => v * 0.35)));
+  mb.box(HC[0], HC[1] - hy * 0.66, HC[2] + hz * 0.52, hx * 0.22, hy * 0.012, 0.006, mat(A.skin.map(v => v * 0.3)));
+  mb.part = 'antenne';
+  if (o.species === 'verde') for (const s of [1, -1]) { const b = add(HC, [s * hx * 0.35, hy * 0.85, 0]); mb.rod(b, add(b, [s * 0.03, 0.09, 0.01]), 0.004, 6, sk); mb.ellipsoid(b[0] + s * 0.03, b[1] + 0.095, b[2] + 0.01, 0.011, 0.011, 0.011, 8, 6, mat([0.6, 1, 0.4], 1.2, 3)); }
   return skinMesh(mb, S, o);
 }
 
@@ -1465,8 +1873,10 @@ const SEATS = {
   hover: [0, 0.12, 0.25, 0, 'seduto', { hip: [0, 0.98, -0.15], footL: [0.13, 0.72, 0.42], footR: [-0.13, 0.72, 0.42], wheel: [0, 1.28, 0.38], wheelR: 0.17 }],
   sub: [0, -0.92, 2.25, 0, 'seduto', { hip: [0, 0.55, -0.38], footL: [0.13, 0.42, 0.3], footR: [-0.13, 0.42, 0.3], wheel: [0, 0.86, 0.12], wheelR: 0.12 }]
 };
+SEATS.ufo = [0, 1.57, 5.3, 0, 'seduto', SEATS.hover[5]];
+
 const MAX_BONES = 19;
-root.KagePilot = { MINE, build, pose, poseSpec, bones, OPTS, DEF, TITLES, label, load, save, SEATS, SKIN, HAIRC, BN, MAX_BONES };
+root.KagePilot = { ALIEN, MINE, build, pose, poseSpec, bones, OPTS, DEF, TITLES, label, load, save, SEATS, SKIN, HAIRC, BN, MAX_BONES };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* Cybercity 3D — web engine (WebGL 1). Same shaders and city generator as the Android DreamService.

@@ -30,14 +30,14 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /* ---------------- mesh builder ---------------- */
-function MB() { this.p = []; this.c = []; this.a = []; this.i = []; this.m = I3(); this.stack = []; this.flatN = []; }
+function MB() { this.p = []; this.c = []; this.a = []; this.i = []; this.m = I3(); this.stack = []; this.flatN = []; this.pt = []; this.part = ''; }
 MB.prototype.push = function (m) { this.stack.push(this.m); this.m = mul(this.m, m); return this; };
 MB.prototype.pop = function () { this.m = this.stack.pop(); return this; };
 MB.prototype.tp = function (p) { return ap(this.m, p); };
 /** material: { c:[r,g,b], e: emissive, slot, mode, a:[a,b,c] } — a can also be a function of the local point */
 MB.prototype.v = function (p, mat, lp) {
   const w = this.tp(p), n = this.p.length / 3;
-  this.p.push(w[0], w[1], w[2]);
+  this.p.push(w[0], w[1], w[2]); this.pt.push(this.part || this.tag || '');
   this.c.push(mat.c[0], mat.c[1], mat.c[2], mat.e || 0);
   const an = typeof mat.a === 'function' ? mat.a(lp || p, w) : (mat.a || [0, 0, 0]);
   this.a.push((mat.mode || 0) + 8 * (mat.slot || 0), an[0], an[1], an[2]);
@@ -116,7 +116,7 @@ MB.prototype.finish = function () {
   for (let k = 0; k < N.length; k += 3) { const l = Math.hypot(N[k], N[k + 1], N[k + 2]) || 1; N[k] /= l; N[k + 1] /= l; N[k + 2] /= l; }
   let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
   for (let k = 0; k < P.length; k += 3) { x0 = Math.min(x0, P[k]); x1 = Math.max(x1, P[k]); y0 = Math.min(y0, P[k + 1]); y1 = Math.max(y1, P[k + 1]); z0 = Math.min(z0, P[k + 2]); z1 = Math.max(z1, P[k + 2]); }
-  return { pos: new Float32Array(P), norm: N, col: new Float32Array(this.c), anim: new Float32Array(this.a), idx: I, verts: P.length / 3, bounds: [x0, y0, z0, x1, y1, z1] };
+  return { pos: new Float32Array(P), norm: N, col: new Float32Array(this.c), anim: new Float32Array(this.a), idx: I, verts: P.length / 3, bounds: [x0, y0, z0, x1, y1, z1], parts: this.pt };
 };
 
 /* ---------------- colours shared with the KAGE GT ---------------- */
@@ -147,6 +147,7 @@ function buildDrone(o) {
   const shell = o.shell;
   const L = shell === 'cargo' ? 1.45 : 1.3, Hk = shell === 'cargo' ? 1.35 : shell === 'stealth' ? 0.8 : 1;
   // fuselage: superellipse sections along z
+  mb.part = 'fusoliera';
   const ex = shell === 'stealth' ? 1.0 : shell === 'cargo' ? 4.0 : 2.6, ns = lo ? 8 : (shell === 'stealth' ? 8 : 18 * U);
   const st = lo ? [0, 0.3, 0.6, 1] : U > 1 ? Array.from({ length: 23 }, (_, k) => 0.5 - 0.5 * Math.cos(k / 22 * Math.PI)) : [0, 0.08, 0.22, 0.42, 0.6, 0.76, 0.9, 1];
   const prof = t => { // half width, half height, centre y
@@ -158,16 +159,20 @@ function buildDrone(o) {
   const rows = st.map(t => { const [w, h, cy] = prof(t), z = -L * 0.47 + t * L; const r = []; for (let k = 0; k <= ns; k++) { const q = se(k / ns * Math.PI * 2, ex); r.push([q[0] * w, cy + q[1] * h, z]); } return r; });
   mb.grid(rows, paint, true);
   // canopy / sensor glass on the top front
+  mb.part = 'vetro_sensori';
   { const cr = []; for (const t of (lo ? [0.45, 0.85] : [0.42, 0.55, 0.68, 0.8, 0.9])) { const [w, h, cy] = prof(t), z = -L * 0.47 + t * L, r = [];
       for (let k = 0; k <= 8; k++) { const a = -0.9 + k / 8 * 1.8; r.push([Math.sin(a) * w * 0.62, cy + h * (0.55 + 0.5 * Math.cos(a)) + 0.012, z]); } cr.push(r); }
     mb.grid(cr, glass, true); }
   // LED side strips and under-glow
+  mb.part = 'strisce_led';
   for (const sx of [-1, 1]) mb.box(sx * 0.27, 0.02, 0.0, 0.012, 0.022, L * 0.55, led);
   if (!lo) { mb.push(T(0, -0.13 * Hk, 0)); mb.torus(0.2, 0.012, 16 * U, 4 * U, mat(col(o.led, LEDS), 0.8, 3)); mb.pop(); }
   // tail fin
+  mb.part = 'deriva';
   mb.box(0, 0.14 * Hk, -L * 0.36, 0.02, 0.14, 0.22, acc, [1, 0.4]);
   mb.box(0, 0.2 * Hk, -L * 0.38, 0.024, 0.012, 0.2, led);
   // arms + motors + rotors
+  mb.part = 'bracci_motori';
   const frame = o.frame, nArm = frame === 'hexa' ? 6 : 4, R = DRONE_RIG.armR * (frame === 'hexa' ? 1.05 : 1);
   const angs = []; for (let k = 0; k < nArm; k++) angs.push(frame === 'hexa' ? (30 + k * 60) * Math.PI / 180 : (45 + k * 90) * Math.PI / 180);
   angs.forEach((a, k) => {
@@ -184,6 +189,7 @@ function buildDrone(o) {
       mb.push(T(0, lv > 0 ? 0.1 : -0.1, 0)); mb.cyl(-0.008, 0.008, 0.083, 0.083, lo ? 6 : 14 * U, led, false); mb.pop();
       const py = lv > 0 ? 0.135 : -0.135, dir = ((k + (lv > 0 ? 0 : 1)) % 2) ? 2 : 1, pv = [mx, mz];
       // hub + blades
+      mb.part = 'mozzo_pale';
       const rot = mat([0.06, 0.06, 0.07], 0, 0, dir, pv), tip = mat(col(o.accent), 0, 2, dir, pv);
       mb.push(T(0, py, 0)); mb.cyl(-0.02, 0.02, 0.03, 0.025, lo ? 4 : 8 * U, rot); mb.pop();
       const nb = lo ? 2 : o.blades;
@@ -199,15 +205,18 @@ function buildDrone(o) {
         for (const ga of [a + Math.PI * 0.75, a - Math.PI * 0.75]) mb.rod([0, 0.06, 0], [Math.sin(ga) * 0.46, py, Math.cos(ga) * 0.46], 0.01, 4, acc);
       }
       // nav lights on the outer side of the motor
+      mb.part = 'luci_navigazione';
       const navC = mz > 0 ? (mx > 0 ? [1, 0.08, 0.06] : [0.1, 1, 0.3]) : [1, 1, 1];
       mb.box(Math.sin(a) * 0.09, 0.05, Math.cos(a) * 0.09, 0.03, 0.03, 0.03, mz > 0 ? mat(navC, 1.2) : mat(navC, 1.6, 0, 7, [k * 0.37, 0, 0]));
       mb.pop();
     }
   });
   // gimbal camera under the nose
+  mb.part = 'gimbal_camera';
   mb.ellipsoid(0, -0.11 * Hk, L * 0.36, 0.075, 0.075, 0.075, lo ? 6 : 14 * U, lo ? 4 : 8 * U, carbon);
   if (!lo) { mb.push(M(T(0, -0.11 * Hk, L * 0.36 + 0.06), RX(Math.PI / 2))); mb.cyl(0, 0.03, 0.04, 0.035, 12 * U, glass); mb.cyl(0.029, 0.034, 0.02, 0.02, 8 * U, mat([0.1, 0.9, 1.0], 1.4)); mb.pop(); }
   // skids
+  mb.part = 'pattini';
   for (const sx of [-1, 1]) {
     if (!lo) { mb.rod([sx * 0.12, -0.1 * Hk, 0.2], [sx * 0.22, -0.3, 0.22], 0.012, 5, carbon);
     mb.rod([sx * 0.12, -0.1 * Hk, -0.2], [sx * 0.22, -0.3, -0.22], 0.012, 5, carbon); }
@@ -216,6 +225,7 @@ function buildDrone(o) {
   if (shell === 'cargo') { mb.box(0, -0.2, -0.02, 0.36, 0.14, 0.62, mat(col(o.accent), 0, 2)); mb.box(0, -0.2, -0.02, 0.37, 0.02, 0.5, led); }
   if (shell === 'stealth') { for (const sx of [-1, 1]) mb.box(sx * 0.18, 0.06, -0.32, 0.18, 0.01, 0.25, acc, [0.4, 1]); }
   // headlights
+  mb.part = 'fari';
   if (lo) mb.box(0, 0.0, L * 0.5 - 0.02, 0.2, 0.02, 0.02, mat([1, 0.97, 0.9], 1.6)); else for (const sx of [-1, 1]) mb.box(sx * 0.07, 0.0, L * 0.5 - 0.02, 0.06, 0.02, 0.02, mat([1, 0.97, 0.9], 1.6));
   const m = mb.finish(); m.kind = 'drone'; m.opts = o; return m;
 }
@@ -246,14 +256,17 @@ function buildBoat(o) {
     }
     const P = (x, y, z) => [ox + x, y, z];
     // bottom panels (keel → chine), sides (chine → rail → sheer) — separate so the chine stays a crisp edge
+    mb.part = 'carena';
     for (const sd of [-1, 1]) {
       mb.grid(secs.map(q => [P(0, q.k, q.z), P(sd * q.b * 0.92, q.kc, q.z)]), bottom, sd < 0);
       mb.grid(secs.map(q => [P(sd * q.b * 0.92, q.kc, q.z), P(sd * q.b, q.kc + 0.07, q.z), P(sd * q.b * 0.985, q.s - 0.18, q.z), P(sd * q.b * 0.96, q.s, q.z)]), paint, sd < 0);
       // neon waterline at the spray rail + livery stripe under the sheer
+      mb.part = 'linea_galleggiamento_neon';
       mb.grid(secs.slice(1, -2).map(q => [P(sd * (q.b + 0.012), q.kc + 0.06, q.z), P(sd * (q.b + 0.012), q.kc + 0.1, q.z)]), led, sd < 0);
       mb.grid(secs.slice(2, -1).map(q => [P(sd * (q.b * 0.99 + 0.01), q.s - 0.3, q.z), P(sd * (q.b * 0.975 + 0.01), q.s - 0.2, q.z)]), acc, sd < 0);
     }
     // transom
+    mb.part = 'specchio_poppa';
     const q = secs[0];
     mb.poly([P(-q.b * 0.96, q.s, q.z), P(q.b * 0.96, q.s, q.z), P(q.b * 0.985, q.s - 0.18, q.z), P(q.b, q.kc + 0.07, q.z), P(q.b * 0.92, q.kc, q.z), P(0, q.k, q.z), P(-q.b * 0.92, q.kc, q.z), P(-q.b, q.kc + 0.07, q.z), P(-q.b * 0.985, q.s - 0.18, q.z)].reverse(), paint);
     return secs;
@@ -263,28 +276,35 @@ function buildBoat(o) {
     const sL = hull(-0.95, 0.42, nst), sR = hull(0.95, 0.42, nst);
     deckL = sL.map(q => [-0.95 - q.b * 0.96, q.s, q.z]); deckR = sR.map(q => [0.95 + q.b * 0.96, q.s, q.z]);
     // tunnel between the hulls
+    mb.part = 'tunnel_scafi';
     mb.grid(sL.map((q, j) => [[-0.95 + q.b * 0.96, q.s - 0.1, q.z], [0.95 - sR[j].b * 0.96, sR[j].s - 0.1, q.z]]), bottom, true);
     // bridge deck covers the full width up to the bow of the hulls
+    mb.part = 'ponte';
   } else {
     const s = hull(0, 1, nst);
     deckL = s.map(q => [-q.b * 0.96, q.s, q.z]); deckR = s.map(q => [q.b * 0.96, q.s, q.z]);
   }
   // crowned deck
+  mb.part = 'coperta';
   mb.grid(deckL.map((l, j) => { const r = deckR[j], w = (r[0] - l[0]) / 2, cx = (r[0] + l[0]) / 2, y = l[1]; return [[l[0], y, l[2]], [cx - w * 0.5, y + 0.07, l[2]], [cx, y + 0.1, l[2]], [cx + w * 0.5, y + 0.07, l[2]], [r[0], y, r[2]]]; }), paint, false);
   // deck stripes
+  mb.part = 'strisce_coperta';
   mb.grid(deckL.slice(Math.round(nst * 0.15), Math.round(nst * 0.94)).map((l, j) => { const z = l[2], y = Sh((z - z0) / Lh) + 0.105; return [[-0.18, y, z], [0.18, y, z]]; }), acc, false);
   // cockpit canopy (glass bubble) + frame
+  mb.part = 'cupola_pozzetto';
   { const rows = []; const tz = lo ? [0.32, 0.45, 0.6] : U > 1 ? Array.from({ length: 14 }, (_, k) => 0.3 + k / 13 * 0.31) : [0.3, 0.36, 0.43, 0.5, 0.56, 0.61];
     for (const t of tz) { const z = z0 + t * Lh, w = (o.hull === 'catamaran' ? 1.15 : B(t) * 0.78), y = Sh(t) + 0.08, hgt = 0.62 * Math.sin((t - 0.29) / 0.33 * Math.PI) + 0.02, r = [];
       const nk = 10 * U; for (let k = 0; k <= nk; k++) { const a = -Math.PI / 2 + k / nk * Math.PI; r.push([Math.sin(a) * w, y + Math.cos(a) * hgt, z]); } rows.push(r); }
     mb.grid(rows, glass, true);
     const zf = z0 + 0.61 * Lh; mb.box(0, Sh(0.61) + 0.12, zf, (o.hull === 'catamaran' ? 2.3 : B(0.61) * 1.56), 0.06, 0.08, acc); }
   // radar arch with LED bar
+  mb.part = 'arco_radar';
   { const z = z0 + 0.25 * Lh, w = o.hull === 'catamaran' ? 1.55 : B(0.25) * 0.85, y = Sh(0.25);
     for (const sx of [-1, 1]) mb.rod([sx * w, y, z], [sx * w * 0.8, y + 1.05, z - 0.35], 0.06, lo ? 5 : 8, acc);
     mb.box(0, y + 1.07, z - 0.37, w * 1.7, 0.1, 0.32, acc); mb.box(0, y + 1.0, z - 0.2, w * 1.5, 0.03, 0.03, led);
     mb.box(0, y + 1.3, z - 0.42, 0.04, 0.4, 0.04, dark); mb.box(0, y + 1.52, z - 0.42, 0.07, 0.07, 0.07, mat([1, 1, 1], 1.6, 0, 7, [0.3, 0, 0])); }
   // engines
+  mb.part = 'motori';
   const zt = z0;
   if (o.engine === 'outboard') {
     for (const sx of (o.hull === 'catamaran' ? [-0.95, 0.95] : [-0.55, 0.55])) {
@@ -312,6 +332,7 @@ function buildBoat(o) {
     mb.box(0, y, z - 0.25, 0.04, 1.4, 0.6, acc, [1, 0.6]);
   }
   // hydrofoil struts and wings
+  mb.part = 'aliscafi';
   if (o.hull === 'hydrofoil') {
     for (const [z, w] of [[z0 + 0.72 * Lh, 2.3], [z0 + 0.12 * Lh, 1.7]]) {
       for (const sx of [-1, 1]) mb.box(sx * w * 0.42, -0.75, z, 0.06, 1.1, 0.4, acc);
@@ -320,6 +341,7 @@ function buildBoat(o) {
     }
   }
   // bow lights + nav
+  mb.part = 'luci_prua';
   const zb = z0 + 0.86 * Lh;
   for (const sx of [-1, 1]) {
     mb.box(sx * B(0.86) * 0.9, Sh(0.86) - 0.12, zb, 0.04, 0.05, 0.35, mat(sx > 0 ? [1, 0.1, 0.08] : [0.1, 1, 0.3], 1.2));
@@ -354,10 +376,12 @@ function buildGalleon(o) {
   for (const sd of [-1, 1]) {
     mb.grid(secs.map(q => sect(q).map(p => [sd * p[0], p[1], q.z])), paint, sd < 0);
     // wales (accent) and neon waterline
+    mb.part = 'cinte';
     for (const [y0, y1, m] of [[0.55, 0.75, acc], [2.25, 2.45, acc], [-0.05, 0.08, led]])
       mb.grid(secs.slice(1, -1).map(q => { const f = y => { const s = sect(q); for (let i = 0; i + 1 < s.length; i++) if (y >= s[i][1] && y <= s[i + 1][1]) return lerp(s[i][0], s[i + 1][0], (y - s[i][1]) / (s[i + 1][1] - s[i][1] || 1)); return q.b; };
         return [[sd * (f(y0) + 0.04), y0, q.z], [sd * (f(y1) + 0.04), y1, q.z]]; }), m, sd < 0);
     // gun ports: emissive light-cannon ports in a row
+    mb.part = 'portelli_cannoni';
     if (!lo || true) for (let g = 0; g < 9; g++) {
       const t = 0.3 + g * 0.055, z = z0 + t * Lh, x = sd * (B(t) * 0.995 + 0.05);
       mb.box(x, 1.45, z, 0.06, 0.5, 0.55, mat(col(o.led, LEDS), 1.2, 3));
@@ -365,11 +389,14 @@ function buildGalleon(o) {
     }
   }
   // transom with lit stern windows
+  mb.part = 'specchio_poppa_finestre';
   { const q = secs[0], s = sect(q); mb.poly(s.map(p => [-p[0], p[1], q.z]).reverse().concat(s.map(p => [p[0], p[1], q.z])).reverse(), paint); }
   // decks
+  mb.part = 'ponti';
   const deckAt = (t0, t1, y, m) => mb.grid(secs.filter(q => q.t >= t0 - 1e-6 && q.t <= t1 + 1e-6).map(q => [[-q.b * 0.88, y, q.z], [0, y + 0.05, q.z], [q.b * 0.88, y, q.z]]), m, false);
   deckAt(0, 1, GALLEON_RIG.deckY, wood);
   // stern castle (quarterdeck) and forecastle
+  mb.part = 'castelli';
   { const zA = z0 - 0.2, zB = z0 + 0.3 * Lh, yB = 4.3, yT = 6.6, wA = 3.3, wB = 4.2;
     const C = [[-wA, yB, zA], [wA, yB, zA], [wA, yT + 0.6, zA], [-wA, yT + 0.6, zA], [-wB, yB, zB], [wB, yB, zB], [wB, yT, zB], [-wB, yT, zB]];
     for (const f of [[1, 5, 6, 2], [4, 0, 3, 7], [3, 2, 6, 7], [5, 4, 7, 6], [0, 1, 2, 3]]) mb.poly(f.map(k => C[k]), f[0] === 0 ? paint : f[0] === 3 ? wood : paint);
@@ -378,17 +405,21 @@ function buildGalleon(o) {
     mb.box(0, yT + 0.75, zA + 0.05, wA * 2 + 0.3, 0.2, 0.3, acc);
     for (const sx of [-1, 1]) mb.box(sx * (wB + 0.05), yT - 0.3, (zA + zB) / 2, 0.08, 0.15, zB - zA, led);
     // stern lanterns
+    mb.part = 'fanali_poppa';
     for (const sx of [-2.6, 0, 2.6]) { mb.rod([sx, yT + 0.8, zA + 0.1], [sx, yT + 2.0, zA - 0.4], 0.05, 5, dark); mb.ellipsoid(sx, yT + 2.2, zA - 0.45, 0.3, 0.42, 0.3, 8, 6, mat([1, 0.8, 0.45], 1.6)); }
     const zF = z0 + 0.84 * Lh, zG = z0 + 0.98 * Lh; deckAt(0.84, 0.97, 4.4, wood);
     mb.box(0, 3.9, zF, 7.2, 1.0, 0.25, paint);
   }
   // bulwark rails (accent caps)
+  mb.part = 'parapetti';
   for (const sd of [-1, 1]) mb.grid(secs.slice(Math.round(nst * 0.28), nst).map(q => [[sd * q.b * 0.9, q.s, q.z], [sd * q.b * 0.9, q.s + 0.18, q.z]]), acc, sd < 0);
   // bowsprit + neon spire figurehead
+  mb.part = 'bompresso_polena';
   const zBow = z0 + Lh;
   mb.rod([0, 4.2, zBow - 3], [0, 8.2, zBow + 9], 0.32, 8, wood, 0.14);
   mb.rod([0, 2.6, zBow - 0.4], [0, 3.6, zBow + 2.2], 0.25, 8, mat(col(o.led, LEDS), 1.4, 3), 0.02);
   // masts, tops, yards, sails
+  mb.part = 'alberi';
   const D = GALLEON_RIG.deckY, sailM = o.sails;
   const sailCol = sailM === 'classic' ? [0.86, 0.81, 0.69] : sailM === 'solar' ? [0.04, 0.09, 0.2] : [0.05, 0.055, 0.08];
   function squareSail(mz, yTop, yBot, wTop, wBot, nu, nv) {
@@ -397,6 +428,7 @@ function buildGalleon(o) {
     const sm = (c, e, slot) => mat(c, e || 0, slot || 0, 4, lp => { const u = (lp[0] / lerp(wTop, wBot, (yTop - lp[1]) / (yTop - yBot)) + 0.5), v = (yTop - lp[1]) / (yTop - yBot); return [u, v, mz]; });
     if (sailM === 'solar' && !lo) {
       // solar cells: each cell its own quad with a slightly different tint, silver seams
+      mb.part = 'vele_celle_solari';
       for (let j = 0; j < nv; j++) for (let k = 0; k < nu; k++) {
         const h = Math.sin((j * 7 + k * 13 + mz) * 12.9898) * 43758.5453, f = h - Math.floor(h);
         const c = [0.03 + f * 0.04, 0.08 + f * 0.06, 0.2 + f * 0.12];
@@ -408,6 +440,7 @@ function buildGalleon(o) {
       mb.grid(rows.map(r => r.map(p => [p[0], p[1], p[2] - 0.01])), sm(sailCol, 0), true);
     }
     // seams / neon panel lines (follow the billow because they carry the same u, v)
+    mb.part = 'cuciture_neon';
     if (sailM !== 'classic' || !lo) {
       const lm = sailM === 'neon' ? sm(col(o.led, LEDS), 1.3, 3) : sailM === 'solar' ? sm([0.7, 0.75, 0.8], 0.2) : sm([0.55, 0.5, 0.42], 0);
       const th = sailM === 'neon' ? 0.09 : 0.05, step = (sailM === 'neon' ? 2 : 1) * U;
@@ -423,6 +456,7 @@ function buildGalleon(o) {
   GALLEON_RIG.masts.forEach(([mz, h], mi) => {
     mb.push(T(0, D, mz)); mb.cyl(0, h, 0.42, 0.16, lo ? 6 : 12 * U, wood); mb.pop();
     // tops (platforms) with LED rim
+    mb.part = 'coffe';
     for (const f of [0.42, 0.72]) { if (mi === 2 && f > 0.6) continue; mb.push(T(0, D + h * f, mz)); mb.cyl(-0.1, 0.1, 1.3 - f, 1.3 - f, lo ? 6 : 14, dark); mb.cyl(0.1, 0.16, 1.32 - f, 1.32 - f, lo ? 6 : 14, led, false); mb.pop(); }
     const yawm = (mat0) => Object.assign({}, mat0, { mode: 4, a: lp => [0.5, 0, mz] });
     if (mi < 2) {
@@ -431,11 +465,13 @@ function buildGalleon(o) {
       for (let s = 0; s + 1 < yards.length; s++) squareSail(mz, yards[s + 1][0] - 0.3, yards[s][0] + 0.5 - (s === 0 ? -0.0 : 0), yards[s + 1][1] * 0.95, yards[s][1] * 0.98, nu, nv);
       squareSail(mz, yards[0][0] - 0.3, D + h * 0.12, yards[0][1] * 0.98, yards[0][1] * 1.02, nu, nv);
       // flag
+      mb.part = 'bandiera';
       { const fy = D + h + 0.2; mb.rod([0, D + h - 0.2, mz], [0, fy + 1.2, mz], 0.05, 5, dark);
         mb.grid([0, 1, 2, 3, 4].map(k => [[0, fy + 1.1, mz - k * 0.5], [0, fy + 0.4, mz - k * 0.5]]), mat(col(o.accent), 0.15, 2, 5, lp => [(mz - lp[2]) / 2, 0, 0.35]), false);
         mb.grid([0, 1, 2, 3, 4].map(k => [[0.01, fy + 1.1, mz - k * 0.5], [0.01, fy + 0.4, mz - k * 0.5]]), mat(col(o.accent), 0.15, 2, 5, lp => [(mz - lp[2]) / 2, 0, 0.35]), true); }
     } else {
       // mizzen: lateen sail (fore-aft) on a diagonal yard
+      mb.part = 'vela_mezzana';
       const yA = D + h * 0.95, yB = D + h * 0.25, zA = mz + 4.5, zB = mz - 6;
       mb.rod([0, yB - 0.6, zB - 0.4], [0, yA + 0.8, zA + 0.6], 0.15, lo ? 5 : 8, wood);
       const rows = []; for (let j = 0; j <= nv; j++) { const v = j / nv, r = []; for (let k = 0; k <= nu; k++) { const u = k / nu, za = lerp(zB, zA, u), ya = lerp(yB, yA, u); r.push([0.0, lerp(ya, D + 1.6 + (za - zB) * 0.02, v * (1 - Math.abs(u - 0.35) * 0.6)), za]); } rows.push(r); }
@@ -445,6 +481,7 @@ function buildGalleon(o) {
     }
   });
   // jibs from the foremast to the bowsprit (fore-aft sails, flutter)
+  mb.part = 'fiocchi';
   for (const [ya, yb, zb] of [[D + 19, D + 5.6, zBow + 6.8], [D + 15, D + 4.0, zBow + 3.0]]) {
     const zA = GALLEON_RIG.masts[0][0] + 0.6, rows = [];
     for (let j = 0; j <= (lo ? 1 : 3); j++) { const v = j / (lo ? 1 : 3), r = []; for (let k = 0; k <= nu; k++) { const u = k / nu; r.push([0, lerp(lerp(ya, D + 3.2, u * 0.9), yb, v * u), lerp(zA, zb, u)]); } rows.push(r); }
@@ -453,6 +490,7 @@ function buildGalleon(o) {
     if (sailM === 'neon') mb.grid(rows[rows.length - 1].map(p => [[0.03, p[1] - 0.08, p[2]], [0.03, p[1] + 0.08, p[2]]]), fm(col(o.led, LEDS), 1.3, 3), true);
   }
   // rigging: shrouds to the rails and stays between mast tops
+  mb.part = 'sartiame';
   if (!lo) {
     for (const [mz, h] of GALLEON_RIG.masts) for (const sd of [-1, 1]) for (let r = 0; r < 3; r++) {
       const t = (mz - z0) / Lh, b = B(Math.max(0, Math.min(1, t))) * 0.9;
@@ -463,6 +501,7 @@ function buildGalleon(o) {
     mb.rod([0, D + m2[1] * 0.95, m2[0]], [0, D + f[1] * 0.8, f[0]], 0.04, 3, rope);
     mb.rod([0, D + z3[1] * 0.95, z3[0]], [0, D + m2[1] * 0.7, m2[0]], 0.04, 3, rope);
     // rudder + bow lamps
+    mb.part = 'timone_lanterne';
     mb.box(0, -0.8, z0 - 0.4, 0.3, 4.2, 1.4, dark);
   }
   for (const sd of [-1, 1]) mb.box(sd * 3.0, 5.2, z0 + 0.9 * Lh, 0.25, 0.25, 0.25, mat(sd > 0 ? [1, 0.1, 0.08] : [0.1, 1, 0.3], 1.4));
@@ -482,26 +521,32 @@ function buildMoto(o) {
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), metal = mat([0.5, 0.52, 0.56]), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const R = MOTO_RIG.wheelR, zf = MOTO_RIG.wb / 2, zr = -MOTO_RIG.wb / 2;
   // wheels (rotate as propellers about x: built in the yz plane, mode 3 uses x/y pivot → we spin them with a z-axis rotated frame instead)
+  mb.part = 'ruote';
   for (const [z, w] of [[zf, 0.12], [zr, 0.18]]) {
     const pv = [0, R, 0];
     mb.push(M(T(0, R, z), RY(PI / 2)));      // wheel plane: local xy, axis local z (= world x)
     const tyre = mat([0.03, 0.03, 0.03], 0, 0, 3, [0, 0, 0]), rim = mat(col(o.accent), 0, 2, 3, [0, 0, 0]), ring = mat(col(o.led, LEDS), 1.1, 3, 3, [0, 0, 0]);
     mb.torus2 = null;
     // tyre: torus about local z
+    const wn = z > 0 ? 'anteriore' : 'posteriore'; mb.part = 'ruota_' + wn;
     mb.push(RX(PI / 2)); mb.torus(R - 0.05, 0.055 + w * 0.15, lo ? 14 : 32 * U, lo ? 5 : 10 * U, tyre); mb.pop();
     if (o.wheels === 'hubless') { mb.push(RX(PI / 2)); mb.torus(R - 0.12, 0.022, lo ? 14 : 32 * U, 4, ring); mb.torus(R - 0.1, 0.035, lo ? 12 : 28 * U, 4, rim); mb.pop(); }
     else { mb.push(RX(PI / 2)); mb.torus(R - 0.1, 0.03, lo ? 12 : 28 * U, 4, rim); mb.pop(); for (let k = 0; k < 6; k++) { mb.push(RZ(k / 6 * TAU)); mb.box(0, (R - 0.1) / 2, 0, 0.025, R - 0.1, 0.02, rim); mb.pop(); }
       mb.cyl2 = null; mb.push(RX(PI / 2)); mb.cyl(-0.05, 0.05, 0.05, 0.05, 10, rim); mb.pop(); }
     // brake disc
+    mb.part = 'disco_freno_' + wn;
     mb.push(T(0, 0, 0.06)); mb.push(RX(PI / 2)); mb.cyl(-0.004, 0.004, 0.16, 0.16, lo ? 10 : 24, mat([0.55, 0.56, 0.6], 0, 0, 3, [0, 0, 0])); mb.pop(); mb.pop();
     mb.pop(); void pv;
   }
   // frame / swingarm / fork
+  mb.part = 'telaio_forcellone_forcella';
   mb.rod([0, R, zr], [0, 0.52, -0.1], 0.04, 8, acc);
   mb.rod([0.08, R, zf], [0.06, 1.0, zf - 0.22], 0.028, 8, metal); mb.rod([-0.08, R, zf], [-0.06, 1.0, zf - 0.22], 0.028, 8, metal);
   // battery / motor block
+  mb.part = 'batteria_motore';
   mb.box(0, 0.5, 0.0, 0.26, 0.32, 0.6, dark); mb.box(0, 0.5, 0.0, 0.27, 0.04, 0.5, led);
   // tank + seat + tail
+  mb.part = 'serbatoio_sella_coda';
   const shell = [];
   const prof = o.fairing === 'naked' ? [[0.55, 0.62, 0.1], [0.25, 0.86, 0.15], [-0.15, 0.82, 0.13], [-0.5, 0.88, 0.07], [-0.75, 0.92, 0.02]]
     : o.fairing === 'cafe' ? [[0.6, 0.78, 0.12], [0.3, 0.9, 0.16], [-0.05, 0.84, 0.14], [-0.4, 0.84, 0.13], [-0.65, 0.86, 0.1], [-0.75, 0.86, 0.04]]
@@ -511,18 +556,22 @@ function buildMoto(o) {
   mb.box(0, 0.9, -0.32, 0.2, 0.05, 0.42, mat([0.06, 0.05, 0.05]));                     // seat
   if (o.fairing === 'sport') {
     // lower fairing panels + windscreen
+    mb.part = 'carenatura_parabrezza';
     for (const sx of [-1, 1]) mb.box(sx * 0.17, 0.6, 0.45, 0.03, 0.36, 0.6, paint, [0.6, 0.8]);
     mb.box(0, 1.08, 0.62, 0.22, 0.2, 0.02, glass, [0.6, 0.6]);
     for (const sx of [-1, 1]) mb.box(sx * 0.171, 0.63, 0.45, 0.012, 0.05, 0.5, led);
   }
   if (o.fairing === 'cafe') { mb.push(T(0, 0.92, 0.72)); mb.push(RX(PI / 2)); mb.cyl(-0.05, 0.05, 0.11, 0.11, 16, dark); mb.pop(); mb.pop(); }
   // headlight (LED bar) + tail light
+  mb.part = 'fari';
   mb.box(0, 0.86, o.fairing === 'sport' ? 0.88 : 0.78, 0.18, 0.04, 0.03, mat([1, 0.97, 0.9], 1.6));
   mb.box(0, 0.96, -0.82, 0.2, 0.03, 0.03, mat([1, 0.1, 0.15], 1.5));
   // handlebars
+  mb.part = 'manubrio';
   mb.rod([-0.34, 1.02, zf - 0.28], [0.34, 1.02, zf - 0.28], 0.016, 6, dark);
   for (const sx of [-1, 1]) mb.rod([sx * 0.3, 1.02, zf - 0.28], [sx * 0.36, 1.02, zf - 0.28], 0.024, 6, mat([0.06, 0.06, 0.06]));
   // foot pegs
+  mb.part = 'pedane';
   for (const sx of [-1, 1]) mb.box(sx * 0.17, 0.4, -0.3, 0.08, 0.02, 0.04, metal);
   const m = mb.finish(); m.kind = 'moto'; m.opts = o; return m;
 }
@@ -538,17 +587,21 @@ function buildHover(o) {
   const paint = mat(col(o.paint), 0, 1), acc = mat(col(o.accent), 0, 2), dark = mat([0.03, 0.03, 0.035]), led = mat(col(o.led, LEDS), 1, 3), glass = mat([0.02, 0.03, 0.05], 0, 4);
   const skirt = mat(col(o.skirt).map(v => v * 0.7), 0, 0);
   // inflatable skirt: a rounded rectangle tube (superellipse) around the hull
+  mb.part = 'gonna';
   const ring = (rx, rz, n) => { const pts = []; for (let k = 0; k <= n; k++) { const a = k / n * TAU, c = Math.cos(a), s2 = Math.sin(a); pts.push([Math.sign(s2) * Math.pow(Math.abs(s2), 0.5) * rx, Math.sign(c) * Math.pow(Math.abs(c), 0.5) * rz]); } return pts; };
   const n = lo ? 16 : 40 * U, outer = ring(2.0, 4.0, n);
   const rows = []; for (let j = 0; j <= (lo ? 4 : 8 * U); j++) { const a = j / (lo ? 4 : 8 * U) * TAU, r = 0.32, row = [];
     for (const [x, z] of outer) { const L = Math.hypot(x, z) || 1, nx = x / L, nz = z / L; row.push([x + nx * Math.cos(a) * r, 0.34 + Math.sin(a) * r, z + nz * Math.cos(a) * r]); } rows.push(row); }
   mb.grid(rows, skirt, true);
   // deck
+  mb.part = 'ponte';
   const deck = ring(1.95, 3.95, n); { const c = mb.v([0, 0.62, 0], paint); const ix = deck.map(([x, z]) => mb.v([x, 0.62, z], paint)); for (let k = 0; k < ix.length - 1; k++) mb.tri(c, ix[k + 1], ix[k]); }
   for (let k = 0; k < deck.length - 1; k++) { const [x0, z0] = deck[k], [x1, z1] = deck[k + 1]; mb.poly([[x0, 0.62, z0], [x1, 0.62, z1], [x1 * 1.0, 0.5, z1], [x0, 0.5, z0]], paint); }
   // LED trim around the deck
+  mb.part = 'bordo_led';
   { const tr = []; for (const [x, z] of ring(1.97, 3.97, n)) tr.push([[x, 0.6, z], [x, 0.64, z]]); mb.grid(tr, led, false); }
   // cabin
+  mb.part = 'cabina';
   if (o.cabin === 'chiusa') {
     const cr = []; for (const [t, w, h] of [[1.6, 0.9, 0.0], [1.2, 1.25, 0.85], [0.2, 1.35, 1.05], [-0.8, 1.3, 1.0], [-1.3, 1.1, 0.0]]) { const r = []; for (let k = 0; k <= 12; k++) { const a = -PI / 2 + k / 12 * PI; r.push([Math.sin(a) * w, 0.62 + Math.cos(a) * h, t]); } cr.push(r); }
     mb.grid(cr, glass, true); mb.box(0, 1.69, -0.2, 0.06, 0.06, 2.2, acc); mb.box(0, 1.72, -0.2, 0.03, 0.02, 2.0, led);
@@ -557,6 +610,7 @@ function buildHover(o) {
     for (const sx of [-0.4, 0.4]) { mb.box(sx, 0.85, -0.4, 0.5, 0.45, 0.5, mat([0.08, 0.08, 0.09])); }
   }
   // rear fans in ducts (spin about z: mode 3 pivot (x, y))
+  mb.part = 'eliche_intubate';
   const fans = o.fans === 1 ? [[0, 1.75, 1.1]] : [[-0.95, 1.35, 0.7], [0.95, 1.35, 0.7]];
   for (const [fx, fy, fr] of fans) {
     const zf = -3.0;
@@ -565,9 +619,11 @@ function buildHover(o) {
     for (let b = 0; b < 5; b++) { mb.push(M(T(fx, fy, zf + 0.05), RZ(b / 5 * TAU), RY(0.4))); mb.box(0, fr * 0.48, 0, 0.16, fr * 0.9, 0.02, mat([0.12, 0.12, 0.14], 0, 0, 3, pv)); mb.pop(); }
     for (const sx of [-1, 1]) mb.rod([fx + sx * fr * 0.7, 0.62, zf + 0.4], [fx + sx * fr * 0.5, fy - fr * 0.5, zf], 0.05, 6, acc);
     // rudders behind the fan
+    mb.part = 'timoni';
     for (const rx of [-fr * 0.4, fr * 0.4]) mb.box(fx + rx, fy, zf - 0.35, 0.03, fr * 1.6, 0.4, dark);
   }
   // lights
+  mb.part = 'luci';
   for (const sx of [-1, 1]) { mb.box(sx * 1.2, 0.66, 3.75, 0.4, 0.06, 0.06, mat([1, 0.97, 0.9], 1.5)); mb.box(sx * 1.7, 0.66, -3.6, 0.2, 0.06, 0.06, mat(sx > 0 ? [1, 0.1, 0.08] : [0.1, 1, 0.3], 1.4)); }
   const m = mb.finish(); m.kind = 'hover'; m.opts = o; return m;
 }
@@ -594,25 +650,31 @@ function buildSub(o) {
   }
   mb.grid(rows, paint, true);
   // glass bubble cockpit at the bow
+  mb.part = 'cupola_vetro';
   const bz = o.hull === 'batiscafo' ? 0 : L / 2 - 1.2, br = o.hull === 'batiscafo' ? 1.0 : 0.75;
   mb.ellipsoid(0, o.hull === 'manta' ? 0.35 : 0.15, bz + (o.hull === 'batiscafo' ? 1.05 : 0.3), br, br * 0.85, br, lo ? 10 : 22 * U, lo ? 8 : 14 * U, glass);
   // tail fins + LED rings
+  mb.part = 'pinne_coda';
   for (const a of [0, PI / 2, PI, PI * 1.5]) { mb.push(M(T(0, 0, -L / 2 + 0.6), RZ(a))); mb.box(0, 0.65, 0, 0.05, 0.6, 0.8, acc, [0.4, 1]); mb.pop(); }
   for (const z of [-L / 2 + 1.3, 0.2]) { const t = (z + L / 2) / L; const r0 = rows[Math.round(t * st)][0][1]; mb.push(M(T(0, 0, z), RX(PI / 2))); mb.torus(Math.abs(r0) + 0.01, 0.025, lo ? 12 : 28, 3, led); mb.pop(); }
   // thrusters (spinning props in shrouds)
+  mb.part = 'propulsori';
   const thr = o.hull === 'manta' ? [[1.3, 0], [-1.3, 0]] : [[0.95, -0.3], [-0.95, -0.3]];
   for (const [tx, ty] of thr) { mb.push(M(T(tx, ty, -L * 0.3), RX(PI / 2))); mb.cyl(-0.35, 0.35, 0.28, 0.28, lo ? 10 : 20, acc, false); mb.cyl(-0.36, -0.3, 0.25, 0.25, lo ? 10 : 20, led, false); mb.pop();
     for (let b = 0; b < 4; b++) { mb.push(M(T(tx, ty, -L * 0.3), RZ(b / 4 * TAU), RY(0.5))); mb.box(0, 0.12, 0, 0.08, 0.22, 0.015, mat([0.6, 0.62, 0.66], 0, 0, 3, [tx, ty])); mb.pop(); }
     mb.rod([tx * 0.6, ty * 0.5, -L * 0.3], [tx, ty, -L * 0.3], 0.06, 6, dark); }
   // floodlights (pointing forward) + skids
+  mb.part = 'fari_pattini';
   for (const sx of [-1, 1]) { mb.box(sx * 0.55, -0.45, L / 2 - 1.4, 0.2, 0.2, 0.15, dark); mb.box(sx * 0.55, -0.45, L / 2 - 1.32, 0.16, 0.16, 0.02, mat([1, 0.95, 0.8], 1.8)); }
   for (const sx of [-1, 1]) mb.rod([sx * 0.6, -1.0, -L * 0.3], [sx * 0.6, -1.0, L * 0.3], 0.05, 6, acc);
   for (const sx of [-1, 1]) for (const z of [-L * 0.25, L * 0.25]) mb.rod([sx * 0.4, -0.5, z], [sx * 0.6, -1.0, z], 0.035, 5, acc);
   // manipulator arms
+  mb.part = 'bracci_robotici';
   if (o.arms) for (const sx of [-1, 1]) { const a0 = [sx * 0.55, -0.55, L / 2 - 1.6], a1 = [sx * 0.8, -0.9, L / 2 - 0.9], a2 = [sx * 0.6, -0.95, L / 2 - 0.2];
     mb.rod(a0, a1, 0.06, 6, metalM()); mb.rod(a1, a2, 0.045, 6, metalM()); mb.ellipsoid(...a1, 0.08, 0.08, 0.08, 8, 6, dark);
     for (const d of [-1, 1]) mb.rod(a2, [a2[0] + d * 0.08, a2[1], a2[2] + 0.14], 0.02, 4, dark); }
   // sail / conning tower for the torpedo hull
+  mb.part = 'torretta';
   if (o.hull === 'siluro') { mb.box(0, 0.95, -0.4, 0.3, 0.5, 1.4, paint, [1, 0.6]); mb.box(0, 1.22, -0.4, 0.06, 0.06, 1.1, led); }
   const m = mb.finish(); m.kind = 'sub'; m.opts = o; return m;
   function metalM() { return mat([0.45, 0.46, 0.5]); }
@@ -668,15 +730,19 @@ function buildGarage() {
   mb.box(G.x1 - 0.5, G.h / 2, cz, 1, G.h, D, wall); mb.box(cx, G.h / 2, G.z0 + 0.5, W, G.h, 1, wall); mb.box(cx, G.h / 2, G.z1 - 0.5, W, G.h, 1, wall);
   mb.box(cx, G.h + 0.3, cz, W + 1, 0.6, D + 1, wall);
   // roof light strips and LED trims
+  mb.part = 'luci_soffitto';
   for (let k = 0; k < 5; k++) mb.box(cx, G.h - 0.05, G.z0 + 6 + k * 10, W - 6, 0.1, 0.5, mat([0.9, 0.95, 1], 1.4));
   mb.box(G.x0 + 0.2, G.h + 0.62, cz, 0.3, 0.12, D + 1, led); mb.box(G.x0 + 0.2, 0.15, cz, 0.2, 0.3, D, led);
   // parking bays
+  mb.part = 'stalli';
   for (let k = 0; k < 6; k++) { const z = G.z0 + 5 + k * 8.4; mb.box(G.x1 - 12, 0.05, z, 18, 0.02, 0.18, mat([0.9, 0.9, 0.95], 0.5)); }
   for (let k = 0; k < 5; k++) { const x = G.x0 + 10 + k * 8.4; mb.box(x, 0.05, G.z0 + 9, 0.18, 0.02, 14, mat([0.9, 0.9, 0.95], 0.5)); mb.box(x, 0.05, G.z1 - 9, 0.18, 0.02, 14, mat([0.9, 0.9, 0.95], 0.5)); }
   // drone pad + galleon pedestal
+  mb.part = 'piattaforme';
   mb.push(T(G.x0 + 26, 0.05, G.z1 - 10)); mb.cyl(0, 0.3, 3, 3, 24, dark); mb.cyl(0.3, 0.34, 3, 3, 24, led, false); mb.pop();
   mb.push(T(cx, 0, cz)); mb.cyl(0, 1.2, 2.6, 2.4, 16, wall); mb.cyl(1.2, 1.26, 2.45, 2.45, 16, led, false); mb.pop();
   // sign above the opening (pixel font, facing the street)
+  mb.part = 'insegna';
   const text = 'KAGE GARAGE', px = 0.42, y0 = G.h - 0.9, z0 = cz + text.length * 6 * px / 2;
   [...text].forEach((ch, i) => { const g = FONT5[ch] || FONT5[' '];
     g.forEach((row, r) => [...row].forEach((b, c) => { if (b === '1') mb.box(G.x0 - 0.1, y0 + (6 - r) * px * 0.95 - 5.5 * px, z0 - (i * 6 + c) * px, 0.12, px * 0.85, px * 0.85, mat([1, 0.3, 0.8], 1.4, 3)); })); });
@@ -728,6 +794,7 @@ function buildNexus() {
   const mb = new MB(), dark = mat([0.05, 0.055, 0.065]), metal = mat([0.16, 0.17, 0.19]), led = mat([0, 1, 0.9], 0.9, 3);
   const R = NEXUS.R, cy = NEXUS.cy, segs = 42;
   // outer ring: faceted segments with a groove, LED lining on the inner edge
+  mb.part = 'anello_esterno';
   for (let k = 0; k < segs; k++) {
     const a = (k + 0.5) / segs * TAU;
     mb.push(M(T(Math.cos(a) * (R - 0.3), cy + Math.sin(a) * (R - 0.3), 0), RZ(a)));
@@ -736,6 +803,7 @@ function buildNexus() {
     mb.pop();
   }
   // inner glyph ring (rotates about z while dialing: mode 3 pivot (0, cy))
+  mb.part = 'anello_glifi';
   const rot = c => mat(c[0], c[1] || 0, c[2] || 0, 3, [0, cy, 0]);
   for (let k = 0; k < 21; k++) {
     const a = k / 21 * TAU;
@@ -745,6 +813,7 @@ function buildNexus() {
     mb.pop();
   }
   // seven lock clamps: their lights carry the lock index in aAnim.a (lit when uLocks >= index)
+  mb.part = 'sette_morse';
   for (let k = 0; k < 7; k++) {
     const a = PI / 2 - k / 7 * TAU, x = Math.cos(a) * R, y = cy + Math.sin(a) * R, lk = { c: [1, 0.3, 0.8], e: 0.85, slot: 3, mode: 0, a: [k + 1, 0, 0] };
     mb.push(M(T(x, y, 0), RZ(a - PI / 2)));
@@ -753,8 +822,10 @@ function buildNexus() {
     mb.pop();
   }
   // footing: two buttress blocks sunk into the street
+  mb.part = 'basamento';
   for (const sx of [-1, 1]) { mb.box(sx * 7.4, 0.2, 0, 2.2, 1.6, 2.6, dark, [0.8, 1]); mb.box(sx * 7.4, 1.02, 0, 1.8, 0.05, 2.2, led); }
   // the surface (event membrane): slot 5 is shaded procedurally in vehicle.frag (uPortal opens it from the rim inwards)
+  mb.part = 'membrana';
   const memb = { c: [0.2, 1, 0.8], e: 1, slot: 5, mode: 0, a: [0, 0, 0] }, n = 48, ri = NEXUS.inner;
   const c0 = mb.v([0, cy, 0], memb), o = []; for (let k = 0; k <= n; k++) { const a = k / n * TAU; o.push(mb.v([Math.cos(a) * ri, cy + Math.sin(a) * ri, 0], memb)); }
   for (let k = 0; k < n; k++) mb.tri(c0, o[k], o[k + 1]);
@@ -764,6 +835,7 @@ function buildConsole() {
   const mb = new MB(), dark = mat([0.05, 0.05, 0.06]), metal = mat([0.2, 0.21, 0.24]), led = mat([0, 1, 0.9], 0.8, 3);
   mb.cyl(0, 0.35, 1.2, 1.15, 6, dark); mb.cyl(0.35, 0.95, 0.75, 0.6, 6, metal); mb.cyl(0.95, 1.05, 0.62, 1.15, 6, dark);
   // sloped hexagonal face with 7 key plates (index in aAnim.a → lit while dialing) and a central dome
+  mb.part = 'console';
   mb.push(M(T(0, 1.12, 0), RX(-0.28)));
   mb.cyl(-0.04, 0.04, 1.18, 1.18, 6, metal);
   for (let k = 0; k < 7; k++) {

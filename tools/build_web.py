@@ -10,7 +10,7 @@ I18N = (root / 'web/i18n.js').read_text()
 def i18n(html): return re.sub(r'(<body[^>]*>)', lambda m: m.group(1) + '\n<script>' + I18N.replace('</', '<\\/') + '</script>', html, count=1)
 shaders = {p.name: p.read_text() for p in sorted((root / 'app/src/main/assets/shaders').iterdir())}
 tpl = (root / 'web/template.html').read_text()
-engine = (root / 'web/vehicles.js').read_text() + '\n' + (root / 'web/pilot.js').read_text() + '\n' + (root / 'web/cybercity.js').read_text()
+engine = (root / 'web/vehicles.js').read_text() + '\n' + (root / 'web/xeno.js').read_text() + '\n' + (root / 'web/pilot.js').read_text() + '\n' + (root / 'web/cybercity.js').read_text()
 html = tpl.replace('/*SHADERS*/', 'const SHADERS=' + json.dumps(shaders) + ';').replace('/*ENGINE*/', engine)
 out = root / 'docs/index.html'
 out.parent.mkdir(exist_ok=True)
@@ -20,7 +20,7 @@ print('wrote', out, len(html), 'bytes')
 # NEON RUN mini game
 gtpl = (root / 'web/game_template.html').read_text()
 game = (root / 'web/game.js').read_text()
-ghtml = gtpl.replace('/*SHADERS*/', 'const SHADERS=' + json.dumps(shaders) + ';').replace('/*ENGINE*/', engine).replace('/*CARHD*/', (root / 'web/car_hd.js').read_text()).replace('/*CARRENDER*/', (root / 'web/car_render.js').read_text()).replace('/*ENGINEFX*/', (root / 'web/engine_fx.js').read_text()).replace('/*GAME*/', game).replace('/*FLEET*/', (root / 'web/fleet_game.js').read_text()).replace('/*NEXUS*/', (root / 'web/nexus.js').read_text()).replace('/*ONFOOT*/', (root / 'web/onfoot.js').read_text())
+ghtml = gtpl.replace('/*SHADERS*/', 'const SHADERS=' + json.dumps(shaders) + ';').replace('/*ENGINE*/', engine).replace('/*CARHD*/', (root / 'web/car_hd.js').read_text()).replace('/*CARRENDER*/', (root / 'web/car_render.js').read_text()).replace('/*ENGINEFX*/', (root / 'web/engine_fx.js').read_text()).replace('/*GAME*/', game).replace('/*FLEET*/', (root / 'web/fleet_game.js').read_text()).replace('/*NEXUS*/', (root / 'web/nexus.js').read_text()).replace('/*ONFOOT*/', (root / 'web/onfoot.js').read_text()).replace('/*XENO*/', (root / 'web/xeno_game.js').read_text())
 gout = root / 'docs/game.html'
 gout.write_text(i18n(ghtml))
 (root / 'app/src/main/assets/web').mkdir(parents=True, exist_ok=True)

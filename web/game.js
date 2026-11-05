@@ -542,6 +542,7 @@ function Game(canvas, hud, opts) {
   this.veh = null;
   this.nexus = window.KageNexus ? new KageNexus(this) : null;   // portal to ECO (web/nexus.js)
   this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
+  this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
 }
 /** model resolution for the KAGE GT: low / high / ultra */
 Game.prototype.setQuality = function (q) {
@@ -593,8 +594,10 @@ Game.prototype.frame = function (dt, inp) {
   const phys = VEH ? this.fleet.update(dt, inp) : stepCar(this.c, FOOT ? { gas: false, brake: false, steer: 0, hand: true, boost: false } : inp, dt, this.city);
   this.phys = phys;
   if (this.nexus) this.nexus.update(dt);
+  if (this.xeno) this.xeno.update(dt, inp);
   const c = this.c;
-  const cv = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
+  const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
+  const cv = this.xeno ? this.xeno.camera(cv0, dt) : cv0;
   // below the lagoon surface: teal murk, light from above, marine snow
   const UNDER = !past && cv.e[1] < -1.25 && isWater(c.x + cv.e[0], c.z + cv.e[2]);
   if (UNDER) pal = Object.assign({}, pal, { fog: eco ? [0.0, 0.07, 0.03] : [0.0, 0.075, 0.095], top: [0.0, 0.04, 0.05], fogDen: 0.042, sun: [0.3, 0.6, 0.65], stripes: 0 });
@@ -680,6 +683,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.nexus) this.nexus.drawWorld({ set, camX, camZ, t, pal, dt });
     if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
+    if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -728,6 +732,7 @@ Game.prototype.frame = function (dt, inp) {
   }
   if (this.fleet) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.nexus) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  if (this.xeno) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.xeno.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   const rainAmt = UNDER ? 0.55 : eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
@@ -752,6 +757,7 @@ Game.prototype.frame = function (dt, inp) {
   if (VEH) this.fleet.drawHud(this.hud); else if (FOOT) this.hud.getContext('2d').clearRect(0, 0, this.hud.width, this.hud.height); else this.drawHud(inp);
   if (this.foot && !VEH) this.foot.drawHud(this.hud);
   if (this.fleet) this.fleet.drawGarageHud(this.hud);
+  if (this.xeno) this.xeno.drawHud(this.hud);
   if (this.nexus) this.nexus.drawHud(this.hud);
 };
 

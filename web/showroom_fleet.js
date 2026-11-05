@@ -35,6 +35,12 @@ SPECS.hover = c => [['TIPO', 'Hovercraft anfibio · strada e acqua'], ['PROPULSI
   ['VELOCITÀ MAX', '95 km/h · 130 in boost'], ['CABINA', c.cabin === 'chiusa' ? 'chiusa, 4 posti' : 'pozzetto aperto, 2 posti'], ['DIMENSIONI', 'L 8,6 m · B 4,6 m'], ['PESO', '1.900 kg']];
 SPECS.sub = c => [['TIPO', 'Sottomarino da esplorazione · ' + KF.optLabel('sub', 'hull', c.hull)], ['PROFONDITÀ MAX', '1.200 m (laguna: 24 m)'], ['PROPULSIONE', '2 propulsori elettrici orientabili'],
   ['VELOCITÀ', '32 km/h · 50 km/h in boost'], ['AUTONOMIA', '14 ore'], ['ATTREZZATURA', (c.arms ? '2 bracci robotici · ' : '') + 'fari da 20.000 lm · sonar'], ['EQUIPAGGIO', '2']];
+SPECS.ufo = c => [['TIPO', 'Disco volante · ' + KF.optLabel('ufo', 'hull', c.hull)], ['DIAMETRO', '25 m · 3 ponti'], ['PROPULSIONE', 'nucleo a plasma · antigravità'], ['VELOCITÀ MAX', '210 km/h · 430 in boost'],
+  ['RAGGIO TRAENTE', 'fino a 90 m · persone e veicoli'], ['A BORDO', 'plancia, nucleo, mappa stellare, capsule di stasi'], ['EQUIPAGGIO', 'grigio, piccolo verde, nordico, ombra']];
+SPECS.chrono = c => [['TIPO', 'Cabina del tempo Art Déco · ' + KF.optLabel('chrono', 'metal', c.metal)], ['ALTEZZA', '3,7 m'], ['VETRI', KF.optLabel('chrono', 'glass', c.glass)], ['MECCANISMO', 'due corone di ingranaggi controrotanti'],
+  ['DESTINAZIONI', 'Cybercity oggi ⇄ prateria del passato'], ['DOVE', 'KAGE GARAGE · INVIO per partire']];
+SPECS.alien = c => [['SPECIE', KF.optLabel('alien', 'species', c.species)], ['ALTEZZA', { grigio: '1,24 m', verde: '1,38 m', nordico: '1,96 m', scuro: '2,08 m' }[c.species]],
+  ['ORIGINE', { grigio: 'sistema sconosciuto', verde: 'cintura esterna', nordico: 'ammasso delle Pleiadi (dicono)', scuro: 'nessuno lo sa' }[c.species]], ['DOVE', 'a bordo del KAGE XENO']];
 SPECS.pilot = c => [['RUOLO', 'Pilota collaudatore KAGE · auto, drone, mare'], ['ALTEZZA', KagePilot.label('height', c.height)], ['CORPORATURA', KagePilot.label('build', c.build)],
   ['TUTA', 'ignifuga in fibra aramidica · ' + KagePilot.label('suit', c.suit) + ' con LED ' + KagePilot.label('accent', c.accent)],
   ['CASCO', 'integrale in carbonio · visiera a realtà aumentata'], ['LICENZE', 'KAGE GT · STRIX · RIPTIDE · LEVIATHAN'], ['STATO', 'pronto al via']];
@@ -65,13 +71,13 @@ SR.prototype.setVehicle = function (kind, cfg) {
   const F = this.F; F.kind = kind; F.cfg = Object.assign({}, cfg || (kind === 'pilot' ? KagePilot.load() : KF.loadCfg(kind))); F.t = 0;
   this.rebuildFleet();
   const b = F.mesh.bounds, R = Math.max(b[3] - b[0], b[4] - b[1], b[5] - b[2]);
-  this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4, moto: 4, hover: 12, sub: 10 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : kind === 'pilot' ? 0.08 : 0.2;
+  this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4, alien: 3.6, moto: 4, hover: 12, sub: 10, ufo: 36, chrono: 6 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : (kind === 'pilot' || kind === 'alien') ? 0.08 : 0.2;
   if (this.cam.mode !== 'orbit' && this.cam.mode !== 'cockpit') this.cam.mode = 'orbit';
 };
 SR.prototype.rebuildFleet = function () {
   const F = this.F, key = F.kind + this.quality + JSON.stringify(F.cfg);
-  const pc = F.kind === 'pilot' ? Object.assign({}, F.cfg, { pose: undefined }) : F.cfg, key2 = F.kind + this.quality + JSON.stringify(pc);
-  if (!F.cache[key2]) F.cache[key2] = F.vmesh(F.kind === 'pilot' ? KagePilot.build(pc, LOD[this.quality]) : KF.KINDS[F.kind].build(Object.assign({}, F.cfg, { lod: LOD[this.quality] || 'hi' })));
+  const pc = (F.kind === 'pilot' || F.kind === 'alien') ? Object.assign({}, F.cfg, { pose: undefined }) : F.cfg, key2 = F.kind + this.quality + JSON.stringify(pc);
+  if (!F.cache[key2]) F.cache[key2] = F.vmesh((F.kind === 'pilot' || F.kind === 'alien') ? KagePilot.build(pc, LOD[this.quality]) : KF.KINDS[F.kind].build(Object.assign({}, F.cfg, { lod: LOD[this.quality] || 'hi' })));
   F.mesh = F.cache[key2]; void key;
 };
 /** the pilot (seated pose) for the vehicle being shown */
@@ -113,16 +119,16 @@ SR.prototype.frame = function (dt) {
   const water = k === 'boat' || k === 'galleon' || k === 'sub';
   // pose on the turntable / in the basin
   const b = m.bounds, hover = k === 'drone' ? 0.32 + 0.55 + Math.sin(t * 1.4) * 0.06 : k === 'sub' ? 0.6 : k === 'hover' ? 0.02 : 0;
-  if (k === 'pilot' && cam.mode === 'cockpit') cam.mode = 'orbit';
+  if ((k === 'pilot' || k === 'alien') && cam.mode === 'cockpit') cam.mode = 'orbit';
   if (k === 'moto' || k === 'hover') { /* land vehicles on the turntable */ }
-  if (k === 'pilot' && (F.cfg.pose === 'cammina' || F.cfg.pose === 'corre')) { /* walking on the spot */ }
+  if ((k === 'pilot' || k === 'alien') && (F.cfg.pose === 'cammina' || F.cfg.pose === 'corre')) { /* walking on the spot */ }
   const bob = water ? Math.sin(t * 1.1) * (k === 'galleon' ? 0.12 : 0.05) : 0;
-  const still = k === 'pilot';
+  const still = (k === 'pilot' || k === 'alien');
   const pitch = still ? 0 : water ? Math.sin(t * 0.8) * (k === 'galleon' ? 0.012 : 0.02) : -0.03 + Math.sin(t * 0.9) * 0.015;
   const roll = still ? 0 : water ? Math.sin(t * 0.6 + 1) * (k === 'galleon' ? 0.025 : 0.03) : Math.sin(t * 0.7) * 0.02;
   const Mv = U.mul(U.T(0, hover + bob, 0), U.mul(U.RY(this.turn), U.mul(U.RX(pitch), U.RZ(roll))));
   const toWorld = p => { const c = Math.cos(this.turn), s = Math.sin(this.turn); return [p[0] * c + p[2] * s, p[1] + hover, -p[0] * s + p[2] * c]; };
-  const cy = k === 'pilot' ? b[4] * 0.6 : (b[1] + b[4]) / 2 * (k === 'galleon' ? 0.55 : 1) + hover;
+  const cy = (k === 'pilot' || k === 'alien') ? b[4] * 0.6 : (b[1] + b[4]) / 2 * (k === 'galleon' ? 0.55 : 1) + hover;
   let eye, tgt, fov = 40;
   if (cam.mode === 'cockpit') {
     const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : KF.GALLEON_RIG.eye;
@@ -166,7 +172,7 @@ SR.prototype.frame = function (dt) {
     if (ps) this.drawPilotMesh(set, ps.mesh, U.mul(Mv, U.mul(U.T(ps.S[0], ps.S[1], ps.S[2]), U.RY(ps.S[3]))), ps.S[4], { seat: ps.S[5], steer: Math.sin(t * 0.5) * 0.15 });
   } else {
     // mirrored drone in the glossy floor, then the floor, then the drone
-    const draw1 = M2 => { if (k === 'pilot') this.drawPilotMesh(set, m, M2, F.cfg.pose || 'in piedi', {}); else { vehUniforms(); gl.uniformMatrix4fv(vu.uModel, false, M2); this.drawMesh(vp, m); } };
+    const draw1 = M2 => { if ((k === 'pilot' || k === 'alien')) this.drawPilotMesh(set, m, M2, F.cfg.pose || 'in piedi', {}); else { vehUniforms(); gl.uniformMatrix4fv(vu.uModel, false, M2); this.drawMesh(vp, m); } };
     draw1(U.mul(new Float32Array([1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1]), Mv));
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     set(P.floor); gl.uniform1f(P.floor.u.uAlpha, 0.86); this.drawQuad(P.floor, this.ground);

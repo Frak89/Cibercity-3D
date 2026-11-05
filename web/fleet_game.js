@@ -116,6 +116,29 @@ function stepDrone(st, inp, dt, city, cfg) {
   st.rot += dt * (34 + st.thrust * 30); st.blur = ease(st.blur, st.y > 0.4 || st.thrust > 0.6 ? 0.85 : 0.5, 3, dt);
   st.shake = Math.max(0, st.shake - dt * 3); st.hit = Math.max(0, st.hit - dt * 2.5); st.stun = Math.max(0, st.stun - dt);
 }
+/* KAGE XENO: a heavy, floaty saucer (slow to start, slow to stop), yaws in place, banks gently; F = tractor beam */
+function stepUfo(st, inp, dt, city) {
+  const boosting = inp.boost && st.energy > 0.02, vmax = boosting ? 120 : 58;
+  st.energy = boosting ? Math.max(0, st.energy - dt * 0.1) : Math.min(1, st.energy + dt * 0.05);
+  st.h = wrapA(st.h + (inp.yaw || 0) * 1.1 * dt);
+  const fx = Math.sin(st.h), fz = Math.cos(st.h), rx = -Math.cos(st.h), rz = Math.sin(st.h);
+  const dF = (inp.fwd || 0) * vmax, dS = (inp.strafe || 0) * vmax * 0.6;
+  const vF0 = st.vx * fx + st.vz * fz, vS0 = st.vx * rx + st.vz * rz;
+  st.vx = ease(st.vx, fx * dF + rx * dS, 0.9, dt); st.vz = ease(st.vz, fz * dF + rz * dS, 0.9, dt);
+  st.vy = ease(st.vy, (inp.lift || 0) * 14, 1.6, dt);
+  const prevY = st.y;
+  st.x = wrapP(st.x + st.vx * dt); st.z = wrapP(st.z + st.vz * dt); st.y += st.vy * dt;
+  if (st.y < 0) { st.y = 0; st.vy = 0; }
+  if (st.y > 600) { st.y = 600; st.vy = Math.min(0, st.vy); }
+  const hit = collideDrone(st, city, prevY, 9);
+  if (hit > 2) st.shake = Math.min(1, st.shake + hit * 0.03);
+  st.vF = st.vx * fx + st.vz * fz;
+  st.pitch = ease(st.pitch, clamp((dF - vF0) / vmax * 0.18, -0.15, 0.15), 2, dt);
+  st.roll = ease(st.roll, clamp((dS - vS0) / vmax * 0.2 - (inp.yaw || 0) * 0.08, -0.2, 0.2), 2, dt);
+  st.rot += dt * (1.2 + Math.hypot(st.vx, st.vz) * 0.02 + (st.beam ? 2.5 : 0));
+  st.beam = !!inp.fire && st.y > 2;
+  st.shake = Math.max(0, st.shake - dt * 3);
+}
 /* KAGE VOLT: the NEON RUN car physics on a lighter, lower, quicker chassis; the body leans into the corners */
 function stepMoto(st, inp, dt, city) {
   const c = st.car || (st.car = Object.assign(NR.newCar(), { x: st.x, z: st.z, h: st.h }));
@@ -387,6 +410,7 @@ FleetGame.prototype.respawn = function () {
   if (k === 'drone') { const c = this.carSave || g.c; this.st = newState('drone', c.x, c.z, c.h, 2.5); }
   else if (k === 'moto' || k === 'hover') { const c = this.carSave || g.c; this.st = newState(k, c.x - Math.cos(c.h) * 3, c.z + Math.sin(c.h) * 3, c.h, 0); }
   else if (k === 'sub') { const P = COURSES.sub[0].pts[0]; this.st = newState('sub', P.x, P.z, P.h, -4); }
+  else if (k === 'ufo') { const X = this.g.xeno, sp = X ? X.ship : null, c = this.carSave || g.c; this.st = sp ? newState('ufo', sp.x, sp.z, sp.h, sp.y) : newState('ufo', c.x, c.z, c.h, 30); }
   else if (k === 'boat') { const P = COURSES.boat[0].pts[1]; this.st = newState('boat', P.x, P.z, P.h); }
   else { const P = COURSES.galleon[0].pts[3]; this.st = newState('galleon', P.x - 20, P.z, P.h); this.st.sail = this.st.sailT = 0.6; }
   if (this.race) { const r = this.race.me; r.st = this.st; }
@@ -395,7 +419,7 @@ FleetGame.prototype.respawn = function () {
 
 /* ---------------- races ---------------- */
 FleetGame.prototype.startRace = function (courseId) {
-  const k = this.kind; if (!k) return;
+  const k = this.kind; if (!k || !COURSES[k]) return;
   const course = COURSES[k].find(c => c.id === courseId) || COURSES[k][0];
   const P = course.pts, g0 = P[0], fx = Math.sin(g0.h), fz = Math.cos(g0.h), rx = Math.cos(g0.h), rz = -Math.sin(g0.h);
   const names = RIVALS[k], n = names.length + 1, racers = [];
@@ -460,6 +484,7 @@ FleetGame.prototype.stepOne = function (st, inp, dt, cfg) {
   if (st.kind === 'moto') stepMoto(st, inp, dt, this.g.city);
   else if (st.kind === 'hover') stepHover(st, inp, dt, this.g.city);
   else if (st.kind === 'sub') stepSub(st, inp, dt);
+  else if (st.kind === 'ufo') stepUfo(st, inp, dt, this.g.city);
   else if (st.kind === 'drone') stepDrone(st, inp, dt, this.g.city, cfg);
   else if (st.kind === 'boat') stepBoat(st, inp, dt, cfg, this.g.t);
   else {
@@ -505,20 +530,20 @@ FleetGame.prototype.camera = function (view, dt, t) {
   const st = this.st, k = this.kind, v = view % 5;
   this.camH += wrapA(st.h - this.camH) * Math.min(1, dt * (k === 'galleon' ? 1.5 : v === 1 ? 2.5 : 4));
   const fx = Math.sin(this.camH), fz = Math.cos(this.camH), sp = Math.hypot(st.vx, st.vz);
-  const D = { drone: [5.5, 1.8, 12, 5], boat: [13, 4.2, 26, 9], galleon: [52, 20, 95, 38], moto: [4.6, 1.8, 10, 4], hover: [11, 4.2, 22, 9], sub: [10, 2.6, 18, 5] }[k];
+  const D = { drone: [5.5, 1.8, 12, 5], boat: [13, 4.2, 26, 9], galleon: [52, 20, 95, 38], moto: [4.6, 1.8, 10, 4], hover: [11, 4.2, 22, 9], sub: [10, 2.6, 18, 5], ufo: [34, 11, 70, 26] }[k];
   let e, l, fov = 62 + Math.min(16, sp * 0.25), drawCar = true;
-  const yb = k === 'drone' || k === 'sub' ? st.y : Math.max(st.y, 0);
+  const yb = k === 'drone' || k === 'sub' || k === 'ufo' ? st.y : Math.max(st.y, 0);
   // on the water the chase camera never backs into the buildings on the quays: pull it in over land
-  const back = d0 => { if (k === 'drone' || k === 'moto' || k === 'sub') return d0; let d = d0; while (d > 8 && !isWater(st.x - fx * d, st.z - fz * d)) d -= 3; return d; };
+  const back = d0 => { if (k === 'drone' || k === 'moto' || k === 'sub' || k === 'ufo') return d0; let d = d0; while (d > 8 && !isWater(st.x - fx * d, st.z - fz * d)) d -= 3; return d; };
   if (v === 0) { const d = back(D[0]); e = [-fx * d, yb + D[1] * (0.6 + 0.4 * d / D[0]), -fz * d]; l = [fx * 4, yb + D[1] * 0.35, fz * 4]; }
   else if (v === 1) { const d = back(D[2]); e = [-fx * d, yb + D[3] * (0.6 + 0.4 * d / D[2]), -fz * d]; l = [fx * 8, yb + 1, fz * 8]; }
   else if (v === 2) {
     const c = Math.cos(st.h), s = Math.sin(st.h);
-    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : KF.GALLEON_RIG.eye;
+    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : k === 'ufo' ? [0, KF.KINDS.ufo.rig.floor + 1.55, 5.6] : KF.GALLEON_RIG.eye;
     const look = st.h, pc = Math.cos(st.pitch * (k === 'drone' ? 0.6 : 1));
     e = [s * E[2] + c * E[0], st.y + E[1], c * E[2] - s * E[0]];
     l = [e[0] + Math.sin(look) * 30 * pc, e[1] - Math.sin(st.pitch * (k === 'drone' ? 0.6 : 1)) * 30 + (k === 'drone' ? 0 : -1.5), e[2] + Math.cos(look) * 30 * pc];
-    fov = k === 'drone' ? 98 : 72; drawCar = k !== 'drone';
+    fov = k === 'drone' ? 98 : k === 'ufo' ? 80 : 72; drawCar = k !== 'drone';
   } else if (v === 3) { this.cinT += dt * 0.22; const r = D[2] * 0.9, a = this.cinT; e = [Math.sin(a) * r, yb + D[3] * 0.7 + Math.sin(this.cinT * 1.7) * D[1], Math.cos(a) * r]; l = [0, yb + D[1] * 0.3, 0]; fov = 50; }
   else { e = [-fx * 2, yb + (k === 'galleon' ? 180 : 75), -fz * 2]; l = [fx * 3, yb, fz * 3]; fov = 60; }
   if (k !== 'sub') { e[1] = Math.max(e[1], -0.4); if (k !== 'drone' && v !== 2) e[1] = Math.max(e[1], 1.5); } else e[1] = Math.min(e[1], -1.5);
@@ -665,9 +690,9 @@ FleetGame.prototype.drawHud = function (hud) {
   g.fillText(k === 'galleon' ? (sp * 1.944).toFixed(1) : Math.round(kmh), W - m * 0.06, H - m * 0.12);
   g.font = (m * 0.022 | 0) + 'px monospace'; g.fillStyle = A; g.fillText(k === 'galleon' ? 'NODI' : 'KM/H', W - m * 0.06, H - m * 0.085);
   g.textAlign = 'left'; g.fillStyle = '#ecfcff'; g.font = (m * 0.02 | 0) + 'px monospace';
-  const l1 = k === 'sub' ? 'PROFONDITÀ ' + Math.max(0, -1.2 - st.y).toFixed(1) + ' m' : k === 'moto' ? 'PIEGA ' + Math.round(Math.abs(st.roll) * 57) + '°' : k === 'hover' ? (isWater(st.x, st.z) ? 'IN ACQUA' : 'IN STRADA') : k === 'drone' ? 'ALT ' + st.y.toFixed(1) + ' m' : k === 'boat' ? (st.foil > 0.5 ? 'SUI FOIL' : 'IN PLANATA ' + Math.round(clamp(st.vF / 14, 0, 1) * 100) + '%') : 'VELE ' + Math.round(st.sailT * 100) + '% · RESA ' + Math.round((st.eff || 0) * 100) + '%';
+  const l1 = k === 'ufo' ? 'ALT ' + st.y.toFixed(0) + ' m' + (st.beam ? ' · RAGGIO ATTIVO' : '') + ' · ×' + ((this.g.xeno && this.g.xeno.count) || 0) : k === 'sub' ? 'PROFONDITÀ ' + Math.max(0, -1.2 - st.y).toFixed(1) + ' m' : k === 'moto' ? 'PIEGA ' + Math.round(Math.abs(st.roll) * 57) + '°' : k === 'hover' ? (isWater(st.x, st.z) ? 'IN ACQUA' : 'IN STRADA') : k === 'drone' ? 'ALT ' + st.y.toFixed(1) + ' m' : k === 'boat' ? (st.foil > 0.5 ? 'SUI FOIL' : 'IN PLANATA ' + Math.round(clamp(st.vF / 14, 0, 1) * 100) + '%') : 'VELE ' + Math.round(st.sailT * 100) + '% · RESA ' + Math.round((st.eff || 0) * 100) + '%';
   g.fillText(l1, W - m * 0.34, H - m * 0.225);
-  g.fillText((k === 'galleon' ? 'ASSIST. FUSIONE ' : k === 'drone' || k === 'sub' ? 'BATTERIA BOOST ' : 'N₂O ') + Math.round(st.energy * 100) + '%', W - m * 0.34, H - m * 0.195);
+  g.fillText((k === 'galleon' ? 'ASSIST. FUSIONE ' : k === 'drone' || k === 'sub' ? 'BATTERIA BOOST ' : k === 'ufo' ? 'ENERGIA ' : 'N₂O ') + Math.round(st.energy * 100) + '%', W - m * 0.34, H - m * 0.195);
   g.fillStyle = 'rgba(255,255,255,0.15)'; g.fillRect(W - m * 0.34, H - m * 0.05, m * 0.3, m * 0.012); g.fillStyle = A; g.fillRect(W - m * 0.34, H - m * 0.05, m * 0.3 * st.energy, m * 0.012);
   if (k === 'galleon') {   // wind rose: arrow = where the wind blows, relative to the bow
     const cx = W - m * 0.43, cy = H - m * 0.15, r = m * 0.06, a = wrapA(this.wind.dir - st.h);
@@ -680,11 +705,11 @@ FleetGame.prototype.drawHud = function (hud) {
   }
   g.fillStyle = 'rgba(236,252,255,0.55)'; g.font = (m * 0.017 | 0) + 'px monospace';
   g.fillText(KF.KINDS[k].title + ' · ' + ['INSEGUIMENTO', 'LONTANA', k === 'drone' ? 'FPV' : k === 'moto' ? 'IN SELLA' : 'PLANCIA', 'CINEMATICA', "DALL'ALTO"][this.g.view % 5], m * 0.03, m * 0.045);
-  const help = k === 'sub' ? 'W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara' : k === 'moto' ? 'W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara' : k === 'hover' ? 'W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara' : k === 'drone' ? 'W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara'
+  const help = k === 'ufo' ? 'W/S avanti-indietro · A/D gira · Q/E laterale · SPAZIO sali · X scendi · F raggio traente · SHIFT boost · C vista · INVIO lascia i comandi' : k === 'sub' ? 'W/S avanti-indietro · A/D timone · SPAZIO sali · X scendi · SHIFT boost · C vista · G flotta · INVIO gara' : k === 'moto' ? 'W gas · S freno · A/D piega · SHIFT boost · C vista · G flotta · INVIO gara' : k === 'hover' ? 'W spinta · S retro · A/D timone · SHIFT boost · passa da strada ad acqua · C vista · G flotta · INVIO gara' : k === 'drone' ? 'W/S avanti-indietro · A/D ruota · Q/E laterale · SPAZIO su · X giù · SHIFT boost · C vista · G flotta · INVIO gara'
     : k === 'boat' ? 'W gas · S retro · A/D timone · SHIFT N₂O · C vista · G flotta · INVIO gara'
     : 'W/S issa-ammaina vele · A/D timone · SHIFT assist · SPAZIO cannoni · C vista · G flotta · INVIO regata';
   g.fillText(help, m * 0.03, H - m * 0.02);
-  if (!R) { g.fillStyle = A; g.fillText('GIRO LIBERO · premi INVIO per una gara (' + COURSES[k][0].name + ')', m * 0.03, m * 0.075); this.minimap(g, W, H, m, A, B, null); return; }
+  if (!R) { g.fillStyle = A; g.fillText(COURSES[k] ? 'GIRO LIBERO · premi INVIO per una gara (' + COURSES[k][0].name + ')' : 'VOLO LIBERO · F raggio traente sopra strade e persone', m * 0.03, m * 0.075); this.minimap(g, W, H, m, A, B, null); return; }
   // race panel
   const me = R.me, rank = R.racers.slice().sort((a, b) => this.progress(b) - this.progress(a)), pos = rank.indexOf(me) + 1;
   box(m * 0.02, m * 0.09, m * 0.42, m * 0.2);
@@ -738,7 +763,7 @@ FleetGame.prototype.minimap = function (g, W, H, m, A, B, R) {
 
 /* ---------------- garage panel (HTML) ---------------- */
 FleetGame.prototype.buildUI = function (el, onChange) {
-  const self = this, kinds = ['car', 'moto', 'drone', 'hover', 'boat', 'sub', 'galleon'], titles = { car: '🏎 KAGE GT', moto: '🏍 MOTO', drone: '🚁 DRONE', hover: '🛸 HOVERCRAFT', boat: '🚤 BARCA', sub: '🤿 SOTTOMARINO', galleon: '⛵ GALEONE' };
+  const self = this, kinds = ['car', 'moto', 'drone', 'hover', 'boat', 'sub', 'galleon', 'ufo'], titles = { ufo: '🛸 UFO', car: '🏎 KAGE GT', moto: '🏍 MOTO', drone: '🚁 DRONE', hover: '🛸 HOVERCRAFT', boat: '🚤 BARCA', sub: '🤿 SOTTOMARINO', galleon: '⛵ GALEONE' };
   const render = () => {
     const k = self.kind || 'car';
     let h = '<b>FLOTTA KAGE</b><div class="frow">' + kinds.map(x => '<button data-v="' + x + '" class="' + (x === k ? 'on' : '') + '">' + titles[x] + '</button>').join('') + '</div>';
@@ -748,7 +773,7 @@ FleetGame.prototype.buildUI = function (el, onChange) {
       h += '<div class="ftitle">' + K.title + ' · PERSONALIZZA</div><div class="fgrid">';
       for (const key in K.opts) h += '<button data-o="' + key + '">' + KF.OPT_TITLES[key] + ': ' + KF.optLabel(k, key, self.cfg[key]) + '</button>';
       h += '<button data-rnd="1">🎲 CASUALE</button></div><div class="ftitle">GARE</div><div class="fgrid">';
-      for (const c of COURSES[k]) { const r = self.records[c.id] || {}; h += '<button data-race="' + c.id + '">🏁 ' + c.name + ' · ' + c.laps + ' GIRI' + (r.lap ? ' · REC ' + fmt(r.lap) : '') + '</button>'; }
+      for (const c of COURSES[k] || []) { const r = self.records[c.id] || {}; h += '<button data-race="' + c.id + '">🏁 ' + c.name + ' · ' + c.laps + ' GIRI' + (r.lap ? ' · REC ' + fmt(r.lap) : '') + '</button>'; }
       h += '<button data-free="1">GIRO LIBERO</button></div>';
     }
     if (self.g.nexus) h += '<div class="ftitle">KAGE NEXUS</div><div class="fgrid"><button data-nexus="1">🌀 VAI AL PORTALE (N = componi)</button>' + (self.g.world === 'eco' ? '<button data-home="1">⟲ TORNA SUBITO IN CITTÀ</button>' : '') + '</div>';

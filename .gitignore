@@ -6,3 +6,4 @@ local.properties
 .DS_Store
 models/
 tools/__pycache__/
+models/cybercity3d_ultra*
