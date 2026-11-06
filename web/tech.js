@@ -23,7 +23,11 @@ const FAULTS = {
 const CODES = Object.keys(FAULTS);
 const HELP = [
   'STATO · telemetria in testo', 'DIAG · diagnosi completa (codici guasto)', 'TEST <modulo> · prova un modulo', 'RESET <ATTUATORI|BUS|TUTTO>', 'CALIBRA <sensore>', 'FLASH FIRMWARE',
-  'SOSTITUISCI FUSIBILE <n>', 'SIGILLA CIRCUITO · RABBOCCA', 'ATTENDI <secondi>', 'RIPETI <n> … FINE', 'SUONA · un bip', 'ELENCO · funzioni del dispositivo', '# commento'];
+  'SOSTITUISCI FUSIBILE <n>', 'SIGILLA CIRCUITO · RABBOCCA', 'SUONA · un bip', 'ELENCO · funzioni del dispositivo', '# commento',
+  '— KAGE SCRIPT 2 —', 'IMPOSTA X = espressione  (o  X = …)', 'SCRIVI "testo con {X}"', 'ATTENDI <secondi o espressione>', 'SE cond [ALLORA] … ALTRIMENTI … FINE', 'MENTRE cond … FINE', 'RIPETI <n> … FINE', 'FERMA',
+  'QUANDO ARRIVO | PARTENZA | PIOGGIA | NOTTE | GIORNO | GUASTO … FINE', 'QUANDO ORA 20:30 … FINE · QUANDO OGNI 60 … FINE · QUANDO TEMP > 100 … FINE',
+  'valori: sensori del dispositivo (TEMP, GIRI…), ORA, MINUTI, GIORNOSETT, PIOGGIA, NEVE, NEBBIA, NOTTE, TEMPERATURA, DISTANZA, VICINO, GUASTI, BATTERIA, CASUALE',
+  'operatori: + - * / %  > < >= <= == !=  E  O  NON', 'Le regole QUANDO lavorano da sole, anche se sei lontano.'];
 
 /* ---------------- device catalogue ---------------- */
 // each device: id, name, where (in range?), sensors [key, label, unit, lo, hi, value()], funcs { NAME: fn(args) → message }
@@ -33,7 +37,7 @@ function catalogue(T) {
   const n = (base, amp, sp, ph) => base + Math.sin(g.t * (sp || 0.7) + (ph || 0)) * amp + Math.sin(g.t * 2.3 + (ph || 0) * 3) * amp * 0.3;
   const D = [];
   // the KAGE GT, parked while you're on foot
-  D.push({ id: 'gt', name: 'KAGE GT · CENTRALINA', icon: '🏎', range: () => !g.veh && near(g.c.x, g.c.z, 25),
+  D.push({ id: 'gt', name: 'KAGE GT · CENTRALINA', icon: '🏎', pos: () => [g.c.x, g.c.z], range: () => !g.veh && near(g.c.x, g.c.z, 25),
     sensors: [['GIRI', 'GIRI MOTORE', 'rpm', 600, 9000, () => g.eng ? g.eng.rpm : 900], ['TEMP', 'TEMP. OLIO', '°C', 60, 120, () => n(92, 1.5, 0.3)], ['TENS', 'TENSIONE', 'V', 12, 14.8, () => n(13.9, 0.08, 1.1)],
       ['GOMME', 'PRESSIONE GOMME', 'bar', 1.9, 2.6, () => n(2.25, 0.01, 0.2)], ['CARB', 'BATTERIA / CARBURANTE', '%', 5, 100, () => g.eng && g.eng.fuelK !== undefined ? g.eng.fuelK * 100 : 86]],
     funcs: { 'APRI PORTE': () => { g.techDoor = 1; return 'porte aperte'; }, 'CHIUDI PORTE': () => { g.techDoor = 0; return 'porte chiuse'; },
@@ -42,7 +46,7 @@ function catalogue(T) {
       'CLACSON': () => { T.beep(420, 420, 0.35, 0.2, 'square'); T.beep(330, 330, 0.35, 0.2, 'square'); return 'BEEEP'; } },
     power: ['FARI ON', 'LAMPEGGIA'], moving: ['APRI PORTE', 'CHIUDI PORTE', 'APRI COFANO', 'CHIUDI COFANO'] });
   // the vehicle you parked when you got off (drone, moto, hovercraft, sub, boat, galleon)
-  D.push({ id: 'parked', name: () => (F && F.parked ? (KF.KINDS[F.parked.kind] || {}).title || F.parked.kind.toUpperCase() : 'VEICOLO') + ' · MODULO DI BORDO', icon: '🛰',
+  D.push({ id: 'parked', name: () => (F && F.parked ? (KF.KINDS[F.parked.kind] || {}).title || F.parked.kind.toUpperCase() : 'VEICOLO') + ' · MODULO DI BORDO', icon: '🛰', pos: () => F && F.parked && F.parked.st ? [F.parked.st.x, F.parked.st.z] : null,
     range: () => !!(F && F.parked && F.parked.st && near(F.parked.st.x, F.parked.st.z, 25)),
     sensors: [['BATT', 'BATTERIA', '%', 10, 100, () => n(78, 0.3, 0.05)], ['TEMP', 'TEMP. MOTORI', '°C', 15, 90, () => n(38, 1, 0.4)], ['GPS', 'SATELLITI GPS', '', 4, 20, () => Math.round(n(14, 1.5, 0.2))], ['ATT', 'ATTUATORI', '%', 60, 100, () => 100]],
     funcs: Object.assign({ 'APRI TUTTO': () => { const P = F.parked; P.ovr = {}; for (const h of (P.model.hinges || [])) P.ovr[h.name] = 1; return 'tutte le parti mobili aperte'; },
@@ -51,12 +55,12 @@ function catalogue(T) {
     dynFuncs: () => { const P = F && F.parked, o = {}; if (!P || !P.model.hinges) return o; for (const h of P.model.hinges) { o['APRI ' + h.name] = () => { P.ovr = P.ovr || {}; P.ovr[h.name] = 1; return h.name + ' aperto'; }; o['CHIUDI ' + h.name] = () => { P.ovr = P.ovr || {}; P.ovr[h.name] = 0; return h.name + ' chiuso'; }; } return o; },
     moving: ['APRI', 'CHIUDI'] });
   // the KAGE XENO parked over the city / its core when you're aboard
-  if (X) D.push({ id: 'xeno', name: 'KAGE XENO · NUCLEO ANTIGRAVITÀ', icon: '🛸', range: () => { const p = f(); if (!p || !p.active) return false; if (p.xs === 'in') return true; const pd = X.toWorld(0, -4.2); return near(pd[0], pd[1], 40); },
+  if (X) D.push({ id: 'xeno', name: 'KAGE XENO · NUCLEO ANTIGRAVITÀ', icon: '🛸', pos: () => X.toWorld(0, -4.2), range: () => { const p = f(); if (!p || !p.active) return false; if (p.xs === 'in') return true; const pd = X.toWorld(0, -4.2); return near(pd[0], pd[1], 40); },
     sensors: [['GRAV', 'CAMPO ANTIGRAVITÀ', 'g', 0.8, 1.2, () => n(1, 0.01, 0.5)], ['PLASMA', 'PLASMA DEL NUCLEO', 'MK', 2, 9, () => n(6.4, 0.3, 0.8)], ['SCUDO', 'SCUDO', '%', 40, 100, () => n(97, 0.5, 0.3)], ['RAGGIO', 'RAGGIO TRAENTE', '%', 0, 100, () => X.beamA * 100]],
     funcs: { 'RAGGIO ON': () => { X.techBeam = true; return 'raggio traente acceso'; }, 'RAGGIO OFF': () => { X.techBeam = false; return 'raggio spento'; }, 'RAGGIO AUTO': () => { X.techBeam = undefined; return 'raggio in automatico'; },
       'PULSA NUCLEO': () => { T.beep(90, 600, 1.4, 0.18, 'sawtooth'); return 'impulso nel nucleo'; } }, power: ['RAGGIO ON'] });
   // the EPOCH in the garage
-  if (X) D.push({ id: 'epoch', name: 'KAGE EPOCH · REGOLATORE CRONOTONICO', icon: '⏳', range: () => near(30, 27, 20),
+  if (X) D.push({ id: 'epoch', name: 'KAGE EPOCH · REGOLATORE CRONOTONICO', icon: '⏳', pos: () => [30, 27], range: () => near(30, 27, 20),
     sensors: [['FLUSSO', 'FLUSSO CRONOTONICO', 'cT', 1, 10, () => n(4.2, 0.4, 0.35)], ['ANNO', 'ANNO DI DESTINAZIONE', '', -50000, 3000, () => g.world === 'meadow' ? 2026 : -12000], ['MOLLE', 'TENSIONE MOLLE', '%', 30, 100, () => n(88, 0.4, 0.2)], ['PORTA', 'PORTA', '%', 0, 100, () => (X.epDoor || 0) * 100]],
     funcs: { 'APRI PORTA': () => { X.techEp = 1; return 'porta aperta'; }, 'CHIUDI PORTA': () => { X.techEp = 0; return 'porta chiusa'; }, 'PORTA AUTO': () => { X.techEp = undefined; return 'porta in automatico'; },
       'CARICA MOLLE': () => { T.beep(200, 1400, 1.2, 0.12, 'triangle'); return 'molle caricate'; } }, moving: ['APRI PORTA', 'CHIUDI PORTA'] });
@@ -79,7 +83,7 @@ function catalogue(T) {
 
 /* ---------------- the tablet ---------------- */
 function Tech(game) {
-  this.g = game; this.D = catalogue(this); this.open = false; this.cur = null; this.tab = 'stato'; this.log = []; this.run = null; this.blink = 0; this.was = {};
+  this.g = game; this.D = catalogue(this); this.open = false; this.cur = null; this.tab = 'stato'; this.log = []; this.runs = []; this.vars = {}; this.blink = 0; this.was = {};
   try { this.st = JSON.parse(LS.get('kageTech', '{}')); } catch (e) { this.st = {}; }
   const st = this.st; st.progs = st.progs || {}; st.auto = st.auto || {}; st.faults = st.faults || {}; st.fixed = st.fixed || 0; st.steps = st.steps || {};
   if (!st.seeded) { st.seeded = 1; // a few faults to start with
@@ -109,36 +113,113 @@ Tech.prototype.read = function (d, s) {
 };
 Tech.prototype.state = function (d, s, v) { return v < s[3] || v > s[4] ? 'err' : (v < s[3] + (s[4] - s[3]) * 0.08 || v > s[4] - (s[4] - s[3]) * 0.08) ? 'warn' : 'ok'; };
 
-/* ---------------- KAGE SCRIPT interpreter ---------------- */
+/* ---------------- KAGE SCRIPT 2 · variables, expressions, SE / ALTRIMENTI, MENTRE, RIPETI, QUANDO triggers ----------------
+ *   IMPOSTA X = espressione · X = espressione · SCRIVI "testo {X}" · ATTENDI espr · FERMA
+ *   SE cond [ALLORA] … [ALTRIMENTI …] FINE · MENTRE cond … FINE · RIPETI espr … FINE
+ *   QUANDO trigger … FINE (top level: runs by itself even when you're far away)
+ *     trigger: ARRIVO · PARTENZA · PIOGGIA · NOTTE · GIORNO · GUASTO · ORA 20:30 · OGNI 60 · or any condition (e.g. TEMP > 100)
+ *   values: numbers, variables, the device's sensors (TEMP, GIRI…), ORA, MINUTI, GIORNOSETT, PIOGGIA, NEVE, NEBBIA, NOTTE,
+ *   TEMPERATURA (real outside °C), DISTANZA (pilot ↔ device, m), VICINO, GUASTI, BATTERIA (phone %), CASUALE
+ *   operators: + - * / %  > < >= <= == !=  E  O  NON  ( ) */
+const KW = new Set(['E', 'O', 'NON', 'ALLORA']);
+function lex(s) { const T = [], re = /\s*(?:(\d+(?:\.\d+)?)|("[^"]*")|([A-Z_À-Ü][A-Z0-9_À-Ü]*)|(>=|<=|==|!=|<>|[-+*/%()<>=]))/gy; let m;
+  while (re.lastIndex < s.length) { const at = re.lastIndex; m = re.exec(s); if (!m) { if (/^\s*$/.test(s.slice(at))) break; throw new Error('simbolo non valido: ' + s.slice(at, at + 8)); }
+    if (m[1]) T.push({ n: +m[1] }); else if (m[2]) T.push({ s: m[2].slice(1, -1) }); else if (m[3]) T.push({ id: m[3] }); else T.push({ op: m[4] === '<>' ? '!=' : m[4] === '=' ? '==' : m[4] }); }
+  return T; }
+function parseExpr(src) { const T = lex(src); let i = 0; const pk = () => T[i], eat = () => T[i++], isOp = (t, o) => t && (t.op === o || t.id === o);
+  const prim = () => { const t = eat(); if (!t) throw new Error('espressione incompleta');
+    if (t.n !== undefined) return () => t.n; if (t.s !== undefined) return () => t.s;
+    if (t.op === '(') { const e = or(); if (!isOp(eat(), ')')) throw new Error('manca )'); return e; }
+    if (t.op === '-') { const e = prim(); return c => -e(c); } if (t.id === 'NON') { const e = prim(); return c => e(c) ? 0 : 1; }
+    if (t.id) { const k = t.id; return c => c.get(k); } throw new Error('inatteso: ' + (t.op || '?')); };
+  const bin = (next, ops) => () => { let a = next(); for (;;) { const t = pk(); const o = t && (ops.includes(t.op) ? t.op : ops.includes(t.id) ? t.id : null); if (!o) return a; eat(); const b = next(), A = a;
+      a = { '*': c => A(c) * b(c), '/': c => { const d = b(c); return d ? A(c) / d : 0; }, '%': c => { const d = b(c); return d ? A(c) % d : 0; }, '+': c => { const x = A(c), y = b(c); return typeof x === 'string' || typeof y === 'string' ? '' + x + y : x + y; }, '-': c => A(c) - b(c),
+        '>': c => +(A(c) > b(c)), '<': c => +(A(c) < b(c)), '>=': c => +(A(c) >= b(c)), '<=': c => +(A(c) <= b(c)), '==': c => +(A(c) == b(c)), '!=': c => +(A(c) != b(c)), 'E': c => +(!!A(c) && !!b(c)), 'O': c => +(!!A(c) || !!b(c)) }[o]; } };
+  const mul = bin(prim, ['*', '/', '%']), add = bin(mul, ['+', '-']), cmp = bin(add, ['>', '<', '>=', '<=', '==', '!=']), and = bin(cmp, ['E']), or = bin(and, ['O']);
+  const e = or(); if (i < T.length) throw new Error('di troppo: ' + JSON.stringify(T[i]).slice(0, 20)); return e; }
+/** text → { main: [instr], handlers: [{ trig, code }] } */
 Tech.prototype.compile = function (text) {
-  const out = [], stack = [];
-  text.split('\n').forEach((raw, ln) => { const l = raw.replace(/#.*/, '').trim().toUpperCase().replace(/\s+/g, ' '); if (!l) return;
-    if (/^RIPETI \d+$/.test(l)) { stack.push(out.length); out.push({ op: 'rep', n: +l.split(' ')[1], ln }); }
-    else if (l === 'FINE') { const s0 = stack.pop(); if (s0 === undefined) throw new Error('riga ' + (ln + 1) + ': FINE senza RIPETI'); out.push({ op: 'end', to: s0, ln }); out[s0].end = out.length; }
-    else if (/^ATTENDI [\d.]+$/.test(l)) out.push({ op: 'wait', s: Math.min(60, +l.split(' ')[1]), ln });
-    else out.push({ op: 'cmd', l, ln }); });
-  if (stack.length) throw new Error('RIPETI senza FINE');
-  return out;
+  const prog = { main: [], handlers: [] }; let out = prog.main; const stack = [];
+  const err = (ln, m) => { throw new Error('riga ' + (ln + 1) + ': ' + m); };
+  text.split('\n').forEach((raw, ln) => {
+    const keepStr = raw.replace(/#(?=(?:[^"]*"[^"]*")*[^"]*$).*/, '').trim(), l = keepStr.replace(/"[^"]*"|[^"]+/g, p => p[0] === '"' ? p : p.toUpperCase()).replace(/\s+/g, ' ');
+    if (!l) return; const w = l.split(' '), x = s => { try { return parseExpr(s); } catch (e) { err(ln, e.message); } };
+    if (w[0] === 'QUANDO') { if (stack.length) err(ln, 'QUANDO va scritto fuori dai blocchi'); const tr = l.slice(7).trim(); let trig;
+      if (/^ORA \d{1,2}[:.]\d{2}$/.test(tr)) { const [h, m] = tr.slice(4).split(/[:.]/).map(Number); trig = { kind: 'ora', h, m }; }
+      else if (/^OGNI [\d.]+$/.test(tr)) trig = { kind: 'ogni', s: Math.max(1, +tr.slice(5)) };
+      else trig = { kind: 'cond', e: x(({ ARRIVO: 'VICINO', PARTENZA: 'NON VICINO', PIOGGIA: 'PIOGGIA', NOTTE: 'NOTTE', GIORNO: 'NON NOTTE', GUASTO: 'GUASTI > 0' })[tr] || tr) };
+      const H = { trig, code: [], src: tr }; prog.handlers.push(H); out = H.code; stack.push({ t: 'quando' }); return; }
+    if (w[0] === 'SE') { const c = l.slice(3).replace(/ ALLORA$/, ''); const j = { op: 'jz', e: x(c), ln }; out.push(j); stack.push({ t: 'se', j }); return; }
+    if (l === 'ALTRIMENTI') { const b = stack[stack.length - 1]; if (!b || b.t !== 'se' || b.els) err(ln, 'ALTRIMENTI senza SE'); const j = { op: 'jmp', ln }; out.push(j); b.j.to = out.length; b.els = j; return; }
+    if (w[0] === 'MENTRE') { const top = out.length, j = { op: 'jz', e: x(l.slice(7)), ln }; out.push(j); stack.push({ t: 'mentre', j, top }); return; }
+    if (w[0] === 'RIPETI') { const v = '__R' + ln; out.push({ op: 'set', v, e: x(l.slice(7) || '1'), ln }); const top = out.length, j = { op: 'jz', e: x(v + ' > 0'), ln }; out.push(j); stack.push({ t: 'ripeti', j, top, v }); return; }
+    if (l === 'FINE') { const b = stack.pop(); if (!b) err(ln, 'FINE senza blocco');
+      if (b.t === 'se') { if (b.els) b.els.to = out.length; else b.j.to = out.length; }
+      else if (b.t === 'mentre') { out.push({ op: 'jmp', to: b.top, yld: 1, ln }); b.j.to = out.length; }
+      else if (b.t === 'ripeti') { out.push({ op: 'set', v: b.v, e: x(b.v + ' - 1'), ln }); out.push({ op: 'jmp', to: b.top, ln }); b.j.to = out.length; }
+      else if (b.t === 'quando') out = prog.main; return; }
+    if (w[0] === 'ATTENDI') { out.push({ op: 'wait', e: x(l.slice(8) || '1'), ln }); return; }
+    if (w[0] === 'SCRIVI' || w[0] === 'DI') { const r = keepStr.slice(w[0].length).trim(); out.push(/^".*"$/.test(r) ? { op: 'say', s: r.slice(1, -1), ln } : { op: 'say', e: x(l.slice(w[0].length + 1)), ln }); return; }
+    if (l === 'FERMA') { out.push({ op: 'stop', ln }); return; }
+    const m = l.match(/^(?:IMPOSTA )?([A-Z_][A-Z0-9_]*) = (.+)$/); if (m && !/^(TEST|RESET|CALIBRA)/.test(m[1])) { out.push({ op: 'set', v: m[1], e: x(m[2]), ln }); return; }
+    out.push({ op: 'cmd', l, ln }); });
+  if (stack.length) throw new Error('manca FINE (blocco ' + stack[stack.length - 1].t.toUpperCase() + ')');
+  return prog;
 };
-Tech.prototype.start = function (d, text, why) {
-  let code; try { code = this.compile(text); } catch (e) { this.print('✖ ' + e.message, 'err'); return; }
+/** values a program can read */
+Tech.prototype.env = function (d) {
+  const g = this.g, vars = (this.vars[d.id] = this.vars[d.id] || {}), RS = window.getRealSky ? getRealSky() : null, B = window.AmpyBridge;
+  const get = k => { if (k in vars) return vars[k]; const now = new Date(), s = d.sensors.find(q => q[0] === k); if (s) return this.read(d, s);
+    switch (k) { case 'ORA': return now.getHours() + now.getMinutes() / 60; case 'MINUTI': return now.getMinutes(); case 'GIORNOSETT': return now.getDay() || 7;
+      case 'PIOGGIA': return RS && /rain|drizzle|storm/.test(RS.wx || '') ? 1 : 0; case 'NEVE': return RS && RS.wx === 'snow' ? 1 : 0; case 'NEBBIA': return RS && RS.wx === 'fog' ? 1 : 0;
+      case 'NOTTE': return (g.dayK || 0) < 0.25 ? 1 : 0; case 'TEMPERATURA': return RS && RS.temp !== null ? RS.temp : 18;
+      case 'VICINO': return this.inRange().includes(d) ? 1 : 0; case 'DISTANZA': { const f = g.foot, p = d.pos ? d.pos() : null; return p && f ? Math.round(Math.hypot(wrapD(p[0] - f.x), wrapD(p[1] - f.z))) : 9999; }
+      case 'GUASTI': return this.faults(d).length; case 'CASUALE': return Math.random();
+      case 'BATTERIA': { try { const v = B ? JSON.parse(B.device()).battery : null; return v === null || v === undefined ? 100 : v; } catch (e) { return 100; } }
+      case 'VERO': return 1; case 'FALSO': return 0; }
+    return 0; };
+  return { get, vars };
+};
+const interp = (s, c) => s.replace(/\{([A-Z_][A-Z0-9_]*)\}/gi, (m, k) => { const v = c.get(k.toUpperCase()); return typeof v === 'number' ? (Math.round(v * 100) / 100).toString() : String(v); });
+Tech.prototype.prog = function (d) { const src = this.st.progs[d.id] || ''; if (!this.pc) this.pc = {}; const c = this.pc[d.id];
+  if (c && c.src === src) return c.p; let p = null; try { p = this.compile(src); } catch (e) { p = null; } this.pc[d.id] = { src, p }; return p; };
+Tech.prototype.start = function (d, text, why, code) {
+  if (!code) { let P; try { P = this.compile(text); } catch (e) { this.print('✖ ' + e.message, 'err'); return; } code = P.main;
+    if (!code.length && P.handlers.length) { this.print('programma salvato: ' + P.handlers.length + ' regole QUANDO attive (partono da sole)', 'ok'); this.st.progs[d.id] = text; this.save(); return; } }
   if (!code.length) { this.print('programma vuoto', 'warn'); return; }
-  this.run = { d, code, pc: 0, wait: 0, cnt: {}, steps: 0 }; this.print('▶ ' + this.dname(d) + ' · programma avviato' + (why ? ' (' + why + ')' : ''), 'ok');
+  this.runs.push({ d, code, pc: 0, wait: 0, steps: 0, why: why || '' }); this.print(why && why.startsWith('QUANDO') ? '⚡ ' + d.id + ' · ' + why : '▶ ' + this.dname(d) + ' · programma avviato' + (why ? ' (' + why + ')' : ''), 'ok');
 };
 Tech.prototype.stepRun = function (dt) {
-  const R = this.run; if (!R) return;
-  if (!this.inRange().includes(R.d)) { this.print('■ collegamento perso: programma fermato', 'err'); this.run = null; return; }
-  if (R.wait > 0) { R.wait -= dt; return; }
-  for (let k = 0; k < 40 && this.run; k++) {
-    if (R.pc >= R.code.length) { this.print('■ programma terminato', 'ok'); this.run = null; return; }
-    if (++R.steps > 5000) { this.print('✖ troppi passi: il programma non finisce mai?', 'err'); this.run = null; return; }
-    const I = R.code[R.pc];
-    if (I.op === 'rep') { R.cnt[R.pc] = I.n; R.pc++; if (I.n <= 0) R.pc = I.end; }
-    else if (I.op === 'end') { const c = --R.cnt[I.to]; R.pc = c > 0 ? I.to + 1 : R.pc + 1; }
-    else if (I.op === 'wait') { R.wait = I.s; R.pc++; return; }
-    else { const r = this.exec(R.d, I.l); R.pc++; if (r && r.wait) { R.wait = r.wait; return; } if (r && r.stop) { this.run = null; return; } }
+  for (const R of this.runs.slice()) {
+    if (R.wait > 0) { R.wait -= dt; continue; }
+    const c = this.env(R.d), done = msg => { if (msg) this.print(msg, 'ok'); this.runs.splice(this.runs.indexOf(R), 1); };
+    for (let k = 0; k < 60; k++) {
+      if (R.pc >= R.code.length) { done(R.why.startsWith('QUANDO') ? '' : '■ programma terminato'); break; }
+      if (++R.steps > 200000) { this.print('✖ troppi passi: il programma non finisce mai?', 'err'); done(); break; }
+      const I = R.code[R.pc]; let r;
+      try {
+        if (I.op === 'set') { c.vars[I.v] = I.e(c); R.pc++; }
+        else if (I.op === 'jz') R.pc = I.e(c) ? R.pc + 1 : I.to;
+        else if (I.op === 'jmp') { R.pc = I.to; if (I.yld) break; }
+        else if (I.op === 'wait') { R.wait = Math.max(0, Math.min(3600, +I.e(c) || 0)); R.pc++; break; }
+        else if (I.op === 'say') { this.print('💬 ' + (I.e ? String(I.e(c)) : interp(I.s, c)), 'ok'); R.pc++; }
+        else if (I.op === 'stop') { done('■ FERMA'); break; }
+        else { r = this.exec(R.d, interp(I.l, c)); R.pc++; if (r && r.wait) { R.wait = r.wait; break; } if (r && r.stop) { done(); break; } }
+      } catch (e) { this.print('✖ riga ' + (I.ln + 1) + ': ' + e.message, 'err'); done(); break; }
+    }
   }
 };
+/** QUANDO rules: evaluated twice a second for every device that has a program, wherever you are */
+Tech.prototype.triggers = function (dt) {
+  if ((this.trT = (this.trT || 0) - dt) > 0) return; this.trT = 0.5; this.tstate = this.tstate || {};
+  for (const d of this.D) { const P = this.prog(d); if (!P || !P.handlers.length) continue; const c = this.env(d);
+    P.handlers.forEach((H, i) => { const key = d.id + '#' + i + '#' + H.src, s = this.tstate[key] = this.tstate[key] || { v: null, t: 0, m: -1 }; let fire = false;
+      if (H.trig.kind === 'ogni') { s.t += 0.5; if (s.t >= H.trig.s) { s.t = 0; fire = true; } }
+      else if (H.trig.kind === 'ora') { const n = new Date(), m = n.getHours() * 60 + n.getMinutes(); if (m === H.trig.h * 60 + H.trig.m && s.m !== m) fire = true; s.m = m; }
+      else { let v = 0; try { v = H.trig.e(c) ? 1 : 0; } catch (e) { } if (s.v === 0 && v === 1) fire = true; s.v = v; }
+      if (fire && !this.runs.some(R => R.code === H.code)) this.start(d, '', 'QUANDO ' + H.src, H.code); }); }
+};
+Object.defineProperty(Tech.prototype, 'run', { get() { return (this.runs || [])[0] || null; }, set(v) { if (!v) this.runs = []; } });
 /** one command on a device; prints the result */
 Tech.prototype.exec = function (d, line) {
   const L = line.trim().toUpperCase().replace(/\s+/g, ' '), w = L.split(' '), fl = this.faults(d), fx = this.funcs(d), P = (s, c) => this.print(s, c);
@@ -181,7 +262,8 @@ const fmt = v => Math.abs(v) >= 1000 ? Math.round(v).toString() : Math.abs(v) >=
 Tech.prototype.update = function (dt) {
   const inR = this.inRange();
   // auto-run programs when you come into range of a device
-  for (const d of this.D) { const now = inR.includes(d); if (now && !this.was[d.id] && this.st.auto[d.id] && this.st.progs[d.id] && !this.run) { this.start(d, this.st.progs[d.id], 'automatico'); } this.was[d.id] = now; }
+  for (const d of this.D) { const now = inR.includes(d); if (now && !this.was[d.id] && this.st.auto[d.id] && this.st.progs[d.id] && !this.runs.some(r => r.d === d && !r.why.startsWith('QUANDO'))) { this.start(d, this.st.progs[d.id], 'automatico'); } this.was[d.id] = now; }
+  this.triggers(dt);
   if (this.cur && !inR.includes(this.cur) && this.open) { this.cur = null; this.render(true); }
   this.stepRun(dt);
   if (this.blink > 0) { this.blink -= dt; this.g.techHL = Math.sin(this.blink * 18) > 0 ? 1 : 0; if (this.blink <= 0) this.g.techHL = undefined; }
@@ -193,7 +275,7 @@ Tech.prototype.update = function (dt) {
 };
 Tech.prototype.drawHud = function (hud) {
   const c2 = hud.getContext('2d'), m = Math.min(hud.width, hud.height); let ln = '';
-  if (this.run) ln = '🔧 KAGE TECH · ' + this.dname(this.run.d) + ' · programma in esecuzione';
+  if (this.runs.length) ln = '🔧 KAGE TECH · ' + this.dname(this.runs[0].d) + ' · ' + (this.runs.length > 1 ? this.runs.length + ' programmi in esecuzione' : 'programma in esecuzione');
   else if (!this.open && this.free()) { const n = this.inRange().filter(d => this.faults(d).length).length; if (n) ln = '🔧 ' + n + ' dispositiv' + (n > 1 ? 'i' : 'o') + ' vicin' + (n > 1 ? 'i' : 'o') + ' segnala' + (n > 1 ? 'no' : '') + ' un guasto · U / 📱 TABLET'; }
   if (!ln) return; c2.font = (m * 0.019 | 0) + 'px monospace'; c2.textAlign = 'left'; const w = c2.measureText(ln).width + m * 0.03;
   c2.fillStyle = 'rgba(3,10,6,0.65)'; c2.fillRect(m * 0.02, hud.height - m * 0.168, w, m * 0.036); c2.fillStyle = '#9dff8a'; c2.fillText(ln, m * 0.035, hud.height - m * 0.143);
@@ -230,8 +312,8 @@ Tech.prototype.buildUI = function () {
 Tech.prototype.saveProg = function () { const ta = this.ui.querySelector('textarea'); if (ta && this.cur) { this.st.progs[this.cur.id] = ta.value; this.save(); } };
 Tech.prototype.example = function (d) {
   const f = Object.keys(this.funcs(d));
-  if (d.id === 'gt') return '# benvenuto: quando arrivi la GT ti accoglie\nFARI ON\nAPRI PORTE\nATTENDI 4\nRIPETI 3\n  CLACSON\n  ATTENDI 0.6\nFINE\nCHIUDI PORTE';
-  if (d.id === 'odyssey') return '# giro di controllo della nave\nSTATO\nNUCLEO BOOST\nATTENDI 3\nREPLICA\nRISVEGLIA 2\nATTENDI 10\nSTASI';
+  if (d.id === 'gt') return '# KAGE SCRIPT 2 · la GT che pensa da sola\nQUANDO ARRIVO\n  SE NOTTE O PIOGGIA ALLORA\n    FARI ON\n  FINE\n  APRI PORTE\n  SCRIVI "benvenuto! fuori ci sono {TEMPERATURA} gradi"\nFINE\n\nQUANDO PARTENZA\n  CHIUDI PORTE\n  FARI OFF\nFINE\n\n# la sera accende i fari, quando piove lampeggia\nQUANDO ORA 20:30\n  FARI ON\nFINE\nQUANDO PIOGGIA\n  RIPETI 3\n    LAMPEGGIA\n    ATTENDI 1\n  FINE\nFINE\n\n# se si surriscalda ti avvisa\nQUANDO TEMP > 110\n  SCRIVI "attenzione: olio a {TEMP} gradi"\n  CLACSON\nFINE';
+  if (d.id === 'odyssey') return '# giro di controllo della nave\nSTATO\nIMPOSTA N = 1\nMENTRE N <= 4\n  RISVEGLIA {N}\n  ATTENDI 4\n  N = N + 1\nFINE\nSTASI\n\n# ogni 5 minuti il nucleo si riequilibra da solo\nQUANDO OGNI 300\n  NUCLEO BOOST\nFINE\n\n# colazione automatica alle 8\nQUANDO ORA 8:00\n  REPLICA\n  SCRIVI "buongiorno capitano"\nFINE';
   return '# programma di prova\nSTATO\n' + f.slice(0, 2).join('\nATTENDI 2\n') + '\nATTENDI 2\nSUONA';
 };
 Tech.prototype.renderLog = function () { const el = this.ui.querySelector('.log'); if (!el) return; el.innerHTML = this.log.map(([s, c]) => '<div class="' + (c ? 't-' + c : '') + (c === 'cmd' || /«|›/.test(s) || /^  [A-Z]/.test(s) ? ' notr' : '') + '">' + esc(s) + '</div>').join(''); el.scrollTop = el.scrollHeight; };

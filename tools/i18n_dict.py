@@ -574,4 +574,5 @@ PAIRS = [
 ("📸 MODALITÀ FOTO", "📸 PHOTO MODE"), ("Naturale", "Natural"), ("Infrarosso", "Infrared"), ("Pellicola", "Film"), ("🎞 Naturale", "🎞 Natural"), ("📸 AmpyCam · trascina per girare · due dita / rotella per avvicinarti", "📸 AmpyCam · drag to orbit · two fingers / wheel to get closer"),
 ("in piedi", "standing"), ("saluto", "wave"), ("esulta", "cheer"), ("braccia conserte", "arms crossed"), ("indica", "point"), ("mani sui fianchi", "hands on hips"), ("pensieroso", "thinking"),
 
+("programma salvato:", "program saved:"), ("regole QUANDO attive (partono da sole)", "QUANDO rules active (they start by themselves)"), ("programmi in esecuzione", "programs running"), ("troppi passi: il programma non finisce mai?", "too many steps: does the program never end?"), ("manca FINE (blocco", "missing FINE (block"), ("FINE senza blocco", "FINE without a block"), ("ALTRIMENTI senza SE", "ALTRIMENTI without SE"), ("QUANDO va scritto fuori dai blocchi", "QUANDO must be outside other blocks"), ("riga", "line"),
 ]
