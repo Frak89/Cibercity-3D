@@ -91,6 +91,8 @@ Star.prototype.update = function (dt, inp) {
     if (s.world === 'planet') s.y = clamp(s.y, 50, 900);
     if (s.world === 'space') { const r = Math.hypot(s.x, s.y, s.z); if (r > 5500) { const k = 5500 / r; s.x *= k; s.y *= k; s.z *= k; } }
   } else { s.imp = ease(s.imp, 0, 1, dt); s.roll = ease(s.roll, 0, 1, dt); }
+  // warp-field lensing strength: follows the warp factor while in curvature (and a short swell on engage / drop-out)
+  { const tgt = s.mode === 'warp' ? clamp(0.25 + 0.75 * KS.WARP_STEPS[s.warpI] / 10, 0, 1) : 0; this.lensK = ease(this.lensK || 0, tgt, tgt > (this.lensK || 0) ? 1.4 : 2.2, dt); }
   // the crew on the move
   for (const c of CREW) if (c.path) { c.ph = (c.ph || Math.random() * 10) + dt * 0.08; }
   // audio
@@ -442,6 +444,12 @@ Star.prototype.drawWorld = function (ctx) {
     if (g.world === 'planet' && (f.ss === 'planet' || f.ss === 'planetin' || f.ss === 'beamup')) { const vis = f.ss === 'planetin' ? f.bt / 1.9 : f.ss === 'beamup' ? 1 - f.bt / 1.9 : 1;
       if (vis > 0.98 || Math.random() < vis) this.drawAvatar(ctx, U.mul(U.T(...this.rel([f.px, f.py, f.pz], ctx)), U.RY(f.h)), f.anim || 'in piedi', { speed: Math.abs(f.v || 0) }, f.anim === 'cammina' || f.anim === 'corre' ? f.ph : t); prep(); }
   }
+};
+/** warp lensing parameters for the game's screen-space pass: ship position (render space), strength, colour */
+Star.prototype.lens = function (ctx) {
+  const k = this.lensK || 0, s = this.ship, f = this.foot(); if (k < 0.01 || this.g.world !== 'space') return null;
+  const inside = !!(f && f.ss === 'helm' && this.g.view % 2 === 0) || (f && f.ss === 'in');
+  return { k, p: this.rel([s.x, s.y, s.z], ctx), r: 70, inside, col: { ciano: [0.2, 0.85, 1], viola: [0.65, 0.35, 1], ambra: [1, 0.6, 0.15] }[this.cfg().warp] || [0.2, 0.85, 1] };
 };
 /** transporter sparkle columns (additive) */
 Star.prototype.drawAdditive = function (ctx) {

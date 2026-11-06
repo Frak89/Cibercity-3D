@@ -4,6 +4,7 @@
 (function (root) {
 'use strict';
 const KF = root.KageFleet, KX = root.KageXeno, MB = KF.MB, T = KF.T, RX = KF.RX, RY = KF.RY, RZ = KF.RZ, M = KF.M, PI = Math.PI, TAU = PI * 2;
+const FM3 = (x, y, z) => new Float32Array([x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1]);
 const mat = (c, e, slot, mode, a) => ({ c, e: e || 0, slot: slot || 0, mode: mode || 0, a: a || [0, 0, 0] });
 const lerp = (a, b, t) => a + (b - a) * t, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const Q = lod => lod === 'lo' ? 0.5 : lod === 'ultra' ? 3 : 1.4;
@@ -40,59 +41,112 @@ function buildStarship(o, lod) {
   // command hull: a long lens, pointed bow, wide round stern (sections along z, superellipse ex 2.4)
   mb.part = 'scafo_comando';
   const sec = z => { const t = (z + 40) / 105; const w = 30 * Math.pow(Math.sin(PI * clamp(t, 0, 1) * 0.92 + 0.08), 0.8) * (1 - 0.35 * sstep(0.55, 1, t)), h = 6.6 * Math.pow(Math.sin(PI * clamp(t, 0, 1)), 0.55); return [w, h]; };
-  const rows = [], nz = N(30), na = N(40);
+  const rows = [], nz = N(36), na = N(48);
   for (let j = 0; j <= nz; j++) { const z = lerp(-40, 65, j / nz), [w, h] = sec(z), row = [];
     for (let k = 0; k <= na; k++) { const a = k / na * TAU, s = Math.sin(a), c = Math.cos(a), e = 2 / 2.6;
       row.push([Math.sign(s) * Math.pow(Math.abs(s), e) * w, Math.sign(c) * Math.pow(Math.abs(c), e) * h * (c > 0 ? 1 : 0.75), z]); }
     rows.push(row); }
   mb.grid(rows, P, false);
-  // panel lines + rows of lit windows along the rim
+  // the upper terrace: a second, narrower lens that gives the hull its stepped two-tier profile
+  mb.part = 'terrazza_superiore';
+  const yTop = (x, z) => { const [w, h] = sec(z); const u = Math.min(1, Math.abs(x) / w); return h * Math.pow(Math.max(0, 1 - Math.pow(u, 2.6)), 1 / 2.6); };
+  const tr = []; for (let j = 0; j <= nz; j++) { const z = lerp(-30, 52, j / nz), tt = j / nz, [w] = sec(z), ww = w * 0.58 * Math.pow(Math.sin(PI * tt), 0.35), row = [];
+    for (let k = 0; k <= na / 2; k++) { const a = -PI / 2 + k / (na / 2) * PI, x = Math.sin(a) * ww, c = Math.cos(a); row.push([x, yTop(x, z) - 0.05 + 1.7 * Math.pow(Math.max(0, c), 0.18) * Math.pow(Math.sin(PI * tt), 0.4), z]); } tr.push(row); }
+  const PT = mat(hc.map(v => v * 0.86), 0, 1); mb.grid(tr, PT, false); mb.grid(tr, PT, true);
+  // a neon seam where the terrace meets the hull (the Cybercity touch)
+  mb.part = 'neon_terrazza'; for (const sx of [-1, 1]) { const seam = []; for (let j = 1; j < nz; j++) { const z = lerp(-30, 52, j / nz), tt = j / nz, [w] = sec(z), x = sx * w * 0.58 * Math.pow(Math.sin(PI * tt), 0.35) * 1.01, y = yTop(x, z); seam.push([[x, y + 0.02, z], [x, y + 0.2, z]]); } mb.grid(seam, W, false); mb.grid(seam, W, true); }
+  // accent band around the rim (between the two rows of windows) + a thin dark pinstripe above it
+  mb.part = 'fascia_bordo';
+  for (const sx of [-1, 1]) { const band = [], pin = [];
+    for (let j = 1; j < nz; j++) { const z = lerp(-40, 65, j / nz), [w] = sec(z); band.push([[sx * (w + 0.06), 0.35, z], [sx * (w + 0.12), 0, z], [sx * (w + 0.06), -0.35, z]]); pin.push([[sx * (w - 0.1), 0.62, z], [sx * (w - 0.02), 0.5, z]]); }
+    mb.grid(band, A, sx < 0); mb.grid(band, A, sx > 0); mb.grid(pin, dark, sx < 0); mb.grid(pin, dark, sx > 0); }
+  // rows of lit windows (two decks along the rim, gaps where the bulkheads are)
   mb.part = 'finestrini';
-  for (let j = 2; j < nz - 1; j += 1) { const z = lerp(-40, 65, j / nz), [w, h] = sec(z); if (w < 6) continue;
-    for (const sx of [-1, 1]) for (const yy of [0.15, -0.25]) mb.box(sx * (w - 0.05), yy * h, z, 0.12, 0.35, 1.4, win); }
+  for (let j = 2; j < nz - 1; j++) { const z = lerp(-40, 65, j / nz), [w, h] = sec(z); if (w < 6 || j % 5 === 0) continue;
+    for (const sx of [-1, 1]) for (const yy of [0.17, -0.27]) { const y = yy * h, u = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(y) / (yy > 0 ? h : h * 0.75), 2.6)), 1 / 2.6); mb.box(sx * (w * u + 0.03), y, z, 0.14, 0.42, 1.35, win); } }
+  // panel lines: longitudinal + transverse grooves that follow the curved top, plus a patchwork of tinted plates
   mb.part = 'linee_pannelli';
-  for (const z of [-20, 0, 20, 40]) { const [w, h] = sec(z); mb.box(0, h + 0.03, z, w * 1.6, 0.06, 0.25, Pd); }
-  mb.box(0, 6.62, 10, 0.3, 0.1, 90, A);
-  // bridge dome + sensor ring
+  const slope = (x, z) => (yTop(x + 0.15, z) - yTop(x - 0.15, z)) / 0.3;
+  const seg = 1.6, groove = mat(hc.map(v => v * 0.45), 0, 1), plateA = mat(hc.map(v => v * 0.78), 0, 1), plateB = mat(hc.map(v => Math.min(1, v * 1.15 + 0.04)), 0, 1);
+  for (const lx of [-20, -13, -7, 7, 13, 20]) for (let z = -32; z < 58; z += seg) { const [w] = sec(z); if (Math.abs(lx) > w * 0.82 || (Math.abs(lx) < sec(z)[0] * 0.58 && z > -30 && z < 52)) continue; mb.box(lx, yTop(lx, z) + 0.02, z, 0.09, 0.05, seg * 0.98, groove); }
+  for (const lz of [-26, -14, -2, 10, 22, 34, 46, 56]) { const [w] = sec(lz); for (let x = -w * 0.85; x < w * 0.85; x += seg) { const xm = x + seg / 2; mb.push(M(T(xm, yTop(xm, lz) + 0.02, lz), RZ(Math.atan(slope(xm, lz))))); mb.box(0, 0, 0, seg * 1.02, 0.05, 0.09, groove); mb.pop(); } }
+  { let s9 = 11; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647;
+    for (let k = 0; k < Math.round(70 * q); k++) { const z = lerp(-30, 58, rnd()), [w] = sec(z), x = (rnd() * 2 - 1) * w * 0.8; if (Math.abs(x) < w * 0.6 && z > -28 && z < 50) continue;
+      const pw = 1.2 + rnd() * 2.4, pd = 1 + rnd() * 3, pm = rnd() < 0.5 ? plateA : plateB; if (Math.abs(x) + pw / 2 > w * 0.8) continue; mb.push(M(T(x, yTop(x, z) + 0.015, z), RZ(Math.atan(slope(x, z))))); mb.box(0, 0, 0, pw, 0.03, pd, pm); mb.pop(); } }
+  // livery: a swept double chevron on the bow and the dorsal accent spine
+  mb.part = 'livrea';
+  for (const s of [-1, 1]) for (const [z0, ww] of [[50, 0.7], [54, 0.45]]) for (let k = 0; k < 8; k++) { const x = s * (1 + k * 1.3), z = z0 - k * 1.05; mb.push(M(T(x, yTop(x, z) + 0.04, z), RY(s * 0.9))); mb.box(0, 0, 0, ww, 0.04, 1.75, A); mb.pop(); }
+  for (const z of [-20, -4, 12, 28, 42]) { if (z > 2 && z < 26) continue; mb.box(0, yTop(0, z) - 0.05 + 1.7 * Math.pow(Math.sin(PI * (z + 30) / 82), 0.4) + 0.03, z, 0.35, 0.08, 9, A); }
+  // bridge dome + sensor ring + a band of windows + mast
   mb.part = 'cupola_plancia';
   mb.push(T(0, 6.2, 14)); KX.lathe(mb, [[10.6, 0], [10.4, 0.9], [9.2, 2.2], [6.5, 3.4], [3, 4.0], [0.01, 4.15]], N(40), (j) => j === 1 ? G : P, true); mb.pop();
   mb.push(T(0, 7.15, 14)); mb.torus(10.45, 0.12, N(48), 6, W); mb.pop();
-  // registry: KAGE ODYSSEY · KX-01 on both flanks of the dome base and on the top
+  mb.push(T(0, 8.55, 14)); for (let k = 0; k < N(28); k++) { const a = k / N(28) * TAU; mb.push(RY(a)); mb.box(0, 0, 8.95, 0.7, 0.28, 0.1, win); mb.pop(); } mb.pop();
+  mb.part = 'antenna_sensori'; mb.push(T(0, 10.35, 14)); mb.cyl(0, 0.35, 1.6, 1.2, N(20), Pd); mb.cyl(0.35, 2.8, 0.12, 0.05, 8, A); mb.ellipsoid(0, 2.9, 0, 0.18, 0.18, 0.18, 8, 6, mat([1, 0.2, 0.2], 2, 3, 7, [0, 0.6, 0])); mb.box(0, 1.2, 0, 3.2, 0.08, 0.08, A); mb.pop();
+  // ventral sensor dome under the bow
+  mb.part = 'sensori_ventrali'; mb.push(T(0, -4.7, 38)); mb.ellipsoid(0, 0, 0, 3.4, 1.2, 3.4, N(24), N(10), G); mb.torus(3.3, 0.1, N(28), 6, W); mb.pop();
+  // impulse engines at the stern of the lens (glowing amber vents)
+  mb.part = 'motori_impulso';
+  for (const s of [-1, 1]) { const z = -37.2, [w, h] = sec(z); mb.box(s * 4.2, 0.6, z, 5.2, 1.5, 1.4, Pd); mb.box(s * 4.2, 0.6, z - 0.72, 4.6, 1.0, 0.06, mat([1, 0.45, 0.12], 2.0, 3)); void w; void h; }
+  // RCS thruster quads around the rim
+  mb.part = 'propulsori_rcs';
+  for (const [z, sy] of [[-24, 1], [0, 1], [24, 1], [46, 1]]) for (const sx of [-1, 1]) { const [w] = sec(z); mb.push(T(sx * (w * 0.93), yTop(w * 0.93, z) + 0.1, z)); mb.box(0, 0, 0, 1.2, 0.25, 1.2, Pd); for (const [dx, dz] of [[0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35]]) mb.box(dx, 0.15, dz, 0.16, 0.08, 0.16, dark); mb.pop(); void sy; }
+  // registry: KAGE ODYSSEY · KX-01 on both flanks
   mb.part = 'scritte';
-  for (const s of [-1, 1]) { const zt = s > 0 ? 8 : 8 - 13 * 6 * 0.34 * -1; const zz = s > 0 ? 34 : 34 - 13 * 6 * 0.34;
-    text(mb, 'KX-01 ODYSSEY', s * (sec(zz + (s > 0 ? -9 : 9))[0] * 0.995 + 0.04), -0.6, s > 0 ? 30 : 30 - 13 * 6 * 0.2, 0.2, mat(hc.map(v => v * 0.35), 0, 2), s); void zt; }
-  // neck + engineering hull with the deflector dish
+  for (const s of [-1, 1]) { const zz = s > 0 ? 34 : 34 - 13 * 6 * 0.34;
+    text(mb, 'KX-01 ODYSSEY', s * (sec(zz + (s > 0 ? -9 : 9))[0] * 0.995 + 0.04), -0.6, s > 0 ? 30 : 30 - 13 * 6 * 0.2, 0.2, mat(hc.map(v => v * 0.35), 0, 2), s); }
+  // swept neck (smooth tapered sections, accent fin on its leading edge)
   mb.part = 'collo';
-  mb.box(0, -7.5, -6, 6, 6, 18, Pd, [0.7, 0.8]);
+  { const nr = []; for (let j = 0; j <= N(10); j++) { const t = j / N(10), z = lerp(-20, 6, t), yc = lerp(-7.6, -5.6, t), w = lerp(2.4, 3.4, Math.sin(PI * t)), hh = 2.6, row = [];
+      for (let k = 0; k <= N(16); k++) { const a = k / N(16) * TAU; row.push([Math.sin(a) * w, yc + Math.cos(a) * hh, z]); } nr.push(row); }
+    mb.grid(nr, Pd, false); }
+  mb.push(M(T(0, -6.2, 5.6), RX(-0.5))); mb.box(0, 0, 0, 0.35, 3.6, 1.2, A); mb.pop();
+  // engineering hull with the deflector dish, ribs, windows and keel fins
   mb.part = 'scafo_ingegneria';
-  const er = []; for (let j = 0; j <= N(20); j++) { const t = j / N(20), z = lerp(-48, 18, t), r = 7.2 * Math.pow(Math.sin(PI * clamp(t * 0.95 + 0.05, 0, 1)), 0.45) * (1 - 0.2 * t);
-    const row = []; for (let k = 0; k <= N(28); k++) { const a = k / N(28) * TAU; row.push([Math.sin(a) * r, -11 + Math.cos(a) * r * 0.85, z]); } er.push(row); }
+  const er = []; const eR = t => 7.2 * Math.pow(Math.sin(PI * clamp(t * 0.95 + 0.05, 0, 1)), 0.45) * (1 - 0.2 * t);
+  for (let j = 0; j <= N(26); j++) { const t = j / N(26), z = lerp(-48, 18, t), r = eR(t);
+    const row = []; for (let k = 0; k <= N(32); k++) { const a = k / N(32) * TAU; row.push([Math.sin(a) * r, -11 + Math.cos(a) * r * 0.85, z]); } er.push(row); }
   mb.grid(er, P, false);
+  mb.part = 'costole_ingegneria';
+  for (const t of [0.22, 0.42, 0.62, 0.8]) { const z = lerp(-48, 18, t), r = eR(t); mb.push(M(T(0, -11, z), FM3(1, 0.85, 1))); mb.torus(r + 0.04, 0.12, N(32), 6, Pd); mb.pop(); }
+  for (let i = 0; i < 18; i++) { const t = 0.12 + i * 0.045, z = lerp(-48, 18, t), r = eR(t); for (const s of [-1, 1]) mb.box(s * (r * 0.97), -11.8, z, 0.1, 0.3, 1.4, win); }
+  mb.part = 'pinne_chiglia';
+  mb.push(M(T(0, -18.2, -30), RX(0.25))); mb.box(0, 0, 0, 0.5, 3.2, 12, Pd); mb.box(0, -1.65, 0, 0.55, 0.12, 11, A); mb.pop();
   mb.part = 'deflettore';
-  mb.push(M(T(0, -11, 17.3), RX(PI / 2))); mb.cyl(-0.4, 0.5, 4.2, 3.6, N(32), A); mb.disc(3.5, N(32), 0.52, mat(wc.map(v => v * 0.7 + 0.25), 1.6, 3)); mb.torus(3.0, 0.15, N(32), 6, mat([1, 0.75, 0.3], 1.4, 3)); mb.pop();
+  mb.push(M(T(0, -11, 17.3), RX(PI / 2))); mb.cyl(-0.4, 0.5, 4.2, 3.6, N(32), A); mb.disc(3.5, N(32), 0.52, mat(wc.map(v => v * 0.7 + 0.25), 1.6, 3)); mb.torus(3.0, 0.15, N(32), 6, mat([1, 0.75, 0.3], 1.4, 3)); mb.torus(1.8, 0.1, N(28), 6, mat([1, 0.75, 0.3], 1.2, 3)); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; mb.box(Math.cos(a) * 2.4, Math.sin(a) * 2.4, 0.55, 0.12, 0.12, 0.1, A); } mb.pop();
   mb.part = 'hangar_navette';
-  mb.box(0, -11, -48.6, 7, 4.5, 0.4, mat([0.9, 0.85, 0.6], 0.6, 3)); mb.anim('PORTELLONE HANGAR', [0, 0, 0], [0, 1, 0], 4.6, 1); mb.box(0, -11, -48.25, 8, 5.5, 0.3, dark); mb.animEnd();
-  // pylons and warp nacelles (glowing coils along the inner faces, magenta intake caps, cyan trailing grilles)
+  mb.box(0, -11, -48.6, 7, 4.5, 0.4, mat([0.16, 0.15, 0.14], 0.12, 3)); for (let k = 0; k < 3; k++) mb.box(0, -12.6 + k * 1.6, -48.82, 6.4, 0.12, 0.05, mat([1, 0.75, 0.35], 1.4, 3)); for (const sx of [-1, 1]) mb.box(sx * 3.3, -11, -48.82, 0.12, 4.2, 0.05, mat([0.3, 0.9, 1], 1.4, 3)); mb.anim('PORTELLONE HANGAR', [0, 0, 0], [0, 1, 0], 4.6, 1); mb.box(0, -11, -48.25, 8, 5.5, 0.3, dark); for (let k = 0; k < 4; k++) mb.box(0, -12.9 + k * 1.25, -48.08, 7.6, 0.05, 0.05, A); mb.animEnd();
+  for (const s of [-1, 1]) { mb.box(s * 1.8, -13.3, -48.75, 0.5, 0.2, 0.1, mat([1, 0.6, 0.15], 1.6, 3, 7, [0, s > 0 ? 0 : 0.5, 0])); }
+  // swept pylons (airfoil sections with an accent leading edge) and refined warp nacelles
   for (const s of [-1, 1]) {
     mb.part = 'piloni';
-    mb.push(T(s * 16, -3, -24)); mb.push(RZ(-s * 0.55)); mb.box(0, 0, 0, 2.2, 22, 9, P, [0.6, 1]); mb.pop(); mb.pop();
+    { const R0 = [s * 6.5, -8.4], R1 = [s * 25.2, 4.4], dx = R1[0] - R0[0], dy = R1[1] - R0[1], L = Math.hypot(dx, dy), n = [-dy / L, dx / L], rows = [];
+      for (let j = 0; j <= N(8); j++) { const u = j / N(8), x = lerp(R0[0], R1[0], u), y = lerp(R0[1], R1[1], u), zc = lerp(-22, -36, u), ch = lerp(16, 10, u), th = lerp(1.9, 1.0, u), row = [];
+        for (let k = 0; k <= N(14); k++) { const a = k / N(14) * TAU, sn = Math.sin(a) * th / 2 * (0.6 + 0.4 * Math.cos(a)); row.push([x + n[0] * sn, y + n[1] * sn, zc + Math.cos(a) * ch / 2]); } rows.push(row); }
+      mb.grid(rows, P, s > 0); mb.grid(rows, P, s < 0);
+      for (let j = 0; j < N(8); j++) { const u = (j + 0.5) / N(8), x = lerp(R0[0], R1[0], u), y = lerp(R0[1], R1[1], u), zc = lerp(-22, -36, u), ch = lerp(16, 10, u); mb.push(M(T(x, y, zc + ch / 2 - 0.05), RZ(Math.atan2(dy, dx)))); mb.box(0, 0, 0, L / N(8) * 1.02, 0.35, 0.25, A); mb.pop(); } }
     mb.part = s > 0 ? 'gondola_warp_sinistra' : 'gondola_warp_destra';
-    const nx = s * 27, ny = 6, nrow = []; for (let j = 0; j <= N(18); j++) { const t = j / N(18), z = lerp(-62, 2, t), r = 3.6 * (t < 0.08 ? Math.sqrt(t / 0.08) : t > 0.9 ? 0.6 + 0.4 * Math.cos((t - 0.9) / 0.1 * PI / 2) : 1);
-      const row = []; for (let k = 0; k <= N(24); k++) { const a = k / N(24) * TAU; row.push([nx + Math.sin(a) * r, ny + Math.cos(a) * r, z]); } nrow.push(row); }
+    const nx = s * 27, ny = 6, nR = t => 3.6 * (t < 0.1 ? 0.55 + 0.45 * Math.sqrt(t / 0.1) : t > 0.86 ? 0.55 + 0.45 * Math.cos((t - 0.86) / 0.14 * PI / 2) : 1 - 0.06 * (t - 0.1)), nrow = [];
+    for (let j = 0; j <= N(24); j++) { const t = j / N(24), z = lerp(-62, 2, t), r = nR(t), row = [];
+      for (let k = 0; k <= N(28); k++) { const a = k / N(28) * TAU; row.push([nx + Math.sin(a) * r, ny + Math.cos(a) * r * 1.05, z]); } nrow.push(row); }
     mb.grid(nrow, P, false);
+    mb.part = 'anelli_gondola'; for (let i = 0; i < 7; i++) { const t = 0.16 + i * 0.1, z = lerp(-62, 2, t); mb.push(T(nx, ny, z)); mb.torus(nR(t) + 0.03, 0.07, N(28), 5, i % 3 ? Pd : A); mb.pop(); }
     mb.part = 'bobine_warp';
-    for (let i = 0; i < 9; i++) { const z = -54 + i * 5.6; mb.box(nx - s * 3.55, ny, z, 0.3, 2.6, 4.2, W); }
-    mb.push(T(nx, ny, -62.3)); mb.push(RX(PI / 2)); mb.disc(2.6, N(24), 0, mat(wc, 1.2, 3)); mb.pop(); mb.pop();
+    for (let i = 0; i < 9; i++) { const z = -54 + i * 5.6; mb.box(nx - s * 3.45, ny, z, 0.35, 2.9, 4.5, dark); mb.box(nx - s * 3.6, ny, z, 0.3, 2.5, 4.1, W); }
+    mb.part = 'pinna_gondola'; mb.push(T(nx, ny + 3.6, -36)); mb.box(0, 0.5, 0, 0.3, 1.2, 30, Pd); mb.box(0, 1.15, -2, 0.34, 0.12, 26, A); mb.pop();
+    mb.part = 'scarico_gondola'; mb.push(T(nx, ny, -62.2)); mb.push(RX(PI / 2)); mb.disc(2.0, N(24), 0, mat(wc, 1.5, 3)); mb.torus(2.0, 0.12, N(24), 6, A); for (let k = 0; k < 6; k++) { const a = k / 6 * PI; mb.push(RY(a)); mb.box(0, -0.02, 0, 3.9, 0.05, 0.08, dark); mb.pop(); } mb.pop(); mb.pop();
     mb.part = 'collettori';
-    mb.ellipsoid(nx, ny, 2.2, 3.0, 3.0, 2.6, N(20), N(12), Wm);
-    mb.box(nx, ny + 3.7, -30, 0.5, 0.3, 50, A);
+    mb.ellipsoid(nx, ny, 2.0, 2.9, 3.0, 2.8, N(24), N(14), Wm);
+    mb.push(T(nx, ny, 1.0)); mb.torus(3.25, 0.22, N(28), 8, A); mb.pop();
   }
-  // running lights (strobe) at the wing tips and nacelle ends
+  // running lights (strobe) at the wing tips and nacelle ends + hull floodlights
   mb.part = 'luci_navigazione';
-  for (const s of [-1, 1]) { mb.ellipsoid(s * 29.5, 0, 22, 0.35, 0.35, 0.35, 8, 6, mat(s > 0 ? [1, 0.1, 0.1] : [0.1, 1, 0.3], 1.8, 3, 7, [0, s > 0 ? 0 : 0.5, 0])); mb.ellipsoid(s * 27, 9.8, -60, 0.3, 0.3, 0.3, 8, 6, mat([1, 1, 1], 2, 3, 7, [0, 0.25, 0])); }
-  // airlock (starboard side of deck 4) — EVA exit
+  for (const s of [-1, 1]) { mb.ellipsoid(s * 29.5, 0, 22, 0.35, 0.35, 0.35, 8, 6, mat(s > 0 ? [1, 0.1, 0.1] : [0.1, 1, 0.3], 1.8, 3, 7, [0, s > 0 ? 0 : 0.5, 0])); mb.ellipsoid(s * 27, 10.4, -60, 0.3, 0.3, 0.3, 8, 6, mat([1, 1, 1], 2, 3, 7, [0, 0.25, 0]));
+    for (const z of [-10, 30]) mb.ellipsoid(s * 3.2, -4.6, z, 0.28, 0.14, 0.28, 8, 4, mat([1, 0.95, 0.85], 1.6, 3)); }
+  // airlock (starboard side of deck 4) — EVA exit, set flush into the hull side
   mb.part = 'portello_eva';
-  mb.box(23.5, -3.2, 20, 0.4, 3, 2.4, A); mb.box(23.62, -3.2, 20, 0.08, 2.4, 1.8, mat([0.2, 1, 0.5], 0.9, 3)); mb.anim('PORTELLO EVA', [0, 0, 0], [0, 0, 1], 2.0, 1); mb.box(23.78, -3.2, 20, 0.12, 2.5, 1.9, A); mb.animEnd();
+  { const ax = (() => { const [w, h] = sec(20), c = Math.pow(3.2 / (h * 0.75), 2.6); return w * Math.pow(Math.max(0, 1 - c), 1 / 2.6); })();
+    mb.box(ax - 0.15, -3.2, 20, 0.4, 3, 2.4, A); mb.box(ax - 0.02, -3.2, 20, 0.08, 2.4, 1.8, mat([0.2, 1, 0.5], 0.9, 3)); mb.anim('PORTELLO EVA', [0, 0, 0], [0, 0, 1], 2.0, 1); mb.box(ax + 0.12, -3.2, 20, 0.12, 2.5, 1.9, A); mb.animEnd(); }
   const m = mb.finish(); m.kind = 'starship'; return m;
 }
 

@@ -504,7 +504,7 @@ function Game(canvas, hud, opts) {
   }
   this.P = { sky: prog('sky.vert', 'sky.frag'), building: prog('building.vert', 'building.frag'), ground: prog('ground.vert', 'ground_game.frag'),
     board: prog('billboard.vert', 'billboard.frag'), car: prog('car.vert', 'car.frag'), rain: prog('rain.vert', 'rain.frag'),
-    post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag') };
+    post: prog('post.vert', 'post.frag'), warp: prog('post.vert', 'warp.frag'), nature: prog('nature.vert', 'nature.frag'), meadow: prog('ground.vert', 'ground_meadow.frag'), mist: prog('post.vert', 'mist.frag'), solid: prog('solid.vert', 'solid.frag'), glow: prog('glow.vert', 'glow.frag'), lens: prog('post.vert', 'lens.frag') };
   if (window.CarHD && window.CarRender) { this.P.hd = prog('car_hd.vert', 'car_hd.frag'); this.hd = new CarRender(gl, this.P.hd, CarHD.build({ quality: opts.quality || 'high' })); this.hdQ = opts.quality || 'high'; }
   this.P.veh = prog('vehicle.vert', 'vehicle.frag'); this.P.water = prog('water.vert', 'water.frag'); this.P.eco = prog('post.vert', 'eco.frag'); this.P.pil = prog('pilot.vert', 'vehicle.frag'); this.P.seabed = prog('water.vert', 'seabed.frag');
   function buf(arr, idx) { const b = gl.createBuffer(); gl.bindBuffer(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(idx ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, idx ? new Uint16Array(arr) : new Float32Array(arr), gl.STATIC_DRAW); return b; }
@@ -765,6 +765,18 @@ Game.prototype.frame = function (dt, inp) {
   if (this.xeno && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.xeno.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.star) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.star.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.gear && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.gear.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  // warp-field lensing: copy the frame and re-draw it bent around the ship (only while the KAGE ODYSSEY is in curvature)
+  if (this.star && P.lens) { const li = this.star.lens({ camX, camZ }); if (li) {
+    let cx = 0.5, cy = 0.47, R = 0.3, k = li.k * 0.3;
+    if (!li.inside) { const v = [li.p[0], li.p[1], li.p[2], 1], q = [0, 0, 0, 0]; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) q[i] += VP[j * 4 + i] * v[j];
+      if (q[3] > 1) { cx = 0.5 + 0.5 * q[0] / q[3]; cy = 0.5 + 0.5 * q[1] / q[3]; R = Math.min(0.9, li.r * Pm[5] / q[3] * 0.5); k = li.k; } }
+    if (!this.lensTex || this.lensW !== W || this.lensH !== H) { if (this.lensTex) gl.deleteTexture(this.lensTex); this.lensTex = gl.createTexture(); this.lensW = W; this.lensH = H; gl.bindTexture(gl.TEXTURE_2D, this.lensTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, W, H, 0, gl.RGB, gl.UNSIGNED_BYTE, null); }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.lensTex); gl.copyTexSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 0, 0, W, H);
+    const lp = P.lens; gl.useProgram(lp.p); set(lp); gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+    gl.uniform1i(lp.u.uTex, 0); gl.uniform2f(lp.u.uC, cx, cy); gl.uniform1f(lp.u.uR, R); gl.uniform1f(lp.u.uK, k); gl.uniform3fv(lp.u.uCol, li.col); gl.uniform2f(lp.u.uRes, W, H);
+    this.draw(lp, this.M.quad); gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); } }
   const rainAmt = SPACE ? 0 : UNDER ? 0.55 : eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);
