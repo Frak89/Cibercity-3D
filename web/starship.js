@@ -71,7 +71,7 @@ function buildStarship(o, lod) {
   mb.part = 'deflettore';
   mb.push(M(T(0, -11, 17.3), RX(PI / 2))); mb.cyl(-0.4, 0.5, 4.2, 3.6, N(32), A); mb.disc(3.5, N(32), 0.52, mat(wc.map(v => v * 0.7 + 0.25), 1.6, 3)); mb.torus(3.0, 0.15, N(32), 6, mat([1, 0.75, 0.3], 1.4, 3)); mb.pop();
   mb.part = 'hangar_navette';
-  mb.box(0, -11, -48.5, 7, 4.5, 0.4, mat([0.9, 0.85, 0.6], 0.6, 3)); mb.box(0, -11, -48.3, 8, 5.5, 0.3, dark);
+  mb.box(0, -11, -48.6, 7, 4.5, 0.4, mat([0.9, 0.85, 0.6], 0.6, 3)); mb.anim('PORTELLONE HANGAR', [0, 0, 0], [0, 1, 0], 4.6, 1); mb.box(0, -11, -48.25, 8, 5.5, 0.3, dark); mb.animEnd();
   // pylons and warp nacelles (glowing coils along the inner faces, magenta intake caps, cyan trailing grilles)
   for (const s of [-1, 1]) {
     mb.part = 'piloni';
@@ -92,7 +92,7 @@ function buildStarship(o, lod) {
   for (const s of [-1, 1]) { mb.ellipsoid(s * 29.5, 0, 22, 0.35, 0.35, 0.35, 8, 6, mat(s > 0 ? [1, 0.1, 0.1] : [0.1, 1, 0.3], 1.8, 3, 7, [0, s > 0 ? 0 : 0.5, 0])); mb.ellipsoid(s * 27, 9.8, -60, 0.3, 0.3, 0.3, 8, 6, mat([1, 1, 1], 2, 3, 7, [0, 0.25, 0])); }
   // airlock (starboard side of deck 4) — EVA exit
   mb.part = 'portello_eva';
-  mb.box(23.5, -3.2, 20, 0.4, 3, 2.4, A); mb.box(23.7, -3.2, 20, 0.2, 2.4, 1.8, mat([0.2, 1, 0.5], 0.9, 3));
+  mb.box(23.5, -3.2, 20, 0.4, 3, 2.4, A); mb.box(23.62, -3.2, 20, 0.08, 2.4, 1.8, mat([0.2, 1, 0.5], 0.9, 3)); mb.anim('PORTELLO EVA', [0, 0, 0], [0, 0, 1], 2.0, 1); mb.box(23.78, -3.2, 20, 0.12, 2.5, 1.9, A); mb.animEnd();
   const m = mb.finish(); m.kind = 'starship'; return m;
 }
 

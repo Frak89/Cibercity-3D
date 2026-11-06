@@ -523,7 +523,7 @@ function Game(canvas, hud, opts) {
     quad: this.mesh({ aPos: [[-1, -1, 1, -1, 1, 1, -1, 1], 2] }, [0, 1, 2, 0, 2, 3])
   };
   { const hw = (HARBOR.x1 - HARBOR.x0) / 2 + 1; this.M.water = this.mesh({ aPos: [[-hw, -hw, hw, -hw, hw, hw, -hw, hw], 2] }, [0, 1, 2, 0, 2, 3]); }
-  this.vmesh = m => this.mesh(Object.assign({ aPos: [m.pos, 3], aNorm: [m.norm, 3], aCol: [m.col, 4], aAnim: [m.anim, 4] }, m.skin ? { aSkin: [m.skin, 4] } : {}), m.idx);
+  this.vmesh = m => { const g = this.mesh(Object.assign({ aPos: [m.pos, 3], aNorm: [m.norm, 3], aCol: [m.col, 4], aAnim: [m.anim, 4] }, m.skin ? { aSkin: [m.skin, 4] } : {}), m.idx); g.hinges = m.hinges; return g; };
   if (window.KageFleet) this.T = { drones: KageFleet.bakeTraffic(KageFleet.buildDrone({ lod: 'lo' }), city.DR).map(ch => this.mesh({ aPos: [ch.pos, 3], aNorm: [ch.norm, 3], aCol: [ch.col, 4], aAnim: [ch.anim, 4], aLane: [ch.lane, 4], aDir: [ch.dir, 4] }, ch.idx)) };
   if (window.EngineFX) {
     const F = window.EngineFX;

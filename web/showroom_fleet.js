@@ -57,7 +57,7 @@ SR.prototype.initFleet = function () {
     const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); } return { p, u }; };
   const buf = (a, ix) => { const b = gl.createBuffer(); gl.bindBuffer(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, b); gl.bufferData(ix ? gl.ELEMENT_ARRAY_BUFFER : gl.ARRAY_BUFFER, ix ? new Uint16Array(a) : new Float32Array(a), gl.STATIC_DRAW); return b; };
   this.F = { kind: null, veh: prog('vehicle.vert', 'vehicle.frag'), pil: prog('pilot.vert', 'vehicle.frag'), water: prog('water.vert', 'water.frag'), cache: {},
-    vmesh: m => { const a = { aPos: [buf(m.pos), 3], aNorm: [buf(m.norm), 3], aCol: [buf(m.col), 4], aAnim: [buf(m.anim), 4] }; if (m.skin) a.aSkin = [buf(m.skin), 4]; const u32 = m.verts > 65535 && gl.getExtension('OES_element_index_uint'); return { a, u32: !!u32, i: u32 ? (() => { const b = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(m.idx), gl.STATIC_DRAW); return b; })() : buf(m.idx, true), n: m.idx.length, bounds: m.bounds, S: m.S, skin: !!m.skin }; },
+    vmesh: m => { const a = { aPos: [buf(m.pos), 3], aNorm: [buf(m.norm), 3], aCol: [buf(m.col), 4], aAnim: [buf(m.anim), 4] }; if (m.skin) a.aSkin = [buf(m.skin), 4]; const u32 = m.verts > 65535 && gl.getExtension('OES_element_index_uint'); return { a, hinges: m.hinges || [], u32: !!u32, i: u32 ? (() => { const b = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, b); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(m.idx), gl.STATIC_DRAW); return b; })() : buf(m.idx, true), n: m.idx.length, bounds: m.bounds, S: m.S, skin: !!m.skin }; },
     basin: { a: { aPos: [buf([-160, -160, 160, -160, 160, 160, -160, 160]), 2] }, i: buf([0, 1, 2, 0, 2, 3], true), n: 6 } };
 };
 SR.prototype.drawMesh = function (pr, m) {
@@ -70,7 +70,7 @@ SR.prototype.drawMesh = function (pr, m) {
 SR.prototype.setVehicle = function (kind, cfg) {
   if (!kind || kind === 'car') { if (this.F) this.F.kind = null; this.cam.dist = 7.2; this.cam.tgt = null; return; }
   this.initFleet();
-  const F = this.F; F.kind = kind; F.cfg = Object.assign({}, cfg || (kind === 'pilot' ? KagePilot.load() : KF.loadCfg(kind))); F.t = 0;
+  const F = this.F; F.hv = []; F.ht = []; F.kind = kind; F.cfg = Object.assign({}, cfg || (kind === 'pilot' ? KagePilot.load() : KF.loadCfg(kind))); F.t = 0;
   this.rebuildFleet();
   const b = F.mesh.bounds, R = Math.max(b[3] - b[0], b[4] - b[1], b[5] - b[2]);
   this.cam.dist = { drone: 4.6, boat: 13, galleon: 52, pilot: 3.4, alien: 3.6, moto: 4, hover: 12, sub: 10, ufo: 36, chrono: 6, starship: (this.F.cfg && this.F.cfg.view && this.F.cfg.view !== 'esterno') ? 30 : 190 }[kind] || R * 1.4; this.cam.pitch = kind === 'galleon' ? 0.22 : (kind === 'pilot' || kind === 'alien') ? 0.08 : 0.2;
@@ -189,6 +189,7 @@ SR.prototype.frame = function (dt) {
     set(vp); gl.uniform1f(vu.uTraffic, 0); gl.uniform1f(vu.uScale, 1); gl.uniform3f(vu.uTint, -1, 0, 0); gl.uniform1f(vu.uLit, this.spots ? 2.8 : 1.25); gl.uniform1f(vu.uDay, this.spots ? 0.3 : 0); gl.uniform1f(vu.uGlowOnly, 0);
     gl.uniform1f(vu.uRotA, F.t * 42); gl.uniform1f(vu.uBlur, k === 'drone' ? 0.6 : 0); gl.uniform1f(vu.uPropA, F.t * ({ boat: 6, moto: 2.5, hover: 18, sub: 9 }[k] || 0));
     gl.uniform1f(vu.uSail, k === 'galleon' ? 0.75 : 0); gl.uniform1f(vu.uSailYaw, k === 'galleon' ? Math.sin(F.t * 0.15) * 0.25 : 0); gl.uniform1f(vu.uSailSide, 1); gl.uniform1f(vu.uFlut, 0.35);
+    if (m.hinges && m.hinges.length) { F.hv = F.hv || []; F.ht = F.ht || []; for (let i = 0; i < m.hinges.length; i++) F.hv[i] = (F.hv[i] || 0) + ((F.ht[i] || 0) - (F.hv[i] || 0)) * Math.min(1, dt * 2.2); KF.setHinges(gl, vu, m.hinges, F.hv); }
     if (vu.uLocks) gl.uniform1f(vu.uLocks, 0); if (vu.uPortal) gl.uniform1f(vu.uPortal, 0); if (vu.uSteer) gl.uniform1f(vu.uSteer, Math.sin(F.t * 0.5) * 0.3);
   };
   if (water) {

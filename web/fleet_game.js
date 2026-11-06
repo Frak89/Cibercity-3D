@@ -537,6 +537,7 @@ FleetGame.prototype.drawModel = function (m, st, ctx, extra) {
   const M = U.mul(U.T(rx, st.y, rz), U.mul(U.RY(st.h), U.mul(U.RX(st.pitch || 0), U.RZ(st.roll || 0))));
   gl.uniformMatrix4fv(u.uModel, false, M);
   gl.uniform1f(u.uRotA, st.rot || 0); gl.uniform1f(u.uPropA, st.prop || 0); gl.uniform1f(u.uBlur, st.blur || 0); if (u.uSteer) gl.uniform1f(u.uSteer, st.steerA || 0);
+  if (m.hinges && m.hinges.length) KF.setHinges(gl, u, m.hinges, st.hv);
   gl.uniform1f(u.uSail, st.kind === 'galleon' ? st.sail * (0.3 + 0.7 * (st.eff || 0)) : 0); gl.uniform1f(u.uSailYaw, st.sailYaw || 0); gl.uniform1f(u.uSailSide, st.sailSide || 1); gl.uniform1f(u.uFlut, st.kind === 'galleon' ? 0.3 + (1 - (st.eff || 0)) * st.sail : 0.4);
   if (extra) extra(u);
   this.g.draw(P, m);
@@ -623,7 +624,10 @@ FleetGame.prototype.drawWorld = function (ctx) {
 FleetGame.prototype.drawPlayer = function (ctx) {
   const gl = this.gl, P = this.g.P.veh, u = P.u;
   gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uGlowOnly, 0);
-  if (this.parked) this.drawModel(this.parked.model, this.parked.st, ctx);
+  const ease2 = (st, m, tgt) => { if (!m.hinges || !m.hinges.length) return; st.hv = st.hv || []; for (let i = 0; i < m.hinges.length; i++) { const t = typeof tgt === 'function' ? tgt(m.hinges[i].name) : tgt; st.hv[i] = (st.hv[i] || 0) + (t - (st.hv[i] || 0)) * Math.min(1, (ctx.dt || 0.016) * 2.5); } };
+  if (this.parked) { const P = this.parked; ease2(P.st, P.model, n => /CAVALLETTO|TETTUCCIO|CABINA|CUPOLA|RAMPA/.test(n) ? 1 : 0); this.drawModel(P.model, P.st, ctx); }
+  if (this.kind && this.st && this.pm) { const st = this.st, k = this.kind;
+    ease2(st, this.pm, n => (/CARRELLO/.test(n) && st.y > 3) || (/PATTINO/.test(n) && st.y > 2.5) ? 1 : /GIMBAL/.test(n) ? clamp(0.3 + (st.pitch || 0), 0, 1) : /PORTELLI/.test(n) ? ((st.cool || 0) > 2 ? 1 : 0) : 0); }
   if (this.kind && this.cv && this.cv.drawCar) {
     const Mv = this.drawModel(this.pm, this.st, ctx);
     if (Mv && this.kind !== 'drone' && this.g.view % 5 !== 2) this.drawPilot(ctx.set, Mv, this.kind);

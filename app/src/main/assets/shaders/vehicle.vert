@@ -15,6 +15,9 @@ uniform float uSailYaw;  // yard bracing (rad)
 uniform float uSailSide; // which side the fore-aft sails fill (-1..1)
 uniform float uFlut;     // flutter amount
 uniform float uSteer;    // steering angle for steered parts (rad)
+uniform vec4 uHP[6];     // animated parts (hinges / slides): pivot xyz, amount (rad or m)
+uniform vec4 uHA[6];     // axis xyz, type (0 = rotate about the axis, 1 = slide along it)
+vec3 rotAx(vec3 v, vec3 k, float a){ float c = cos(a), s = sin(a); return v * c + cross(k, v) * s + k * dot(k, v) * (1.0 - c); }
 uniform float uTraffic;
 uniform float uScale;
 uniform float uBob;      // traffic: 0 drones (hover bob + nose down), 1 boats (waves)
@@ -58,6 +61,11 @@ void main(){
         if (aAnim.w > 0.5) { vec2 q = rot2(p.yz - aAnim.yz, pA) + aAnim.yz; p.yz = q; n.yz = rot2(n.yz, pA); }
         else { vec2 q = rot2(p.xy - aAnim.yz, pA) + aAnim.yz; p.xy = q; n.xy = rot2(n.xy, pA); }
         if (aAnim.w > 2.5) { vec2 pv = vec2(0.0, aAnim.z); p.xz = rot2(p.xz - pv, -uSteer) + pv; n.xz = rot2(n.xz, -uSteer); }
+    } else if (mode < 0.5 && aAnim.w > 9.5) {    // animated part #(w - 10): door, hatch, canopy, landing leg…
+        int hi = int(aAnim.w - 9.5); vec4 HP = vec4(0.0), HA = vec4(0.0, 1.0, 0.0, 0.0);
+        for (int k = 0; k < 6; k++) { if (k == hi) { HP = uHP[k]; HA = uHA[k]; } }
+        if (HA.w < 0.5) { vec3 ax = normalize(HA.xyz); p = rotAx(p - HP.xyz, ax, HP.w) + HP.xyz; n = rotAx(n, ax, HP.w); }
+        else p += HA.xyz * HP.w;
     } else if (mode < 0.5 && aAnim.w > 1.5 && aAnim.w < 2.5) {   // steered part: yaw about (x, z) = (a, b)
         p.xz = rot2(p.xz - aAnim.yz, -uSteer) + aAnim.yz; n.xz = rot2(n.xz, -uSteer);
     } else if (mode > 3.5 && mode < 4.5) {   // square sail: billow forward, then brace about the mast

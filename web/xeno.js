@@ -71,11 +71,14 @@ function buildUfo(o, lod) {
   // central drive ring (decor)
   mb.push(T(0, UFO_RIG.emitY - 0.02, 0)); mb.torus(5.2, 0.14, N(64), 6, mat(led, 0.9, 3, 1, [0, 0, 0])); mb.torus(2.4, 0.1, N(40), 6, mat(led, 0.7, 3, 2, [0, 0, 0])); mb.pop();
   // landing legs (tripod, with pads)
-  if (o.legs) { mb.part = 'carrello';
+  if (o.legs) { mb.part = 'carrello'; mb.anim('CARRELLO', [0, 0, 0], [0, 1, 0], 1.55, 1);
     for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + PI / 3, ax = Math.sin(a), az = Math.cos(a);
       mb.rod([ax * 6.8, 1.75, az * 6.8], [ax * 8.6, 0.12, az * 8.6], 0.26, N(10), A, 0.18);
       mb.rod([ax * 5.2, 1.4, az * 5.2], [ax * 8.0, 0.6, az * 8.0], 0.12, N(8), A);
-      mb.push(T(ax * 8.6, 0, az * 8.6)); mb.cyl(0, 0.14, 0.75, 0.6, N(16), dark); mb.cyl(0.14, 0.2, 0.6, 0.6, N(16), L, false); mb.pop(); } }
+      mb.push(T(ax * 8.6, 0, az * 8.6)); mb.cyl(0, 0.14, 0.75, 0.6, N(16), dark); mb.cyl(0.14, 0.2, 0.6, 0.6, N(16), L, false); mb.pop(); } mb.animEnd(); }
+  // boarding ramp under the lift (hinged at the rear edge, swings down to the ground)
+  mb.part = 'rampa'; { const lx = UFO_RIG.lift[0], lz = UFO_RIG.lift[1]; mb.anim('RAMPA', [lx, UFO_RIG.emitY - 0.16, lz - 2.2], [1, 0, 0], 0.62);
+    mb.box(lx, UFO_RIG.emitY - 0.2, lz - 4.3, 2.4, 0.1, 4.2, A); for (let i = 0; i < 6; i++) mb.box(lx, UFO_RIG.emitY - 0.14, lz - 2.6 - i * 0.65, 2.0, 0.03, 0.08, L); mb.animEnd(); }
   const m = mb.finish(); m.kind = 'ufo'; return m;
 }
 
@@ -180,11 +183,12 @@ function buildChrono(o, lod) {
   // glass panels with Deco sunburst mullions; the front one is the door (hinged frame + handle)
   mb.part = 'vetrate';
   for (let k = 0; k < 8; k++) { const a = oct(k), w = 2 * R * Math.tan(PI / 8) * 0.95, rr = R * Math.cos(PI / 8) * 1.06;
-    mb.push(M(RY(a), T(0, 0.22, rr))); mb.box(0, (H - 0.62) / 2 + 0.02, 0, w * 0.92, H - 0.68, 0.02, Gl);
+    mb.push(M(RY(a), T(0, 0.22, rr))); if (k === 0) mb.anim('PORTA', [-w / 2, 0, 0], [0, 1, 0], 1.7);
+    mb.box(0, (H - 0.62) / 2 + 0.02, 0, w * 0.92, H - 0.68, 0.02, Gl);
     mb.part = 'telai'; mb.box(0, 0.09, 0.01, w, 0.12, 0.04, Mt); mb.box(0, H - 0.68, 0.01, w, 0.06, 0.04, Mt); mb.box(0, 0.95, 0.012, w, 0.035, 0.03, Mt);
     for (let i = -2; i <= 2; i++) { const ang = i * 0.32; mb.push(M(T(0, 0.95, 0.014), RZ(ang))); mb.box(0, 0.38, 0, 0.018, 0.76, 0.02, Md); mb.pop(); }
     if (k === 0) { mb.part = 'porta'; mb.box(w * 0.4, 0.95, 0.04, 0.03, 0.22, 0.03, Mt); mb.ellipsoid(w * 0.4, 1.08, 0.055, 0.03, 0.03, 0.03, N(8), 6, Mt); }
-    mb.part = 'vetrate'; mb.pop(); }
+    mb.animEnd(); mb.part = 'vetrate'; mb.pop(); }
   // cornice, clock faces on four sides, roof lantern
   mb.part = 'cornicione';
   mb.push(M(T(0, H - 0.5, 0), RY(PI / 8))); mb.cyl(0, 0.12, R * 1.18, R * 1.24, 8, Mt); mb.cyl(0.12, 0.3, R * 1.22, R * 1.22, 8, Md); mb.cyl(0.3, 0.38, R * 1.24, R * 1.12, 8, Mt); mb.pop();
