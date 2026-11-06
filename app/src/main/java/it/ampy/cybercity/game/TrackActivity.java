@@ -21,6 +21,11 @@ import it.ampy.cybercity.Prefs;
  *  run in a full-screen WebView with the car configuration from the showroom. */
 public class TrackActivity extends Activity {
     private WebView web;
+    private android.webkit.PermissionRequest pendingCam;
+    @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
+        super.onRequestPermissionsResult(code, perms, res);
+        if (code == 77 && pendingCam != null) { if (res.length > 0 && res[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) pendingCam.grant(new String[] { android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE }); else pendingCam.deny(); pendingCam = null; }
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override protected void onCreate(Bundle b) {
@@ -33,7 +38,17 @@ public class TrackActivity extends Activity {
         ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true); ws.setMediaPlaybackRequiresUserGesture(false);
         ws.setAllowFileAccess(true);
         web.setWebViewClient(new WebViewClient());
+        web.addJavascriptInterface(new AmpyBridge(this), "AmpyBridge");   // the in-game AmpybiOS tablet's link to the real phone
         web.setWebChromeClient(new WebChromeClient() {
+            // the real camera for the tablet (getUserMedia): ask Android for CAMERA the first time, then grant the page
+            @Override public void onPermissionRequest(final android.webkit.PermissionRequest req) {
+                runOnUiThread(() -> {
+                    boolean video = false; for (String r : req.getResources()) if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) video = true;
+                    if (!video) { req.deny(); return; }
+                    if (checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) req.grant(new String[] { android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+                    else { pendingCam = req; requestPermissions(new String[] { android.Manifest.permission.CAMERA }, 77); }
+                });
+            }
             @Override public void onGeolocationPermissionsShowPrompt(String origin, android.webkit.GeolocationPermissions.Callback cb) {
                 cb.invoke(origin, checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED, false);
             }

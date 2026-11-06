@@ -31,6 +31,25 @@ public class NotifListener extends NotificationListenerService {
         if (w != null) { if (instance != null) instance.rebuild(); else w.onIcons(new ArrayList<>(ICONS.values())); }
     }
 
+    /** the active notifications as JSON for the in-game AmpybiOS tablet: { granted, items: [{ app, pkg, title, text, time }] } */
+    public static String snapshot(Context c) {
+        org.json.JSONObject o = new org.json.JSONObject();
+        try {
+            o.put("granted", granted(c)); org.json.JSONArray a = new org.json.JSONArray();
+            NotifListener in = instance;
+            if (in != null) { StatusBarNotification[] all = in.getActiveNotifications(); android.content.pm.PackageManager pm = c.getPackageManager();
+                if (all != null) for (StatusBarNotification n : all) {
+                    Notification no = n.getNotification(); if ((no.flags & Notification.FLAG_GROUP_SUMMARY) != 0) continue;
+                    org.json.JSONObject it = new org.json.JSONObject(); String label = n.getPackageName();
+                    try { label = String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(n.getPackageName(), 0))); } catch (Exception ignored) { }
+                    CharSequence t = no.extras.getCharSequence(Notification.EXTRA_TITLE), x = no.extras.getCharSequence(Notification.EXTRA_TEXT);
+                    it.put("app", label); it.put("pkg", n.getPackageName()); it.put("title", t == null ? "" : t.toString()); it.put("text", x == null ? "" : x.toString()); it.put("time", n.getPostTime());
+                    a.put(it); } }
+            o.put("connected", in != null); o.put("items", a);
+        } catch (Exception ignored) { }
+        return o.toString();
+    }
+
     @Override public void onListenerConnected() { instance = this; rebuild(); }
     @Override public void onListenerDisconnected() { instance = null; }
     @Override public void onNotificationPosted(StatusBarNotification sbn) { rebuild(); }

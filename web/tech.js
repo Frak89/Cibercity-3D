@@ -94,7 +94,7 @@ Tech.prototype.funcs = function (d) { return Object.assign({}, d.funcs || {}, d.
 Tech.prototype.faults = function (d) { return this.st.faults[d.id] || []; };
 Tech.prototype.inRange = function () { return this.D.filter(d => { try { return d.range(); } catch (e) { return false; } }); };
 Tech.prototype.free = function () { const f = this.g.foot; return f && f.active && !this.g.veh; };
-Tech.prototype.toggle = function () { if (!this.free()) return; this.open = !this.open; this.ui.style.display = this.open ? 'flex' : 'none'; if (this.open) { this.beep(600, 1200, 0.12, 0.1, 'sine'); this.render(true); } };
+Tech.prototype.toggle = function () { if (this.g.aos) { this.g.aos.toggle(); return; } if (!this.free()) return; this.open = !this.open; this.ui.style.display = this.open ? 'flex' : 'none'; if (this.open) { this.beep(600, 1200, 0.12, 0.1, 'sine'); this.render(true); } };
 Tech.prototype.key = function (code) { if (code === 'KeyU' && this.free()) { this.toggle(); return true; } return false; };
 Tech.prototype.print = function (s, cls) { this.log.push([s, cls || '']); if (this.log.length > 140) this.log.splice(0, this.log.length - 140); if (this.open && (this.tab === 'console' || this.tab === 'diag' || this.tab === 'prog')) this.renderLog(); };
 
@@ -194,7 +194,7 @@ Tech.prototype.update = function (dt) {
 Tech.prototype.drawHud = function (hud) {
   const c2 = hud.getContext('2d'), m = Math.min(hud.width, hud.height); let ln = '';
   if (this.run) ln = '🔧 KAGE TECH · ' + this.dname(this.run.d) + ' · programma in esecuzione';
-  else if (!this.open && this.free()) { const n = this.inRange().filter(d => this.faults(d).length).length; if (n) ln = '🔧 ' + n + ' dispositiv' + (n > 1 ? 'i' : 'o') + ' vicin' + (n > 1 ? 'i' : 'o') + ' segnala' + (n > 1 ? 'no' : '') + ' un guasto · U / 🔧 TECNICO'; }
+  else if (!this.open && this.free()) { const n = this.inRange().filter(d => this.faults(d).length).length; if (n) ln = '🔧 ' + n + ' dispositiv' + (n > 1 ? 'i' : 'o') + ' vicin' + (n > 1 ? 'i' : 'o') + ' segnala' + (n > 1 ? 'no' : '') + ' un guasto · U / 📱 TABLET'; }
   if (!ln) return; c2.font = (m * 0.019 | 0) + 'px monospace'; c2.textAlign = 'left'; const w = c2.measureText(ln).width + m * 0.03;
   c2.fillStyle = 'rgba(3,10,6,0.65)'; c2.fillRect(m * 0.02, hud.height - m * 0.168, w, m * 0.036); c2.fillStyle = '#9dff8a'; c2.fillText(ln, m * 0.035, hud.height - m * 0.143);
 };
@@ -209,7 +209,7 @@ Tech.prototype.buildUI = function () {
     + '#techUI .val{width:24%;text-align:right} .t-ok{color:#9dff8a} .t-warn{color:#ffd166} .t-err{color:#ff6b6b} .t-cmd{color:#8fd8ff} #techUI textarea{width:100%;height:38%;background:#020a04;color:#d8ffd0;border:1px solid rgba(150,255,120,.4);font:1.8vmin monospace;resize:none;box-sizing:border-box}'
     + '#techUI .log{white-space:pre-wrap;background:#010502;border:1px solid rgba(150,255,120,.2);padding:.6vmin;margin-top:.6vmin;height:40%;overflow:auto} #techUI input{flex:1;background:#020a04;color:#d8ffd0;border:1px solid rgba(150,255,120,.4);font:1.8vmin monospace;padding:.6vmin} #techUI .funcs{display:flex;flex-wrap:wrap;gap:.6vmin} #techUI .man p{margin:.3vmin 0 .9vmin}';
   document.head.appendChild(st);
-  const b = this.btn = document.createElement('button'); b.id = 'techBtn'; b.textContent = '🔧 TECNICO';
+  const b = this.btn = document.createElement('button'); b.id = 'techBtn'; b.textContent = this.g.aos || window.AmpyOS ? '📱 TABLET' : '🔧 TECNICO';
   const go = e => { e.preventDefault(); e.stopPropagation(); this.toggle(); }; b.addEventListener('click', go); b.addEventListener('touchstart', go); document.body.appendChild(b);
   const ui = this.ui = document.createElement('div'); ui.id = 'techUI'; document.body.appendChild(ui);
   ui.innerHTML = '<h3>🔧 KAGE TECH · TABLET DEL TECNICO</h3><div class="devs"></div><div class="tabs"></div><div class="body"></div>';

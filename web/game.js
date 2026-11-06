@@ -548,6 +548,7 @@ function Game(canvas, hud, opts) {
   this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
+  this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
   this.tech = window.KageTech && this.foot ? new KageTech(this) : null;   // technician's tablet (web/tech.js)
   this.mono = window.KageGlyphs && this.foot ? new KageGlyphs(this) : null;   // monoliths + the CUSTODI language (web/monolith.js)
   this.gear = window.KageGear && this.foot ? new KageGear(this) : null;   // jetpack + skateboard (web/gear.js)   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
