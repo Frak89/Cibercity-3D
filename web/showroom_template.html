@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>AMPY KAGE GT — Showroom</title>
 <style>
+  /* touch: no text selection / callout / grey flash on buttons and controls (inputs stay editable) */
+  html,body,button,label,.tb,[data-act],[data-app],[data-nav],[data-p]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  button{touch-action:manipulation} input,textarea,select{-webkit-user-select:text;user-select:text}
   html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:none}
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   #title{position:fixed;left:3vmin;top:3vmin;pointer-events:none}

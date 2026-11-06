@@ -599,4 +599,13 @@ PAIRS = [
 ("RISPARMIO: risoluzione 60%, 30 fps, niente distorsione warp né filtro foto dal vivo, vista più corta.", "SAVER: 60% resolution, 30 fps, no warp distortion or live photo filter, shorter view."),
 ("modalità", "mode"), ("PIENA", "FULL"), ("BILANCIATA", "BALANCED"), ("RISPARMIO", "SAVER"), ("il telefono si sta scaldando", "the phone is getting hot"), ("risparmio energetico di Android", "Android power saver"), ("batteria al", "battery at"), ("telefono tiepido", "phone is warm"), ("scelta manuale", "manual choice"),
 
+
+("📜 MISSIONE", "📜 MISSION"), ("🎵 MUSICA", "🎵 MUSIC"), ("📟 STATO", "📟 STATUS"), ("🌐 KAGE NET", "🌐 KAGE NET"), ("piloti", "pilots"), ("spento", "off"), ("✦ campagna completata", "✦ campaign completed"), ("▶ apri", "▶ open"), ("⌃ chiudi", "⌃ close"),
+("Torcia", "Torch"), ("Risparmio", "Saver"), ("Foto", "Photo"), ("Tema:", "Theme:"), ("Cam reale", "Real cam"), ("Cam gioco", "Game cam"), ("scorri giù: impostazioni rapide", "swipe down: quick settings"),
+("La campagna: obiettivi, radio di VEGA, capitoli.", "The campaign: objectives, VEGA's radio, chapters."), ("Collegati ai dispositivi: telemetria, funzioni, programmi, diagnosi.", "Connect to devices: telemetry, functions, programs, diagnostics."),
+("Foto del gioco con filtri AmpyCam o fotocamera vera del telefono.", "Game photos with AmpyCam filters or the phone's real camera."), ("Le tue foto, nel gioco e sul telefono.", "Your photos, in the game and on the phone."), ("Mappa della città con obiettivo, veicoli e monoliti.", "City map with objective, vehicles and monoliths."),
+("Lingua dei Custodi: chiavi e iscrizioni.", "Language of the Custodians: keys and inscriptions."), ("Stato della tuta o del telefono vero.", "Status of the suit or the real phone."), ("Messaggi del gioco o notifiche vere.", "Game messages or real notifications."), ("Bussola del gioco o sensori veri.", "Game compass or real sensors."),
+("Torcia: schermo o flash vero.", "Torch: screen or real flash."), ("Apri le tue app AmpyXXX installate.", "Open your installed AmpyXXX apps."), ("Importa ed esporta modelli OBJ.", "Import and export OBJ models."), ("Decora Cybercity con insegne, luci, alberi e modelli.", "Decorate Cybercity with signs, lights, trees and models."),
+("Multigiocatore sulla stessa Wi-Fi.", "Multiplayer on the same Wi-Fi."), ("Colonna sonora e suoni 3D.", "Soundtrack and 3D sounds."), ("Batteria e prestazioni.", "Battery and performance."), ("Tema, funzioni simulate o reali, foto.", "Theme, simulated or real functions, photos."),
+
 ]

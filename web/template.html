@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Cybercity 3D — salvaschermo</title>
 <style>
+  /* touch: no text selection / callout / grey flash on buttons and controls (inputs stay editable) */
+  html,body,button,label,.tb,[data-act],[data-app],[data-nav],[data-p]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  button{touch-action:manipulation} input,textarea,select{-webkit-user-select:text;user-select:text}
   html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,"JetBrains Mono",Consolas,monospace;color:#ecfcff}
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   #hud{position:fixed;left:4vmin;bottom:4vmin;pointer-events:none;text-shadow:0 0 12px var(--a)}

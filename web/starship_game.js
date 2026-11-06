@@ -174,7 +174,7 @@ Star.prototype.footUpdate = function (f, dt, inp) {
     return true;
   }
   if (f.ss === 'planetin') { f.bt += dt; f.anim = 'in piedi'; if (f.bt > 1.9) f.ss = 'planet'; return true; }
-  const run = !!inp.boost;
+  const run = !!inp.boost || !!inp.joyFull;
   if (f.ss === 'in' && f.rideT > 0) {   // riding the lift: doors shut, a hum, the deck changes half way
     const was = f.rideT; f.rideT -= dt; f.v = 0; f.anim = 'in piedi';
     if (was > 0.7 && f.rideT <= 0.7) { f.deck = f.rideTo; f.lx = 0; f.lz = KS.LIFT_Z; this.syncFoot(f); this.say(D[f.deck].title, 2); }
@@ -183,7 +183,7 @@ Star.prototype.footUpdate = function (f, dt, inp) {
     if ((inp.my || 0) > 0.6 || (inp.fwd || 0) > 0.6) this.enter(); return true; }
   if (f.ss === 'in') {
     if (f.lcam === undefined) f.lcam = f.lh;
-    f.v = ease(f.v, Math.min(4.2, window.KageOnFoot.dirMove(f, inp, dt, 'lh', 'lcam', run)), 8, dt); f.vs = 0;
+    f.v = ease(f.v, Math.min(6.5, window.KageOnFoot.dirMove(f, inp, dt, 'lh', 'lcam', run || !!inp.joyFull)), 8, dt); f.vs = 0;
     const fx = Math.sin(f.lh), fz = Math.cos(f.lh), rx = -Math.cos(f.lh), rz = Math.sin(f.lh);
     f.lx += (fx * f.v + rx * f.vs) * dt; f.lz += (fz * f.v + rz * f.vs) * dt;
     this.collideDeck(f); this.syncFoot(f);

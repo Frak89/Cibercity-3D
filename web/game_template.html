@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Cybercity 3D — NEON RUN</title>
 <style>
+  /* touch: no text selection / callout / grey flash on buttons and controls (inputs stay editable) */
+  html,body,button,label,.tb,[data-act],[data-app],[data-nav],[data-p]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  button{touch-action:manipulation} input,textarea,select{-webkit-user-select:text;user-select:text}
   html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:none}
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;color:#ff6177}
@@ -181,7 +184,7 @@
       inp.yaw=b(keys.KeyA||keys.ArrowLeft||tb.tl)-b(keys.KeyD||keys.ArrowRight||tb.tr);
       inp.fwd+=joy.y; inp.yaw-=joy.x; inp.strafe=b(keys.KeyE)-b(keys.KeyQ);
       // on foot: move in the direction you push (relative to the camera); Q/E turn the camera
-      inp.mx=b(keys.KeyD||keys.ArrowRight)-b(keys.KeyA||keys.ArrowLeft)+joy.x; inp.my=b(keys.KeyW||keys.ArrowUp)-b(keys.KeyS||keys.ArrowDown)+joy.y; inp.cam=b(keys.KeyE)-b(keys.KeyQ);
+      inp.mx=b(keys.KeyD||keys.ArrowRight)-b(keys.KeyA||keys.ArrowLeft)+joy.x; inp.my=b(keys.KeyW||keys.ArrowUp)-b(keys.KeyS||keys.ArrowDown)+joy.y; inp.joyFull=Math.hypot(joy.x,joy.y)>0.93; inp.cam=b(keys.KeyE)-b(keys.KeyQ);
       inp.lift=k==='drone'||k==='foot'||k==='sub'||k==='ufo'?b(keys.Space||tb.th)-b(keys.KeyX||keys.KeyZ||keys.ControlLeft||tb.tdn):0;
       inp.fire=(k==='galleon'&&(keys.Space||tb.th))||(k==='ufo'&&!!(keys.KeyF||tb.tfr)); inp.boost=!!(keys.ShiftLeft||keys.ShiftRight||tb.tn);
       // gamepad (standard mapping; drone in mode 2: left stick = altitude/yaw, right stick = pitch/roll)

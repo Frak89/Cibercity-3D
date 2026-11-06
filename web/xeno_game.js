@@ -131,7 +131,7 @@ XenoGame.prototype.footUpdate = function (f, dt, inp) {
   }
   // inside: same controls as on the street, in the ship's frame
   f.t += dt;
-  const run = !!inp.boost, s = this.state();
+  const run = !!inp.boost || !!inp.joyFull, s = this.state();
   f.v = ease(f.v, Math.min(4.2, window.KageOnFoot.dirMove(f, inp, dt, 'h', 'camH', run)), 8, dt); f.vs = 0;
   const lh = f.h - s.h, fx = Math.sin(lh), fz = Math.cos(lh), rx = -Math.cos(lh), rz = Math.sin(lh);
   f.lx += (fx * f.v + rx * f.vs) * dt; f.lz += (fz * f.v + rz * f.vs) * dt;

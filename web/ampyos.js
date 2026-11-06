@@ -109,7 +109,26 @@ body.aosfull #langPill{display:none}
 #aos video,#aos .prev{width:100%;height:100%;object-fit:cover;background:#000;display:block} #aos .shut{position:absolute;bottom:2vmin;left:50%;transform:translateX(-50%);width:9vmin;height:9vmin;border-radius:50%;border:.6vmin solid #fff;background:rgba(255,255,255,.25);cursor:pointer}
 #aos .camtools{position:absolute;top:1.4vmin;right:1.4vmin;display:flex;gap:1vmin} #aos .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 #aos #techUI{position:absolute!important;inset:0!important;width:auto!important;top:0!important;right:0!important;bottom:0!important;border:none!important;border-radius:0!important;box-shadow:none!important;display:flex!important;background:var(--bg)!important}
-#aos canvas{position:static;inset:auto} #aos .n{border-left:.4vmin solid var(--ac)} #aos small{opacity:.65}`;
+#aos canvas{position:static;inset:auto} #aos .n{border-left:.4vmin solid var(--ac)}
+#aos .home{position:relative;padding:2vmin 4vmin 0;display:flex;flex-direction:column;height:100%;box-sizing:border-box}
+#aos .pages{flex:1;min-height:0;overflow:hidden;position:relative} #aos .strip{display:flex;height:100%;will-change:transform} #aos .pg{flex:0 0 100%;height:100%;overflow:hidden;padding:1vmin .5vmin;box-sizing:border-box}
+#aos .grid{grid-template-columns:repeat(auto-fill,minmax(14vmin,1fr));gap:2.4vmin 1.6vmin}
+#aos .ico{transition:transform .16s ease,filter .16s} #aos .ico.press,#aos .ico:active{transform:scale(.86);filter:brightness(1.35)} #aos .ico .lbl{max-width:15vmin;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#aos .ico i{transition:box-shadow .2s} #aos .ico:hover i{box-shadow:0 0 0 1px var(--ac),0 0 3vmin color-mix(in srgb,var(--ac) 55%,transparent)}
+#aos .dots{display:flex;justify-content:center;gap:1.2vmin;padding:.8vmin 0} #aos .dots i{width:1.1vmin;height:1.1vmin;border-radius:50%;background:rgba(255,255,255,.25);cursor:pointer;transition:all .25s} #aos .dots i.on{background:var(--ac);width:3vmin;border-radius:1vmin}
+#aos .dock{display:flex;justify-content:space-around;margin:0 -1vmin .6vmin;padding:1.2vmin 1vmin .6vmin;background:color-mix(in srgb,var(--sf) 75%,transparent);border-radius:var(--rtl) var(--rtr) var(--rbr) var(--rbl);border:1px solid color-mix(in srgb,var(--ac) 30%,transparent)}
+#aos .dock .tag{display:none} #aos .pull{position:absolute;left:50%;top:.4vmin;width:12vmin;height:.7vmin;margin-left:-6vmin;border-radius:1vmin;background:rgba(255,255,255,.18)}
+#aos .wg{display:grid;grid-template-columns:2fr 1fr 1fr;grid-auto-rows:minmax(14vmin,auto);gap:1.6vmin;height:100%}
+#aos .w{background:linear-gradient(145deg,var(--sf),color-mix(in srgb,var(--sf) 65%,var(--ac)));border-radius:var(--rtl) var(--rtr) var(--rbr) var(--rbl);padding:1.6vmin 2vmin;display:flex;flex-direction:column;gap:.6vmin;cursor:pointer;transition:transform .16s;box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 35%,transparent)}
+#aos .w.big{grid-row:span 2} #aos .w b{font-size:2.2vmin;line-height:1.3} #aos .w small{opacity:.7;letter-spacing:.08em;font-size:1.4vmin} #aos .w.press,#aos .w:active{transform:scale(.95)}
+#aos .btn{transition:transform .12s,background .2s} #aos .btn:active{transform:scale(.93)}
+#aos .sheet{position:absolute;inset:0;z-index:8;background:rgba(0,0,0,0);display:flex;align-items:flex-end;justify-content:center;transition:background .25s}
+#aos .sheet .sh{background:var(--sf);border-radius:3vmin 3vmin 0 0;padding:2vmin 3vmin 2.6vmin;width:min(90%,80vmin);margin-bottom:6vmin;border-radius:3vmin;transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);text-align:center;box-shadow:0 -1vmin 4vmin rgba(0,0,0,.5)}
+#aos .sheet.on{background:rgba(0,0,0,.45)} #aos .sheet.on .sh{transform:none} #aos .sheet i{font-style:normal;font-size:6vmin;display:block} #aos .sheet b{font-size:2.4vmin} #aos .sheet p{opacity:.8;font-size:1.9vmin;margin:1vmin 0 1.6vmin}
+#aos .qs{position:absolute;left:0;right:0;top:0;z-index:9;transform:translateY(-105%);transition:transform .32s cubic-bezier(.2,.8,.2,1)} #aos .qs.on{transform:none}
+#aos .qb{margin:0 2vmin;padding:2vmin;background:color-mix(in srgb,var(--sf) 92%,transparent);border-radius:0 0 3vmin 3vmin;display:grid;grid-template-columns:repeat(4,1fr);gap:1.4vmin;box-shadow:0 1vmin 4vmin rgba(0,0,0,.6);border:1px solid color-mix(in srgb,var(--ac) 35%,transparent)}
+#aos .qt{display:flex;flex-direction:column;align-items:center;gap:.5vmin;padding:1.4vmin .6vmin;border-radius:2vmin;border:1px solid color-mix(in srgb,var(--ac) 40%,transparent);background:rgba(255,255,255,.04);color:var(--fg);font:inherit;font-size:1.5vmin;cursor:pointer;transition:transform .12s,background .2s}
+#aos .qt i{font-style:normal;font-size:3.4vmin} #aos .qt.on{background:color-mix(in srgb,var(--ac) 45%,transparent)} #aos .qt:active{transform:scale(.92)} #aos .qv{grid-column:span 3;display:flex;align-items:center;gap:1vmin} #aos .qv input{flex:1;accent-color:var(--ac)} #aos .qx{justify-self:end} #aos small{opacity:.65}`;
   document.head.appendChild(css);
   const r = this.root = document.createElement('div'); r.id = 'aos';
   r.innerHTML = '<div class="tab far"><span class="cam"></span><div class="scr"><div class="wall"><span class="blob" style="width:60vmin;height:60vmin;left:-10vmin;top:-12vmin;background:var(--ac)"></span><span class="blob" style="width:50vmin;height:50vmin;right:-8vmin;bottom:-14vmin;background:var(--sc);animation-delay:-6s"></span></div>'
@@ -126,6 +145,7 @@ body.aosfull #langPill{display:none}
     if (!r.contains(e.target)) { e.stopImmediatePropagation(); if (e.code === 'Space') e.preventDefault(); } }, true);
   addEventListener('keyup', e => { if (this.isOpen && !r.contains(e.target)) e.stopImmediatePropagation(); }, true);
   setInterval(() => { if (this.isOpen) this.status(); }, 1000);
+  this.gestures();
 };
 AmpyOS.prototype.toggle = function (app) { if (this.isOpen) this.close(); else this.open(app); };
 /** attach: the tablet comes up from the pilot's hands, grows until its screen IS the phone's screen (bezel past the edges), AmpybiOS boots */
@@ -174,13 +194,70 @@ AmpyOS.prototype.where = function () { const g = this.g, f = g.foot, Y = g.star;
   return g.world === 'meadow' ? 'prateria del passato' : g.world === 'eco' ? 'ECO' : 'Cybercity'; };
 
 /* ---------------- home ---------------- */
+/* ---------------- home: pages you swipe, a dock, live widgets, long-press info, pull-down quick settings ---------------- */
+const DOCK = ['story', 'camera', 'map', 'tech'];
+const INFO = { story: 'La campagna: obiettivi, radio di VEGA, capitoli.', tech: 'Collegati ai dispositivi: telemetria, funzioni, programmi, diagnosi.', camera: 'Foto del gioco con filtri AmpyCam o fotocamera vera del telefono.', gallery: 'Le tue foto, nel gioco e sul telefono.',
+  map: 'Mappa della città con obiettivo, veicoli e monoliti.', glyphs: 'Lingua dei Custodi: chiavi e iscrizioni.', device: 'Stato della tuta o del telefono vero.', notif: 'Messaggi del gioco o notifiche vere.', sensors: 'Bussola del gioco o sensori veri.',
+  torch: 'Torcia: schermo o flash vero.', ampy: 'Apri le tue app AmpyXXX installate.', obj: 'Importa ed esporta modelli OBJ.', build: 'Decora Cybercity con insegne, luci, alberi e modelli.', net: 'Multigiocatore sulla stessa Wi-Fi.', music: 'Colonna sonora e suoni 3D.', power: 'Batteria e prestazioni.', settings: 'Tema, funzioni simulate o reali, foto.' };
 AmpyOS.prototype.home = function () {
-  this.leave();
-  const tagOf = a => a.dual ? (this.real(a.dual) ? 'real' : 'sim') : a.tag;
-  this.view().innerHTML = '<div class="home"><div class="clock"></div><div class="date"></div><div class="grid">'
-    + this.APPS.map(a => '<button class="ico" data-app="' + a.id + '"><i>' + a.ic + '</i>' + esc(a.name) + '<span class="tag ' + tagOf(a) + '">' + (tagOf(a) === 'real' ? 'REALE' : 'SIMULATO') + '</span></button>').join('') + '</div></div>';
-  this.status();
+  this.leave(); this.app = null;
+  const tagOf = a => a.dual ? (this.real(a.dual) ? 'real' : 'sim') : a.tag, icon = a => '<button class="ico" data-app="' + a.id + '"><i>' + a.ic + '</i><span class="lbl">' + esc(a.name) + '</span><span class="tag ' + tagOf(a) + '">' + (tagOf(a) === 'real' ? 'REALE' : 'SIMULATO') + '</span></button>';
+  const rest = this.APPS.filter(a => !DOCK.includes(a.id)), per = this.perPage(), pages = []; for (let i = 0; i < rest.length; i += per) pages.push(rest.slice(i, i + per));
+  this.page = Math.min(this.page || 0, pages.length);   // page 0 = widgets
+  const St = this.g.story, ob = St && St.objective && St.objective(), M = this.g.music;
+  const widgets = '<div class="wg"><div class="w big" data-app="story"><small>📜 MISSIONE</small><b>' + esc(ob ? ob.t : St && St.finished && St.finished() ? '✦ campagna completata' : '—') + '</b><small>' + esc(St && !St.finished() ? St.cur().title : '') + '</small></div>'
+    + '<div class="w" data-app="music"><small>🎵 MUSICA</small><b class="wmus">' + (M ? (M.on ? '♫ ' : '♪ ') + esc(((window.KageMusicStyles || {})[M.style || M.want()] || {}).name || '') : '—') + '</b></div>'
+    + '<div class="w" data-app="device"><small>📟 STATO</small><b class="wdev">…</b></div><div class="w" data-app="net"><small>🌐 KAGE NET</small><b>' + (this.g.net && this.g.net.on ? Object.keys(this.g.net.peers).length + ' piloti' : 'spento') + '</b></div></div>';
+  this.view().innerHTML = '<div class="home"><div class="clock"></div><div class="date"></div><div class="pages"><div class="strip">'
+    + '<div class="pg">' + widgets + '</div>' + pages.map(p => '<div class="pg"><div class="grid">' + p.map(icon).join('') + '</div></div>').join('') + '</div></div>'
+    + '<div class="dots">' + [0, ...pages].map((p, i) => '<i class="' + (i === this.page ? 'on' : '') + '" data-pg="' + i + '"></i>').join('') + '</div>'
+    + '<div class="dock">' + DOCK.map(id => icon(this.APPS.find(a => a.id === id))).join('') + '</div><div class="pull" title="scorri giù: impostazioni rapide"></div></div>';
+  this.nPages = pages.length + 1; this.goPage(this.page, true); this.status(); this.wdev();
+  this.timers.push(setInterval(() => this.wdev(), 3000));
 };
+AmpyOS.prototype.perPage = function () { const v = this.view(), w = v.clientWidth || innerWidth, h = (v.clientHeight || innerHeight) * 0.62, cell = Math.max(80, Math.min(w, h) * 0.24); return Math.max(4, Math.floor(w / (cell * 1.05)) * Math.max(1, Math.floor(h / (cell * 1.12)))); };
+AmpyOS.prototype.wdev = function () { const el = this.view().querySelector('.wdev'); if (!el) return; const B = window.AmpyBridge; let s = 'tuta ' + this.suitBattery() + '%';
+  try { if (this.real('status') && B) { const d = JSON.parse(B.device()); s = (d.charging ? '⚡' : '🔋') + ' ' + d.battery + '% · ' + d.net; } } catch (e) { } el.textContent = s; };
+AmpyOS.prototype.goPage = function (i, instant) { const st = this.view().querySelector('.strip'); if (!st) return; this.page = Math.max(0, Math.min((this.nPages || 1) - 1, i));
+  st.style.transition = instant ? 'none' : 'transform .35s cubic-bezier(.2,.8,.2,1)'; st.style.transform = 'translateX(' + (-this.page * 100) + '%)';
+  this.view().querySelectorAll('.dots i').forEach((d, k) => d.classList.toggle('on', k === this.page)); };
+/** gestures on the screen: swipe pages, swipe from the left edge = back, swipe down from the top = quick settings, long press = info */
+AmpyOS.prototype.gestures = function () {
+  const scr = this.root.querySelector('.scr'); let g = null, lp = null;
+  scr.addEventListener('pointerdown', e => { if (this.busy) return; const r = scr.getBoundingClientRect(); g = { x: e.clientX, y: e.clientY, t: performance.now(), edge: e.clientX - r.left < r.width * 0.035, top: e.clientY - r.top < r.height * 0.1, id: e.pointerId, moved: false };
+    const ico = e.target.closest('.ico,.w'); if (ico) { ico.classList.add('press'); lp = setTimeout(() => { lp = null; ico.classList.remove('press'); g = null; this.vib(30); this.info(ico.dataset.app); }, 520); } });
+  scr.addEventListener('pointermove', e => { if (!g || e.pointerId !== g.id) return; const dx = e.clientX - g.x, dy = e.clientY - g.y; if (Math.hypot(dx, dy) > 10) { g.moved = true; if (lp) { clearTimeout(lp); lp = null; } scr.querySelectorAll('.press').forEach(x => x.classList.remove('press')); }
+    const st = this.view().querySelector('.strip'); if (!this.app && st && Math.abs(dx) > Math.abs(dy) && !g.edge) { st.style.transition = 'none'; st.style.transform = 'translateX(calc(' + (-this.page * 100) + '% + ' + dx + 'px))'; } });
+  const up = e => { if (lp) { clearTimeout(lp); lp = null; } scr.querySelectorAll('.press').forEach(x => x.classList.remove('press')); if (!g || e.pointerId !== g.id) return; const dx = e.clientX - g.x, dy = e.clientY - g.y, fast = performance.now() - g.t < 500, G = g; g = null;
+    if (!G.moved) return;
+    if (G.edge && dx > 60 && Math.abs(dy) < 80) { this.vib(8); if (this.app) this.home(); return; }
+    if (G.top && dy > 70) { this.quick(true); return; }
+    if (!this.app && this.view().querySelector('.strip') && Math.abs(dx) > Math.abs(dy)) { this.suppress = true; setTimeout(() => { this.suppress = false; }, 60); const w = this.view().clientWidth; this.goPage(this.page + (dx < -w * 0.18 || (fast && dx < -40) ? 1 : dx > w * 0.18 || (fast && dx > 40) ? -1 : 0)); this.vib(6); } };
+  scr.addEventListener('pointerup', up); scr.addEventListener('pointercancel', up);
+  this.root.addEventListener('click', e => { if (this.suppress) { e.stopImmediatePropagation(); e.preventDefault(); } const d = e.target.closest('[data-pg]'); if (d) this.goPage(+d.dataset.pg); }, true);
+};
+AmpyOS.prototype.info = function (id) { const A = this.APPS.find(a => a.id === id); if (!A) return; const sc = this.root.querySelector('.scr'); const old = sc.querySelector('.sheet'); if (old) old.remove();
+  const d = document.createElement('div'); d.className = 'sheet'; d.innerHTML = '<div class="sh"><i>' + A.ic + '</i><b>' + esc(A.name) + '</b><p>' + esc(INFO[id] || '') + '</p>' + (A.dual ? '<button class="btn ' + (!this.real(A.dual) ? 'on' : '') + '" data-act="set2:' + A.dual + ':sim">SIMULATO</button> <button class="btn ' + (this.real(A.dual) ? 'on' : '') + '" data-act="set2:' + A.dual + ':real">REALE</button> ' : '') + '<button class="btn" data-app="' + id + '">▶ apri</button> <button class="btn" data-act="shclose">✕</button></div>';
+  sc.appendChild(d); requestAnimationFrame(() => d.classList.add('on')); d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-app],[data-act]')) { d.classList.remove('on'); setTimeout(() => d.remove(), 250); } }); };
+/** quick settings (pull down from the top) */
+AmpyOS.prototype.quick = function (open) {
+  const sc = this.root.querySelector('.scr'); let q = sc.querySelector('.qs'); if (!open) { if (q) { q.classList.remove('on'); setTimeout(() => q.remove(), 300); } return; }
+  if (q) q.remove(); q = document.createElement('div'); q.className = 'qs'; const g = this.g, M = g.music, N = g.net, P = g.power;
+  const T = (k, ic, l, on) => '<button class="qt ' + (on ? 'on' : '') + '" data-act="qs:' + k + '"><i>' + ic + '</i>' + l + '</button>';
+  q.innerHTML = '<div class="qb">' + T('torch', '🔦', 'Torcia', this.torchOn) + T('music', '🎵', 'Musica', M && M.on) + T('net', '🌐', 'KAGE NET', N && N.on) + T('power', '🔋', 'Risparmio', P && P.mode === 'risparmio')
+    + T('photo', '📸', 'Foto', false) + T('theme', '🎨', 'Tema: ' + this.cfg.theme, false) + T('cam', '📷', this.real('camera') ? 'Cam reale' : 'Cam gioco', this.real('camera')) + T('lang', '🌍', window.LANG === 'it' ? 'Italiano' : 'English', false)
+    + '<div class="qv">🔊 <input type="range" min="0" max="1" step="0.05" value="' + (M ? M.vol : 0.5) + '" class="qvol"></div><button class="btn qx" data-act="qs:close">⌃ chiudi</button></div>';
+  sc.appendChild(q); requestAnimationFrame(() => q.classList.add('on')); const vol = q.querySelector('.qvol'); vol.addEventListener('input', () => { if (M) M.setVol(+vol.value); });
+  let y0 = null; q.addEventListener('pointerdown', e => { y0 = e.clientY; }); q.addEventListener('pointerup', e => { if (y0 !== null && y0 - e.clientY > 60) this.quick(false); y0 = null; });
+};
+AmpyOS.prototype.qsAct = function (k) { const g = this.g;
+  if (k === 'close') return this.quick(false);
+  if (k === 'torch') this.setTorch(!this.torchOn); if (k === 'music' && g.music) g.music.setOn(!g.music.on); if (k === 'net' && g.net) g.net.on ? g.net.stop() : g.net.start();
+  if (k === 'power' && g.power) g.power.set(g.power.mode === 'risparmio' ? 'auto' : 'risparmio'); if (k === 'photo') { this.close(); setTimeout(() => g.photo && g.photo.begin(), 3000); return; }
+  if (k === 'theme') { const K = Object.keys(THEMES); this.cfg.theme = K[(K.indexOf(this.cfg.theme) + 1) % K.length]; this.save(); this.theme(); }
+  if (k === 'cam') { this.cfg.mode.camera = this.real('camera') ? 'sim' : 'real'; this.save(); }
+  if (k === 'lang' && window.setLang) { window.setLang(window.LANG === 'it' ? 'en' : 'it'); return; }
+  this.vib(10); this.quick(true); if (!this.app) this.home(); };
 AmpyOS.prototype.leave = function () {
   this.timers.forEach(t => clearInterval(t)); this.timers = []; this.liveCam = false;
   if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
@@ -361,6 +438,9 @@ AmpyOS.prototype.act = function (a, el) {
   else if (k === 'flip') { this.facing = this.facing === 'user' ? 'environment' : 'user'; this.launch('camera'); }
   else if (k === 'camfx') { const K = Object.keys(window.AmpyCamFX.FILTERS); this.camFx = K[(K.indexOf(this.camFx || 'naturale') + 1) % K.length]; this.launch('camera'); }
   else if (k === 'photomode') { this.close(); setTimeout(() => { if (this.g.photo) this.g.photo.begin(); }, 3000); }
+  else if (k === 'qs') { this.qsAct(v); return; }
+  else if (k === 'shclose') { }
+  else if (k === 'set2') { this.cfg.mode[v] = w; this.save(); if (v === 'torch') this.setTorch(false); this.home(); }
   else if (k === 'cammode') { this.cfg.mode.camera = this.real('camera') ? 'sim' : 'real'; this.save(); this.launch('camera'); }
   else if (k === 'mode') { this.cfg.mode[v] = this.real(v) ? 'sim' : 'real'; this.save(); this.launch(this.app); }
   else if (k === 'set') { this.cfg.mode[v] = w; this.save(); if (v === 'torch') this.setTorch(false); this.launch('settings'); }

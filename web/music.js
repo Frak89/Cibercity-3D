@@ -130,5 +130,5 @@ function install(OS) {
     this.launch('music'); };
 }
 if (window.AmpyOS) install(window.AmpyOS);
-window.KageMusic = Music;
+window.KageMusic = Music; window.KageMusicStyles = STY;
 })();

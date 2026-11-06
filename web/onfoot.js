@@ -16,7 +16,7 @@ function dirMove(o, inp, dt, hKey, cKey, run) {
   const d = wrapA(tgt - o[hKey]); o[hKey] = wrapA(o[hKey] + d * Math.min(1, dt * 10));
   // the camera swings round behind you while you walk away from it (not when you walk towards it)
   const back = Math.cos(o[hKey] - c); if (back > 0.2) o[cKey] = wrapA(c + wrapA(o[hKey] - c) * Math.min(1, dt * 1.4 * back));
-  return mag * (run ? 6.2 : 1.9) * Math.max(0.15, Math.cos(d));
+  return mag * (run ? 9.5 : 1.9) * Math.max(0.15, Math.cos(d));   // jog / sprint
 }
 function OnFoot(game) { this.g = game; this.active = false; this.x = 0; this.z = 0; this.y = 0; this.h = 0; this.v = 0; this.vy = 0; this.ph = 0; this.camH = 0; this.air = false; this.t = 0; }
 OnFoot.prototype.canExit = function () { const g = this.g; return !g.veh && !this.active && Math.hypot(g.c.vx, g.c.vz) < 3 && (g.c.y || 0) < 0.5; };
@@ -65,7 +65,8 @@ OnFoot.prototype.update = function (dt, inp) {
     this.anim = T.jump && k > 0.15 && k < 0.85 ? 'salta' : 'cammina'; this.ph += dt * 1.3; this.v = 0;
     if (k >= 1) { this.trans = null; this.y = 0; if (T.into) { this.active = false; this.g.cam.h = this.g.c.h; } }
     return { vF: 0 }; }
-  const run = !!inp.boost;
+  // run: SHIFT / the boost button, or the joystick pushed all the way (touch)
+  const run = !!inp.boost || (!!inp.joyFull);
   const tv = dirMove(this, inp, dt, 'h', 'camH', run);
   this.v = ease(this.v, tv, 8, dt); this.vs = 0;
   const fx = Math.sin(this.h), fz = Math.cos(this.h), rx = -Math.cos(this.h), rz = Math.sin(this.h);

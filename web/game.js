@@ -614,6 +614,7 @@ Game.prototype.frame = function (dt, inp) {
   const fsm = this.fly * this.fly * (3 - 2 * this.fly);
   this.c.y = fsm * CarHD.RIG.fly.alt + (o.power === 'mag' ? 0.015 * Math.sin(this.t * 2.1) * (1 + fsm * 4) : 0);
   const VEH = this.veh && this.fleet, FOOT = !VEH && this.foot && this.foot.active;
+  if (this.audio) this.audio.mute = !!(FOOT && !(this.foot.trans && this.foot.trans.into));   // no engine while you walk
   if (FOOT) this.foot.update(dt, inp);
   const phys = VEH ? this.fleet.update(dt, inp) : stepCar(this.c, FOOT ? { gas: false, brake: false, steer: 0, hand: true, boost: false } : inp, dt, this.city);
   this.phys = phys;

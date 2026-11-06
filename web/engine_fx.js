@@ -233,7 +233,7 @@
     const pend = { pops: 0, s: 0 }; this.pend = pend;
     node.onaudioprocess = (e) => {
       const out = e.outputBuffer.getChannelData(0), s = this.sim;
-      if (!s || !this.on) { out.fill(0); return; }
+      if (!s || !this.on || this.mute) { out.fill(0); return; }   // mute: the pilot is on foot (the car is parked, engine off)
       const os = this.other;
       syn.vol = this.master;
       if (syn.type !== s.type) { syn.type = s.type; syn.rpm = s.rpm; }
