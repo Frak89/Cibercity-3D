@@ -60,9 +60,27 @@ AmpyOS.prototype.build = function () {
   css.textContent = `
 #aos{position:fixed;inset:0;z-index:60;display:none;background:rgba(2,3,8,.0);transition:background .6s;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--fg)}
 #aos.on{background:rgba(2,3,8,.6)}
-#aos .tab{position:absolute;left:50%;top:50%;width:min(96vw,calc(92vh*1.6));height:min(92vh,calc(96vw/1.6));transform:translate(-50%,-50%);border-radius:calc(var(--rtl) + 10px) calc(var(--rtr) + 10px) calc(var(--rbr) + 10px) calc(var(--rbl) + 10px);
-  background:#05060a;padding:1.3vmin;box-sizing:border-box;overflow:hidden;transition:transform .7s cubic-bezier(.2,.8,.2,1),opacity .4s;box-shadow:0 3vmin 8vmin rgba(0,0,0,.7)}
-#aos .tab.far{transform:translate(-50%,8vh) perspective(900px) rotateX(52deg) scale(.26);opacity:.2}
+#aos .tab{position:absolute;left:-2.4vmin;top:-2.4vmin;width:calc(100vw + 4.8vmin);height:calc(100vh + 4.8vmin);transform-origin:50% 50%;border-radius:4vmin;
+  background:#05060a;padding:2.4vmin;box-sizing:border-box;overflow:hidden;transition:transform .9s cubic-bezier(.2,.75,.15,1),opacity .45s,border-radius .9s;box-shadow:0 3vmin 8vmin rgba(0,0,0,.7)}
+#aos .tab.far{transform:translate(0,30vh) perspective(900px) rotateX(55deg) scale(.22);opacity:0}
+#aos .tab.near{transform:scale(.72)}
+#aos .tab.full{transform:none;border-radius:0} #aos .tab.full .scr{border-radius:0}
+#aos .tab.full .cam{display:none}
+#aos .scr.off .view,#aos .scr.off .sb,#aos .scr.off .nav,#aos .scr.off .wall{opacity:0;transition:opacity .35s}
+#aos .scr .view,#aos .scr .sb,#aos .scr .nav,#aos .scr .wall{transition:opacity .5s}
+#aos .boot{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;pointer-events:none;opacity:0;transition:opacity .4s}
+#aos .boot.on{opacity:1} #aos .boot b{font:300 7vmin system-ui;letter-spacing:.3em;background:linear-gradient(90deg,var(--sc),var(--ac));-webkit-background-clip:text;background-clip:text;color:transparent}
+#aos .boot small{margin-top:1.4vmin;letter-spacing:.3em;opacity:.7} #aos .boot i{display:block;width:30vmin;height:.4vmin;margin-top:3vmin;background:rgba(255,255,255,.12);overflow:hidden;border-radius:1vmin}
+#aos .boot i::after{content:"";display:block;height:100%;width:40%;background:linear-gradient(90deg,var(--sc),var(--ac));animation:aosLoad 1.1s ease-in-out infinite}
+@keyframes aosLoad{from{transform:translateX(-100%)}to{transform:translateX(250%)}}
+#aos .blackout{position:absolute;inset:0;z-index:6;background:#000;pointer-events:none;transform:scaleY(0);transform-origin:50% 50%}
+#aos .blackout.go{animation:aosOff .55s ease-in forwards}
+@keyframes aosOff{0%{transform:scaleY(0);opacity:1}55%{transform:scaleY(1)}100%{transform:scaleY(1)}}
+#aos .line{position:absolute;left:0;right:0;top:50%;height:2px;margin-top:-1px;z-index:7;background:#fff;box-shadow:0 0 2vmin #fff;transform:scaleX(0);opacity:0;pointer-events:none}
+#aos .line.go{animation:aosLine .7s ease-out forwards}
+@keyframes aosLine{0%{opacity:1;transform:scaleX(1)}60%{opacity:1;transform:scaleX(.02)}100%{opacity:0;transform:scaleX(0)}}
+#aos .sess{background:none;border:1px solid color-mix(in srgb,var(--ac) 60%,transparent);color:var(--fg);border-radius:2vmin;padding:.3vmin 1.2vmin;font:inherit;font-size:1.5vmin;cursor:pointer}
+body.aosfull #langPill{display:none}
 #aos .tab::before{content:"";position:absolute;inset:-60%;background:conic-gradient(from 0deg,transparent 0 62%,var(--sc) 82%,var(--ac) 99%,transparent 100%);animation:aosSpin 3.6s linear infinite}
 @keyframes aosSpin{to{transform:rotate(360deg)}}
 #aos .cam{position:absolute;left:50%;top:.45vmin;width:.8vmin;height:.8vmin;margin-left:-.4vmin;border-radius:50%;background:#1b1f2a;z-index:3}
@@ -96,11 +114,12 @@ AmpyOS.prototype.build = function () {
   const r = this.root = document.createElement('div'); r.id = 'aos';
   r.innerHTML = '<div class="tab far"><span class="cam"></span><div class="scr"><div class="wall"><span class="blob" style="width:60vmin;height:60vmin;left:-10vmin;top:-12vmin;background:var(--ac)"></span><span class="blob" style="width:50vmin;height:50vmin;right:-8vmin;bottom:-14vmin;background:var(--sc);animation-delay:-6s"></span></div>'
     + '<div class="sb"><span class="st-l"></span><span><b>AmpybiOS</b></span><span class="st-r"></span></div><div class="view"></div>'
-    + '<div class="nav"><button data-nav="back" title="indietro">◁</button><button data-nav="home" title="home">○</button><button data-nav="close" title="metti via il tablet">✕</button></div></div></div>';
+    + '<div class="nav"><button data-nav="back" title="indietro">◁</button><button data-nav="home" title="home">○</button><button class="sess" data-nav="close" title="chiudi la sessione e spegni lo schermo">⏻ CHIUDI SESSIONE</button></div>'
+    + '<div class="boot"><b>AmpybiOS</b><small>KAGE NET · SESSIONE</small><i></i></div><div class="blackout"></div><div class="line"></div></div></div>';
   document.body.appendChild(r);
   ['pointerdown', 'touchstart', 'mousedown', 'wheel', 'click'].forEach(ev => r.addEventListener(ev, e => e.stopPropagation()));
-  r.addEventListener('click', e => { const b = e.target.closest('[data-nav],[data-app],[data-act]'); if (!b) { if (e.target === r) this.close(); return; }
-    if (b.dataset.nav === 'home' || b.dataset.nav === 'back') this.home(); else if (b.dataset.nav === 'close') this.close();
+  r.addEventListener('click', e => { const b = e.target.closest('[data-nav],[data-app],[data-act]'); if (!b) return;
+    if (this.busy) return; if (b.dataset.nav === 'home' || b.dataset.nav === 'back') this.home(); else if (b.dataset.nav === 'close') this.close();
     else if (b.dataset.app) this.launch(b.dataset.app); else if (b.dataset.act) this.act(b.dataset.act, b); });
   // while the tablet is out the game doesn't get the keyboard (inputs in the tablet still do)
   addEventListener('keydown', e => { if (!this.isOpen) return; if (e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); this.app ? this.home() : this.close(); return; }
@@ -109,17 +128,32 @@ AmpyOS.prototype.build = function () {
   setInterval(() => { if (this.isOpen) this.status(); }, 1000);
 };
 AmpyOS.prototype.toggle = function (app) { if (this.isOpen) this.close(); else this.open(app); };
+/** attach: the tablet comes up from the pilot's hands, grows until its screen IS the phone's screen (bezel past the edges), AmpybiOS boots */
 AmpyOS.prototype.open = function (app) {
-  const f = this.g.foot; if (this.isOpen || !f || !f.active || this.g.veh) return;
-  this.isOpen = true; const r = this.root, tab = r.querySelector('.tab'); r.style.display = 'block'; tab.classList.add('far');
-  requestAnimationFrame(() => requestAnimationFrame(() => { r.classList.add('on'); tab.classList.remove('far'); }));
-  this.beep(520, 1040, 0.18, 0.08); this.vib(12); this.status();
-  if (app) this.launch(app); else this.home();
+  const f = this.g.foot; if (this.isOpen || this.busy || !f || !f.active || this.g.veh) return;
+  this.isOpen = true; this.busy = true; const r = this.root, tab = r.querySelector('.tab'), scr = r.querySelector('.scr'), boot = r.querySelector('.boot');
+  tab.className = 'tab far'; scr.classList.add('off'); boot.classList.remove('on'); r.querySelector('.blackout').className = 'blackout'; r.querySelector('.line').className = 'line';
+  r.style.display = 'block'; document.body.classList.add('aosfull');
+  try { if (!window.AmpyBridge && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => { }); } catch (e) { }
+  this.beep(300, 600, 0.4, 0.06); this.vib(10);
+  const T = (ms, fn) => setTimeout(fn, ms);
+  requestAnimationFrame(() => requestAnimationFrame(() => { r.classList.add('on'); tab.className = 'tab near'; }));
+  T(650, () => { tab.className = 'tab full'; this.beep(520, 1040, 0.2, 0.07); });
+  T(1250, () => { boot.classList.add('on'); this.vib(18); });
+  T(2350, () => { if (app) this.launch(app); else this.home(); this.status(); scr.classList.remove('off'); boot.classList.remove('on'); this.busy = false; });
 };
+/** end the session: apps close, the screen switches off (collapse to a line), then the tablet detaches from the real screen and goes back into the pilot's hands */
 AmpyOS.prototype.close = function () {
-  if (!this.isOpen) return; this.leave(); if (this.torchOn) this.setTorch(false); this.isOpen = false; const r = this.root, tab = r.querySelector('.tab');
-  r.classList.remove('on'); tab.classList.add('far'); this.beep(700, 300, 0.15, 0.06);
-  setTimeout(() => { if (!this.isOpen) r.style.display = 'none'; }, 650);
+  if (!this.isOpen || this.busy) return; this.busy = true; this.leave(); if (this.torchOn) this.setTorch(false);
+  const r = this.root, tab = r.querySelector('.tab'), scr = r.querySelector('.scr'), boot = r.querySelector('.boot'), T = (ms, fn) => setTimeout(fn, ms);
+  this.view().innerHTML = ''; boot.querySelector('small').textContent = 'SESSIONE CHIUSA'; boot.querySelector('i').style.display = 'none'; boot.classList.add('on'); scr.classList.add('off');
+  this.beep(700, 300, 0.35, 0.06);
+  T(900, () => { r.querySelector('.blackout').className = 'blackout go'; r.querySelector('.line').className = 'line go'; this.beep(1200, 60, 0.45, 0.08); this.vib(25); });
+  T(1650, () => { boot.classList.remove('on'); tab.className = 'tab near'; r.classList.remove('on'); });
+  T(2250, () => { tab.className = 'tab far'; });
+  T(2900, () => { r.style.display = 'none'; document.body.classList.remove('aosfull'); this.isOpen = false; this.busy = false;
+    boot.querySelector('small').textContent = 'KAGE NET · SESSIONE'; boot.querySelector('i').style.display = '';
+    try { if (!window.AmpyBridge && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => { }); } catch (e) { } });
 };
 AmpyOS.prototype.beep = function (a, b, d, v) { if (!window.FleetAudio) return; if (!this.au) this.au = new FleetAudio(); this.au.start(); this.au.blip(a, b, d, v, 'sine'); };
 AmpyOS.prototype.vib = function (ms) { const B = BR(); try { if (B) B.vibrate(ms); else if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { } };
