@@ -30,7 +30,18 @@ const CREW = [
   { d: 3, x: -6, z: 9.6, h: PI, who: 5, pose: 'braccia conserte', wave: true }, { d: 3, x: 6, z: 16.6, h: 0, who: 'verde', pose: 'esulta' }, { d: 3, x: -9.4, z: 20.8, h: 0, who: 4, pose: 'in piedi', wave: true },
   { d: 3, path: [[3, 4], [3, 23]], who: 'nordico', wave: true },
   { d: 4, x: -5, z: 9, h: 0.4, who: 0, pose: 'mani sui fianchi', wave: true }, { d: 4, x: 5, z: 9, h: -0.4, who: 'grigio', pose: 'pensieroso' }, { d: 4, x: 2.8, z: 20.5, h: PI, who: 2, pose: 'indica', wave: true },
-  { d: 4, path: [[-7, 12], [-7, 22]], who: 'scuro', wave: true }];
+  { d: 4, path: [[-7, 12], [-7, 22]], who: 'scuro', wave: true },
+  // more life: officers walking a round between consoles and stopping to work at each end
+  { d: 0, path: [[-5.6, 9.2], [5.6, 9.2]], who: 3, dwell: true, hA: -2.2, hB: 2.2, work: 'indica', wave: true },
+  { d: 1, path: [[-9, 8], [-9, 20]], who: 'verde', dwell: true, hA: -PI / 2, hB: -PI / 2, work: 'pensieroso', wave: true },
+  { d: 4, path: [[-5, 9.3], [5, 9.3]], who: 'nordico', dwell: true, hA: PI, hB: PI, work: 'indica', wave: true },
+  { d: 4, path: [[0, 20.6], [-6.2, 21.2]], who: 5, dwell: true, hA: PI, hB: -PI / 2, work: 'pensieroso', wave: true },
+  // a coffee break in the mess
+  { d: 3, x: 4.94, z: 6.94, h: PI / 4, who: 'grigio', pose: 'seduto_m' }, { d: 3, x: -4.94, z: 16.06, h: PI + PI / 4, who: 1, pose: 'seduto_m' }, { d: 3, x: 1.06, z: 22.06, h: PI + PI / 4, who: 'verde', pose: 'seduto_m' }];
+// sleepers in the stasis bay (deck 5): who + the pod they occupy
+const SLEEPERS = ['nordico', 0, 'grigio', 'scuro'];
+const REPLI_MENU = ['CAFFÈ KAGE · CALDO', 'TÈ ALLA MENTA DI MARTE', 'ZUPPA DI ALGHE DI PROXIMA', 'SUCCO DI BACCHE DI KEPLER', 'CIOCCOLATA DELLA COLONIA'];
+const MESS_SEAT = { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 0.82, 0.5], wheelR: 0.22 };
 const SITE_CREW = { colonia: [['grigio', 8, 0], ['verde', -6, 9], ['nordico', 12, -10], ['scuro', -14, -6], ['verde', 3, 18], ['grigio', -18, 14]] };
 
 function Star(game) {
@@ -94,7 +105,9 @@ Star.prototype.update = function (dt, inp) {
   // warp-field lensing strength: follows the warp factor while in curvature (and a short swell on engage / drop-out)
   { const tgt = s.mode === 'warp' ? clamp(0.25 + 0.75 * KS.WARP_STEPS[s.warpI] / 10, 0, 1) : 0; this.lensK = ease(this.lensK || 0, tgt, tgt > (this.lensK || 0) ? 1.4 : 2.2, dt); }
   // the crew on the move
-  for (const c of CREW) if (c.path) { c.ph = (c.ph || Math.random() * 10) + dt * 0.08; }
+  for (const c of CREW) if (c.path) { c.ph = (c.ph || Math.random() * 10) + dt * (c.dwell ? 0.05 : 0.08); }
+  this.wake = this.wake && this.wake.t > 0 ? (this.wake.t -= dt, this.wake) : null; this.repT = Math.max(0, (this.repT || 0) - dt); this.boostT = Math.max(0, (this.boostT || 0) - dt);
+  { const f2 = this.foot(), nearLift = f2 && f2.ss === 'in' && Math.hypot(f2.lx, f2.lz - KS.LIFT_Z) < 3 && !(f2.rideT > 0); this.liftK = ease(this.liftK || 0, nearLift ? 1 : 0, 6, dt); }
   // audio
   if (this.au && this.au.ctx) { {
     this.au.on = this.aboard() || (f && f.ss === 'eva'); this.au.update(this.au.on ? 'starship' : null, { thrust: s.mode === 'warp' ? 1 : Math.abs(s.imp), vx: 0, vz: 0, warp: s.mode === 'warp' ? KS.WARP_STEPS[s.warpI] : 0 }); } }
@@ -162,6 +175,12 @@ Star.prototype.footUpdate = function (f, dt, inp) {
   }
   if (f.ss === 'planetin') { f.bt += dt; f.anim = 'in piedi'; if (f.bt > 1.9) f.ss = 'planet'; return true; }
   const run = !!inp.boost;
+  if (f.ss === 'in' && f.rideT > 0) {   // riding the lift: doors shut, a hum, the deck changes half way
+    const was = f.rideT; f.rideT -= dt; f.v = 0; f.anim = 'in piedi';
+    if (was > 0.7 && f.rideT <= 0.7) { f.deck = f.rideTo; f.lx = 0; f.lz = KS.LIFT_Z; this.syncFoot(f); this.say(D[f.deck].title, 2); }
+    if (f.rideT <= 0) { f.rideT = 0; } this.syncFoot(f); return true; }
+  if (f.ss === 'in' && f.sit) { f.v = 0; f.anim = 'seduto'; f.lx = f.sit[0]; f.lz = f.sit[1]; f.lh = f.sit[2]; this.syncFoot(f);
+    if ((inp.my || 0) > 0.6 || (inp.fwd || 0) > 0.6) this.enter(); return true; }
   if (f.ss === 'in') {
     if (f.lcam === undefined) f.lcam = f.lh;
     f.v = ease(f.v, Math.min(4.2, window.KageOnFoot.dirMove(f, inp, dt, 'lh', 'lcam', run)), 8, dt); f.vs = 0;
@@ -199,6 +218,9 @@ Star.prototype.footUpdate = function (f, dt, inp) {
   }
   return false;
 };
+Star.prototype.freeChair = function (f) { let best = null, bd = 1.0;
+  for (const c of KS.messChairs()) { const d = Math.hypot(f.lx - c[0], f.lz - c[1]); if (d < bd && !CREW.some(k => k.d === 3 && k.pose === 'seduto_m' && Math.hypot(k.x - c[0], k.z - c[1]) < 0.3)) { bd = d; best = c; } } return best; };
+Star.prototype.nearPod = function (f) { let bi = -1, bd = 2.1; KS.STASIS.forEach((q, i) => { const d = Math.hypot(f.lx - q[0], f.lz - q[1]); if (d < bd) { bd = d; bi = i; } }); return bi; };
 Star.prototype.syncFoot = function (f) { const w = this.toW([f.lx, D[f.deck].y + (f.ly || 0), f.lz]); f.x = w[0]; f.y = w[1]; f.z = w[2]; };
 Star.prototype.collideDeck = function (f) {
   const d = D[f.deck];
@@ -208,8 +230,9 @@ Star.prototype.collideDeck = function (f) {
   if (d.id === 'ponte') { push(-1.6, 16.8, 1.1); push(1.6, 16.8, 1.1); }
   if (d.id === 'astrolab') push(0, RIG.astro[1], 2.1);
   if (d.id === 'mensa') for (const [tx, tz] of [[-6, 8], [-6, 15], [6, 8], [6, 15], [0, 21]]) push(tx, tz, 1.25);
-  if (d.id === 'ingegneria') push(RIG.core[0], RIG.core[1], 2.6);
-  for (const c of CREW) if (c.d === f.deck && !c.path) push(c.x, c.z, 0.45);
+  if (d.id === 'ingegneria') { push(RIG.core[0], RIG.core[1], 2.6); for (const q of KS.STASIS) push(q[0], q[1], 1.15); }
+  if (d.id === 'mensa') push(KS.REPLI[0], KS.REPLI[1], 0.7);
+  for (const c of CREW) if (c.d === f.deck && !c.path && c.pose !== 'seduto_m') push(c.x, c.z, 0.45);
   f.ly = d.id === 'teletrasporto' && Math.hypot(f.lx, f.lz - 21.6) < 3.6 ? 0.3 : 0;
 };
 
@@ -223,18 +246,29 @@ Star.prototype.where = function () {
     if (d.id === 'teletrasporto' && Math.hypot(f.lx, f.lz - 21.6) < 3.2) return 'pad';
     if (d.id === 'astrolab' && Math.hypot(f.lx, f.lz - (RIG.astro[1] - 3.2)) < 1.6) return 'astro';
     if (d.id === 'mensa' && Math.hypot(f.lx - RIG.airlock[0], f.lz - RIG.airlock[1]) < 2.2) return 'airlock';
+    if (f.sit) return 'stand';
+    if (d.id === 'mensa' && Math.hypot(f.lx - KS.REPLI[0], f.lz - KS.REPLI[1]) < 1.6) return 'replic';
+    if (d.id === 'mensa' && this.freeChair(f)) return 'sit';
+    if (d.id === 'ingegneria') { const i = this.nearPod(f); if (i >= 0) return 'pod'; if (Math.hypot(f.lx + 5, f.lz - 8) < 1.7 || Math.hypot(f.lx - 5, f.lz - 8) < 1.7) return 'core'; }
     return ''; }
   if (f.ss === 'helm') return 'leave';
   if (f.ss === 'eva') return Math.hypot(f.ex - 24.5, f.ey + 3.2, f.ez - 20) < 5 ? 'reenter' : '';
   return '';
 };
-const ACT_LABEL = { badge: 'BADGE', badge_off: 'BADGE', lift: 'PONTI', chair: 'COMANDO', pad: 'TELETRASP.', astro: 'ROTTA', airlock: 'EVA', leave: 'ALZATI', reenter: 'RIENTRA' };
+const ACT_LABEL = { stand: 'ALZATI', replic: 'REPLICA', sit: 'SIEDITI', pod: 'STASI', core: 'NUCLEO', badge: 'BADGE', badge_off: 'BADGE', lift: 'PONTI', chair: 'COMANDO', pad: 'TELETRASP.', astro: 'ROTTA', airlock: 'EVA', leave: 'ALZATI', reenter: 'RIENTRA' };
 Star.prototype.action = function () { return ACT_LABEL[this.where()] || ''; };
 Star.prototype.enter = function () {
   const f = this.foot(), w = this.where(); if (w) this.beamSound(true); if (!w) return !!(f && f.ss && f.ss !== 'planet');
   if (w === 'badge') { this.badge = true; LS.set('kageBadge', '1'); this.say('BADGE KAGE ODYSSEY INDOSSATO · premi BEAM IN', 4); }
   else if (w === 'badge_off') { this.badge = false; LS.set('kageBadge', '0'); this.say('BADGE RIMESSO AL SUO POSTO', 3); }
   else if (w === 'lift') this.menu('decks');
+  else if (w === 'sit') { const c = this.freeChair(f); f.sit = c; f.v = 0; this.say('SEDUTO IN MENSA · INVIO o avanti per alzarti', 3); }
+  else if (w === 'stand') { const c = f.sit; f.sit = null; f.lx = c[0] - Math.sin(c[2]) * 0.7; f.lz = c[1] - Math.cos(c[2]) * 0.7; f.lh = c[2] + PI; f.lcam = f.lh; this.syncFoot(f); }
+  else if (w === 'replic') { this.repK = ((this.repK || 0) + 1) % REPLI_MENU.length; this.repT = 9; this.say('REPLICATORE · ' + REPLI_MENU[this.repK], 4); if (this.au) this.au.blip(500, 1600, 0.9, 0.12, 'sine'); }
+  else if (w === 'pod') { const i = this.nearPod(f), who = SLEEPERS[i];
+    if (this.wake && this.wake.i === i) { this.wake = null; this.say('CAPSULA ' + (i + 1) + ' · OSPITE DI NUOVO IN STASI', 3); }
+    else { this.wake = { i, t: 16 }; this.say('CAPSULA ' + (i + 1) + ' · RISVEGLIO · ' + (typeof who === 'string' ? 'OSPITE ' + who.toUpperCase() : 'MEMBRO DELL’EQUIPAGGIO') + ' · tornerà in stasi tra poco', 5); } }
+  else if (w === 'core') { this.boostT = 8; const wf = KS.WARP_STEPS[this.ship.warpI]; this.say('NUCLEO WARP · RIEQUILIBRATO · MATERIA/ANTIMATERIA 1:1 · PRONTO PER WARP ' + wf, 5); if (this.au) this.au.blip(120, 900, 2.4, 0.16, 'sawtooth'); }
   else if (w === 'chair') { f.ss = 'helm'; f.lx = RIG.chair[0]; f.lz = RIG.chair[1]; f.lh = 0; this.g.view = 0; this.say('AI COMANDI · W/S impulso · A/D virata · SPAZIO/X quota · 1-9 · 0 = WARP 10', 5); }
   else if (w === 'leave') { f.ss = 'in'; f.lz = RIG.chair[1] - 1.2; f.lh = PI; f.lcam = PI; }
   else if (w === 'pad') this.beamDown();
@@ -313,7 +347,7 @@ Star.prototype.menu = function (kind) {
   h += '<button data-close="1" style="margin-top:1vmin">✕ CHIUDI</button>';
   mn.innerHTML = h; mn.style.display = 'block';
   mn.querySelectorAll('button').forEach(b => { const go = e => { e.preventDefault(); e.stopPropagation(); const d = b.dataset;
-      if (d.deck !== undefined) { f.deck = +d.deck; f.lx = 0; f.lz = KS.LIFT_Z + 1.4; f.lh = 0; f.lcam = 0; this.syncFoot(f); this.say(D[f.deck].title, 2); }
+      if (d.deck !== undefined) { if (+d.deck !== f.deck) { f.rideT = 1.4; f.rideTo = +d.deck; f.lx = 0; f.lz = KS.LIFT_Z; f.lh = 0; f.lcam = 0; this.syncFoot(f); if (this.au) this.au.blip(220, 140, 1.3, 0.12, 'sine'); } }
       if (d.dest) { s.course = d.dest; this.say('ROTTA IMPOSTATA · ' + KS.DEST[d.dest].name + ' · ' + fmtLy(KS.dist(s.loc, d.dest)), 4); }
       mn.style.display = 'none'; };
     b.addEventListener('click', go); b.addEventListener('touchstart', go); });
@@ -418,14 +452,30 @@ Star.prototype.drawWorld = function (ctx) {
     const inside = aboard && (f.ss !== 'helm' || helmIn);
     if (!inside) { gl.uniform1f(u.uLit, g.world === 'space' ? 1.7 : 1.1); this.drawM(this.mesh('ship', () => KS.buildStarship(cfg, this.lod)), Ms, { rot: t * 0.8 }); gl.uniform1f(u.uLit, 1); }
     if (inside) { const di = f.ss === 'helm' ? 0 : f.deck; gl.uniform1f(u.uLit, 1.6);
-      this.drawM(this.mesh('deck' + di, () => KS.buildDeck(D[di].id, cfg, this.lod)), Ms, { rot: t * 0.7 }); gl.uniform1f(u.uLit, 1);
+      this.coreRot = (this.coreRot || 0) + (ctx.dt || 1 / 60) * 0.7 * (1 + 3 * Math.min(1, (this.boostT || 0) / 2) + (s.mode === 'warp' ? 2 : 0)); this.drawM(this.mesh('deck' + di, () => KS.buildDeck(D[di].id, cfg, this.lod)), Ms, { rot: this.coreRot }); gl.uniform1f(u.uLit, 1);
       // crew of this deck
       for (const c of CREW) { if (c.d !== di) continue; let x = c.x, z = c.z, h = c.h, pose = c.pose, tt = t + (c.x || 0);
-        if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; c.wd = (c.wd || 0) + Math.abs(k - (c.pk === undefined ? k : c.pk)) * Math.hypot(B[0] - A[0], B[1] - A[1]); c.pk = k; tt = c.wd / 1.45; }
+        if (c.path && c.dwell) { const A = c.path[0], B = c.path[1], u = c.ph % 1, sm = v => v * v * (3 - 2 * v); let k, still = null;
+          if (u < 0.35) k = sm(u / 0.35); else if (u < 0.5) { k = 1; still = c.hB; } else if (u < 0.85) k = 1 - sm((u - 0.5) / 0.35); else { k = 0; still = c.hA; }
+          x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k;
+          if (still !== null) { h = still; pose = c.work || 'in piedi'; c.pk = k; }
+          else { h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (u > 0.5 ? PI : 0); pose = 'cammina'; c.wd = (c.wd || 0) + Math.abs(k - (c.pk === undefined ? k : c.pk)) * Math.hypot(B[0] - A[0], B[1] - A[1]); c.pk = k; tt = c.wd / 1.45; } }
+        else if (c.path) { const k = 0.5 - 0.5 * Math.cos(c.ph * TAU), A = c.path[0], B = c.path[1]; x = A[0] + (B[0] - A[0]) * k; z = A[1] + (B[1] - A[1]) * k; h = Math.atan2(B[0] - A[0], B[1] - A[1]) + (Math.sin(c.ph * TAU) < 0 ? PI : 0); pose = 'cammina'; c.wd = (c.wd || 0) + Math.abs(k - (c.pk === undefined ? k : c.pk)) * Math.hypot(B[0] - A[0], B[1] - A[1]); c.pk = k; tt = c.wd / 1.45; }
         const near = f.ss === 'in' && f.deck === di && Math.hypot(f.lx - x, f.lz - z) < 3.2;
         if ((near && c.wave) || (c.greet && this.greetT > 0)) { pose = 'saluto'; h = Math.atan2(f.lx - x, f.lz - z); }
-        let opt = { key: 'crew' + CREW.indexOf(c) }; if (pose === 'seduto_c') { pose = 'seduto'; opt = { key: opt.key, seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
+        let opt = { key: 'crew' + CREW.indexOf(c) }; if (pose === 'seduto_m') { pose = 'seduto'; opt = { key: opt.key, seat: MESS_SEAT }; if (near && c.wave) { pose = 'saluto'; opt = { key: opt.key }; } }
+        if (pose === 'seduto_c') { pose = 'seduto'; opt = { key: opt.key, seat: { hip: [0, 0.55, -0.1], footL: [0.12, 0.05, 0.45], footR: [-0.12, 0.05, 0.45], wheel: [0, 1.05, 0.6], wheelR: 0.25 } }; }
         F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(x, D[di].y, z), U.RY(h))), pose, opt, this.person(c.who), tt); }
+      // sleepers floating in the stasis pods (one may be awake, standing in front of its pod)
+      if (D[di].id === 'ingegneria') KS.STASIS.forEach((q, i) => { const who = SLEEPERS[i], awake = this.wake && this.wake.i === i, face = q[0] < 0 ? PI / 2 : -PI / 2;
+        if (awake) { const ax = q[0] - Math.sign(q[0]) * 1.2, az = q[1] + (q[1] < 21 ? -1.1 : 1.1), hh = f && f.ss === 'in' ? Math.atan2(f.lx - ax, f.lz - az) : face; F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(ax, D[di].y, az), U.RY(hh))), this.wake.t > 13 ? 'esulta' : 'saluto', { key: 'pod' + i }, this.person(who), t); }
+        else F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(q[0], D[di].y + 0.42 + Math.sin(t * 0.6 + i * 1.7) * 0.05, q[1]), U.RY(face))), 'stasi', { key: 'pod' + i }, this.person(who), t + i); });
+      prep();
+      // lift doors (slide open when you walk up) + the replicated cup on the mess counter
+      { const k = this.liftK || 0, dm = this.mesh('liftDoor', () => { const mb = new KF.MB(); mb.part = 'porta_ascensore'; mb.box(0, 1.6, 0, 1.02, 3.2, 0.1, { c: [0.62, 0.64, 0.7], e: 0, slot: 0, mode: 0, a: [0, 0, 0] }); mb.box(0, 1.6, 0.06, 0.05, 2.8, 0.02, { c: [0.2, 0.85, 1], e: 1.2, slot: 3, mode: 0, a: [0, 0, 0] }); return mb.finish(); });
+        for (const sx of [-1, 1]) this.drawM(dm, U.mul(Ms, U.T(sx * (0.52 + k * 1.0), D[di].y, KS.LIFT_Z + 1.5))); }
+      if (D[di].id === 'mensa' && this.repT > 0) { const cup = this.mesh('cup', () => { const mb = new KF.MB(); mb.part = 'tazza'; mb.cyl(0, 0.11, 0.045, 0.055, 14, { c: [0.95, 0.95, 0.97], e: 0, slot: 0, mode: 0, a: [0, 0, 0] }); mb.disc(0.045, 14, 0.1, { c: [0.35, 0.2, 0.1], e: 0.1, slot: 0, mode: 0, a: [0, 0, 0] }); mb.torus(0.04, 0.008, 10, 4, { c: [0.95, 0.95, 0.97], e: 0, slot: 0, mode: 0, a: [0, 0, 0] }); return mb.finish(); });
+        if (this.repT < 8.2 || Math.random() < (9 - this.repT) / 0.8) this.drawM(cup, U.mul(Ms, U.T(KS.REPLI[0] + 0.15, D[di].y + 1.08, KS.REPLI[1]))); }
       prep(); }
     // the avatar inside / on EVA
     if (f && f.active && (f.ss === 'in' || f.ss === 'beamin' || f.ss === 'beamdown' || (f.ss === 'helm' && !helmIn) || f.ss === 'eva')) {
@@ -433,6 +483,7 @@ Star.prototype.drawWorld = function (ctx) {
       if (vis > 0.98 || Math.random() < vis) {
         if (f.ss === 'eva') this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(f.ex, f.ey, f.ez), U.mul(U.RY(f.lh), U.RX(0.3)))), 'salta', {}, t * 0.3);
         else if (f.ss === 'helm') this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(RIG.chair[0], D[0].y, RIG.chair[1]), U.RY(0))), 'seduto', { seat: { hip: [0, 0.55, -0.05], footL: [0.12, 0.05, 0.5], footR: [-0.12, 0.05, 0.5], wheel: [0, 0.75, 0.25], wheelR: 0.35 }, speed: 0 }, t);
+        else if (f.sit) this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(f.lx, D[f.deck].y, f.lz), U.RY(f.lh))), 'seduto', { seat: MESS_SEAT, speed: 0 }, t);
         else this.drawAvatar(ctx, U.mul(Ms, U.mul(U.T(f.lx, D[f.deck].y + (f.ly || 0), f.lz), U.RY(f.lh))), f.anim || 'in piedi', { speed: Math.abs(f.v || 0) }, f.anim === 'cammina' || f.anim === 'corre' ? f.ph : t);
       }
       prep(); }
@@ -445,6 +496,9 @@ Star.prototype.drawWorld = function (ctx) {
       if (vis > 0.98 || Math.random() < vis) this.drawAvatar(ctx, U.mul(U.T(...this.rel([f.px, f.py, f.pz], ctx)), U.RY(f.h)), f.anim || 'in piedi', { speed: Math.abs(f.v || 0) }, f.anim === 'cammina' || f.anim === 'corre' ? f.ph : t); prep(); }
   }
 };
+const buildSparkle = () => { const mb = new KF.MB(); let s9 = 3; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647; mb.part = 'scintille_teletrasporto';
+    for (let i = 0; i < 160; i++) { const a = rnd() * TAU, r = 0.15 + rnd() * 0.38, y = rnd() * 1.95, sz = 0.012 + rnd() * 0.025; mb.ellipsoid(Math.cos(a) * r, y, Math.sin(a) * r, sz, sz * 2.5, sz, 4, 2, { c: rnd() < 0.5 ? [0.7, 0.95, 1] : [1, 0.95, 0.7], e: 1.8, slot: 3, mode: 1, a: [0, 0, 0] }); }
+    mb.part = 'colonna_luce'; mb.cyl(0, 2.1, 0.55, 0.55, 20, { c: [0.6, 0.85, 1], e: 0.35, slot: 3, mode: 0 }, false); return mb.finish(); };
 /** warp lensing parameters for the game's screen-space pass: ship position (render space), strength, colour */
 Star.prototype.lens = function (ctx) {
   const k = this.lensK || 0, s = this.ship, f = this.foot(); if (k < 0.01 || this.g.world !== 'space') return null;
@@ -454,15 +508,22 @@ Star.prototype.lens = function (ctx) {
 /** transporter sparkle columns (additive) */
 Star.prototype.drawAdditive = function (ctx) {
   const g = this.g, gl = this.gl, f = this.foot(); if (!f || !f.active || !f.ss) return;
+  if (f.ss === 'in' && this.shipVisible() && g.fleet) { const d = D[f.deck], P = g.P.veh, u = P.u, Ms = this.shipM(ctx);
+    gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uGlowOnly, 1); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uRotA, ctx.t * 0.5);
+    if (d.id === 'ingegneria') { const pg = this.mesh('podGlow', () => window.KageXeno.buildPodGlow([0.35, 0.7, 1])); KS.STASIS.forEach((q, i) => { if (this.wake && this.wake.i === i) return; this.drawM(pg, U.mul(Ms, U.T(q[0], d.y + 0.32, q[1])), { rot: ctx.t * 0.5 + i }); });
+      // plasma pulses running up the warp core (faster while boosted or at warp)
+      const pr = this.mesh('corePulse', () => { const mb = new KF.MB(); mb.part = 'impulso_plasma'; mb.torus(0.95, 0.12, 28, 6, { c: [0.3, 0.85, 1], e: 1.5, slot: 3, mode: 0, a: [0, 0, 0] }); return mb.finish(); });
+      const sp = 0.5 * (1 + 3 * Math.min(1, (this.boostT || 0) / 2) + (this.ship.mode === 'warp' ? 2 : 0));
+      for (let k = 0; k < 3; k++) { const ph = (ctx.t * sp + k / 3) % 1; gl.uniform1f(u.uLit, Math.sin(ph * PI) * 1.2); this.drawM(pr, U.mul(Ms, U.T(RIG.core[0], d.y + 0.7 + ph * (RIG.H - 0.8), RIG.core[1]))); } gl.uniform1f(u.uLit, 1); }
+    if (d.id === 'mensa' && this.repT > 8) { const sp = this.mesh('sparkle', buildSparkle); { gl.uniform1f(u.uLit, Math.sin((9 - this.repT) * PI) * 1.2); this.drawM(sp, U.mul(Ms, U.mul(U.T(KS.REPLI[0] + 0.15, d.y + 1.05, KS.REPLI[1]), new Float32Array([0.25, 0, 0, 0, 0, 0.12, 0, 0, 0, 0, 0.25, 0, 0, 0, 0, 1]))), { rot: ctx.t * 3 }); gl.uniform1f(u.uLit, 1); } }
+    gl.uniform1f(u.uGlowOnly, 0); }
   let at = null, k = 0;
   if ((f.ss === 'beamout' || f.ss === 'beamup') ) { k = Math.sin(clamp(f.bt / 1.9, 0, 1) * PI); at = f.ss === 'beamout' ? [f.x, f.y || 0, f.z] : [f.px, f.py, f.pz]; }
   else if (f.ss === 'beamin' || f.ss === 'beamdown') { k = Math.sin(clamp(f.bt / 1.9, 0, 1) * PI); at = this.toW([f.lx, D[f.deck].y + (f.ly || 0), f.lz]); }
   else if (f.ss === 'planetin') { k = Math.sin(clamp(f.bt / 1.9, 0, 1) * PI); at = [f.px, f.py, f.pz]; }
   if (!at || k <= 0.01) return;
   const P = g.P.veh, u = P.u; gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uGlowOnly, 1); gl.uniform1f(u.uLit, k * 1.5);
-  const sp = this.mesh('sparkle', () => { const mb = new KF.MB(); let s9 = 3; const rnd = () => (s9 = (s9 * 16807) % 2147483647) / 2147483647; mb.part = 'scintille_teletrasporto';
-    for (let i = 0; i < 160; i++) { const a = rnd() * TAU, r = 0.15 + rnd() * 0.38, y = rnd() * 1.95, sz = 0.012 + rnd() * 0.025; mb.ellipsoid(Math.cos(a) * r, y, Math.sin(a) * r, sz, sz * 2.5, sz, 4, 2, { c: rnd() < 0.5 ? [0.7, 0.95, 1] : [1, 0.95, 0.7], e: 1.8, slot: 3, mode: 1, a: [0, 0, 0] }); }
-    mb.part = 'colonna_luce'; mb.cyl(0, 2.1, 0.55, 0.55, 20, { c: [0.6, 0.85, 1], e: 0.35, slot: 3, mode: 0 }, false); return mb.finish(); });
+  const sp = this.mesh('sparkle', buildSparkle);
   this.drawM(sp, U.T(...this.rel(at, ctx)), { rot: ctx.t * 3 });
   gl.uniform1f(u.uGlowOnly, 0); gl.uniform1f(u.uLit, 1);
 };
@@ -483,7 +544,7 @@ Star.prototype.drawHud = function (hud) {
   }
   if (this.msgT > 0) lines.push('» ' + this.msg);
   if (f && f.active && !f.ss && this.where().startsWith('badge')) lines.push(this.badge ? 'INVIO · rimetti il badge' : 'INVIO · prendi il badge della KAGE ODYSSEY');
-  if (f && f.active && f.ss === 'in') { const w = this.where(); const L = { lift: 'INVIO · ascensore: scegli il ponte', chair: 'INVIO · siediti al posto del capitano', pad: 'INVIO · teletrasporto: scendi', astro: 'INVIO · cartigli dell’Astrolab: scegli il pianeta', airlock: 'INVIO · esci nello spazio (EVA)' }[w]; if (L) lines.push(L); }
+  if (f && f.active && f.ss === 'in') { const w = this.where(); const L = { lift: 'INVIO · ascensore: scegli il ponte', chair: 'INVIO · siediti al posto del capitano', pad: 'INVIO · teletrasporto: scendi', astro: 'INVIO · cartigli dell’Astrolab: scegli il pianeta', airlock: 'INVIO · esci nello spazio (EVA)', sit: 'INVIO · siediti al tavolo', stand: 'INVIO · alzati', replic: 'INVIO · replicatore: ordina qualcosa', pod: 'INVIO · capsula di stasi: risveglia / rimetti in stasi', core: 'INVIO · console del nucleo warp: riequilibra' }[w]; if (L) lines.push(L); }
   if (f && f.active && f.ss === 'eva' && this.where() === 'reenter') lines.push('INVIO · rientra a bordo');
   if (!lines.length && !this.flash) return;
   c2.textAlign = 'center';
