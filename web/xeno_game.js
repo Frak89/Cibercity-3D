@@ -25,7 +25,7 @@ function XenoGame(game) {
   this.ship = { x: GP * 1, z: GP * 1, y: 20, h: 0.6 };   // hovering over the crossroads by the garage
   this.count = 0; this.items = []; this.ambT = 6; this.beamA = 0; this.tt = null; this.meshes = {};
   this.lod = 'ultra';
-  this.epoch = game.vmesh(KX.buildChrono(Object.assign(KF.loadCfg('chrono'), { lod: this.lod })));
+  this.epoch = game.vmesh(KX.buildChrono(Object.assign(KF.loadCfg('chrono'), { lod: this.lod, view: 'esterno' })));
   this.vortex = game.vmesh(KX.buildVortex(this.lod));
   this.beam = game.vmesh(KX.buildBeam(KF.loadCfg('ufo')));
   this.cfgKey = ''; this.refresh();
@@ -230,6 +230,7 @@ XenoGame.prototype.drawHud = function (hud) {
     if (f.xs === 'in') {
       const dp = Math.hypot(f.lx - R.lift[0], f.lz - R.lift[1]), ds = Math.hypot(f.lx - R.seat[0], f.lz - (R.seat[1] - 0.15));
       line = dp < 1.2 ? 'INVIO · scendi col raggio' : ds < 1.3 ? 'INVIO · ai comandi del KAGE XENO' : 'A BORDO DEL KAGE XENO · esplora la nave · plancia davanti, raggio dietro il nucleo';
+      const nc = CREW.find(c => Math.hypot(f.lx - c.x, f.lz - c.z) < 2.6); if (nc && window.KageGlyph) { const KG = window.KageGlyph; if (line.startsWith('A BORDO')) line = '👽 «' + KG.say(KG.SAYINGS[(CREW.indexOf(nc) + Math.floor(g.t / 6)) % KG.SAYINGS.length]) + '»'; }
     } else if (f.xs === 'up' || f.xs === 'down') line = 'RAGGIO TRAENTE…';
     else {
       const pad = this.toWorld(R.lift[0], R.lift[1]);

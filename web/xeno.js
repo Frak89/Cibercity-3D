@@ -21,7 +21,7 @@ function lathe(mb, prof, seg, colf, inward, a0, a1, skip) {
 
 /* ---------------- UFO ---------------- */
 const UFO_OPTS = { hull: ['disco', 'cupola', 'anello'], paint: ['argento', 'nero', 'bianco', 'oro', 'verde', 'viola'], accent: ['nero', 'argento', 'oro', 'ciano'], led: Object.keys(KF.LEDS), legs: [true, false] };
-const UFO_NAMES = { hull: { disco: 'DISCO CLASSICO', cupola: 'GRANDE CUPOLA', anello: 'ANELLO ROTANTE' } };
+const UFO_NAMES = { view: { esterno: 'ESTERNO', interno: 'INTERNO · SPACCATO' }, hull: { disco: 'DISCO CLASSICO', cupola: 'GRANDE CUPOLA', anello: 'ANELLO ROTANTE' } };
 const UFO_DEF = { hull: 'disco', paint: 'argento', accent: 'nero', led: 'lime', legs: true };
 /** rig (local metres): deck floor, interior radius, lift pad, pilot seat, emitter */
 const UFO_RIG = { floor: 2.0, ceil: 5.2, rIn: 7.8, core: 1.25, lift: [0, -4.2], liftR: 1.3, seat: [0, 5.3], emitY: 1.15, R: 12, legY: 1.15 };
@@ -97,11 +97,11 @@ function buildUfoInterior(o, lod) {
   // curved wall, ceiling dome, ribs
   mb.part = 'pareti';
   lathe(mb, [[R.rIn, R.floor], [R.rIn, R.floor + 0.25], [R.rIn - 0.1, R.floor + 2.2], [R.rIn - 0.6, R.ceil - 0.2], [R.rIn - 1.4, R.ceil]], seg, (j, k, s, a) => {
-    return wall; }, false, 0, TAU, (j, a) => Math.cos(a) > 0.86 && j >= 1 && j <= 2);
+    return wall; }, false, 0, TAU, (j, a) => (Math.cos(a) > 0.86 && j >= 1 && j <= 2) || (o.cut && Math.cos(a) > -0.05));
   mb.part = 'cornice_vetrata'; for (const s of [-1, 1]) { const a = s * Math.acos(0.86); mb.rod([Math.sin(a) * R.rIn, R.floor + 0.25, Math.cos(a) * R.rIn], [Math.sin(a) * (R.rIn - 0.6), R.ceil - 0.2, Math.cos(a) * (R.rIn - 0.6)], 0.09, 8, rib); }
   mb.part = 'pareti';
   mb.part = 'soffitto';
-  lathe(mb, [[R.rIn - 1.4, R.ceil], [4.5, R.ceil + 0.35], [1.6, R.ceil + 0.5], [0.01, R.ceil + 0.5]], seg, wall, false);
+  if (!o.cut) lathe(mb, [[R.rIn - 1.4, R.ceil], [4.5, R.ceil + 0.35], [1.6, R.ceil + 0.5], [0.01, R.ceil + 0.5]], seg, wall, false);
   mb.part = 'costole';
   for (let k = 0; k < 16; k++) { const a = (k + 0.5) / 16 * TAU; if (Math.cos(a) > 0.8) continue;
     mb.push(RY(a)); mb.box(0, R.floor + 1.6, R.rIn - 0.25, 0.35, 3.2, 0.3, rib); mb.box(0, R.floor + 0.08, R.rIn - 0.4, 0.5, 0.06, 0.2, L); mb.box(0, R.ceil - 0.1, R.rIn - 1.3, 0.3, 0.2, 1.6, rib); mb.pop(); }
@@ -160,7 +160,7 @@ function buildBeam(o) {
 
 /* ---------------- EPOCH (kind 'chrono'): Art Deco time cabin (brass, glass, dials, counter-rotating gear crowns) ---------------- */
 const CHRONO_OPTS = { metal: ['ottone', 'rame', 'argento', 'bronzo_scuro'], glass: ['trasparente', 'ambra', 'fumé'], led: ['ambra', 'ciano', 'magenta', 'bianco'] };
-const CHRONO_NAMES = { metal: { ottone: 'OTTONE', rame: 'RAME', argento: 'ARGENTO', bronzo_scuro: 'BRONZO SCURO' }, glass: { trasparente: 'TRASPARENTE', ambra: 'AMBRA', 'fumé': 'FUMÉ' } };
+const CHRONO_NAMES = { view: { esterno: 'ESTERNO', spaccato: 'SPACCATO · INTERNO' }, metal: { ottone: 'OTTONE', rame: 'RAME', argento: 'ARGENTO', bronzo_scuro: 'BRONZO SCURO' }, glass: { trasparente: 'TRASPARENTE', ambra: 'AMBRA', 'fumé': 'FUMÉ' } };
 const CHRONO_DEF = { metal: 'ottone', glass: 'ambra', led: 'ambra' };
 const METALS = { ottone: [0.78, 0.6, 0.26], rame: [0.72, 0.38, 0.22], argento: [0.7, 0.72, 0.75], bronzo_scuro: [0.36, 0.27, 0.16] };
 const CHRONO_RIG = { r: 1.05, h: 2.75, door: [0, 1.05] };
@@ -183,6 +183,7 @@ function buildChrono(o, lod) {
   // glass panels with Deco sunburst mullions; the front one is the door (hinged frame + handle)
   mb.part = 'vetrate';
   for (let k = 0; k < 8; k++) { const a = oct(k), w = 2 * R * Math.tan(PI / 8) * 0.95, rr = R * Math.cos(PI / 8) * 1.06;
+    if (o.view === 'spaccato' && (k === 0 || k === 1 || k === 7)) continue;
     mb.push(M(RY(a), T(0, 0.22, rr))); if (k === 0) mb.anim('PORTA', [-w / 2, 0, 0], [0, 1, 0], 1.7);
     mb.box(0, (H - 0.62) / 2 + 0.02, 0, w * 0.92, H - 0.68, 0.02, Gl);
     mb.part = 'telai'; mb.box(0, 0.09, 0.01, w, 0.12, 0.04, Mt); mb.box(0, H - 0.68, 0.01, w, 0.06, 0.04, Mt); mb.box(0, 0.95, 0.012, w, 0.035, 0.03, Mt);
@@ -243,8 +244,8 @@ function buildVortex(lod) {
 }
 
 Object.assign(KF.KINDS, {
-  ufo: { build: buildUfo, opts: UFO_OPTS, names: UFO_NAMES, def: UFO_DEF, rig: UFO_RIG, title: 'KAGE XENO', extra: true },
-  chrono: { build: buildChrono, opts: CHRONO_OPTS, names: CHRONO_NAMES, def: CHRONO_DEF, rig: CHRONO_RIG, title: 'KAGE EPOCH', extra: true },
+  ufo: { build: (o, lod) => o && o.view === 'interno' ? buildUfoInterior(Object.assign({}, o, { cut: true }), lod) : buildUfo(o, lod), opts: Object.assign({}, UFO_OPTS, { view: ['esterno', 'interno'] }), names: UFO_NAMES, def: UFO_DEF, rig: UFO_RIG, title: 'KAGE XENO', extra: true },
+  chrono: { build: buildChrono, opts: Object.assign({}, CHRONO_OPTS, { view: ['esterno', 'spaccato'] }), names: CHRONO_NAMES, def: CHRONO_DEF, rig: CHRONO_RIG, title: 'KAGE EPOCH', extra: true },
   ufoin: { build: buildUfoInterior, opts: UFO_OPTS, names: UFO_NAMES, def: UFO_DEF, rig: UFO_RIG, title: 'KAGE XENO · INTERNO', hidden: true },
   vortex: { build: (o, lod) => buildVortex(lod || (o && o.lod)), opts: {}, names: {}, def: {}, rig: {}, title: 'VORTICE TEMPORALE', hidden: true },
   beam: { build: buildBeam, opts: {}, names: {}, def: {}, rig: {}, title: 'RAGGIO TRAENTE', hidden: true }

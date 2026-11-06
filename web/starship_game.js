@@ -542,6 +542,9 @@ Star.prototype.drawHud = function (hud) {
     if (f.ss === 'beamout' || f.ss === 'beamup' || f.ss === 'beamdown') lines.push('TELETRASPORTO IN CORSO…');
     if (f.ss === 'beamin' || f.ss === 'planetin') lines.push('RIMATERIALIZZAZIONE…');
   }
+  // alien crew talk in the CUSTODI language: the letters you've learned show through (web/monolith.js)
+  if (f && f.active && f.ss === 'in' && window.KageGlyph) { const near = CREW.find(c => c.d === f.deck && typeof c.who === 'string' && c.x !== undefined && Math.hypot(f.lx - c.x, f.lz - c.z) < 3.2);
+    if (near) { const KG = window.KageGlyph, ph = KG.SAYINGS[(CREW.indexOf(near) + Math.floor(this.t / 6)) % KG.SAYINGS.length]; lines.push('👽 «' + KG.say(ph) + '»'); } }
   if (this.msgT > 0) lines.push('» ' + this.msg);
   if (f && f.active && !f.ss && this.where().startsWith('badge')) lines.push(this.badge ? 'INVIO · rimetti il badge' : 'INVIO · prendi il badge della KAGE ODYSSEY');
   if (f && f.active && f.ss === 'in') { const w = this.where(); const L = { lift: 'INVIO · ascensore: scegli il ponte', chair: 'INVIO · siediti al posto del capitano', pad: 'INVIO · teletrasporto: scendi', astro: 'INVIO · cartigli dell’Astrolab: scegli il pianeta', airlock: 'INVIO · esci nello spazio (EVA)', sit: 'INVIO · siediti al tavolo', stand: 'INVIO · alzati', replic: 'INVIO · replicatore: ordina qualcosa', pod: 'INVIO · capsula di stasi: risveglia / rimetti in stasi', core: 'INVIO · console del nucleo warp: riequilibra' }[w]; if (L) lines.push(L); }

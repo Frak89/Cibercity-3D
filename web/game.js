@@ -548,6 +548,7 @@ function Game(canvas, hud, opts) {
   this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
+  this.mono = window.KageGlyphs && this.foot ? new KageGlyphs(this) : null;   // monoliths + the CUSTODI language (web/monolith.js)
   this.gear = window.KageGear && this.foot ? new KageGear(this) : null;   // jetpack + skateboard (web/gear.js)   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
 }
 /** model resolution for the KAGE GT: low / high / ultra */
@@ -610,6 +611,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.xeno) this.xeno.update(dt, inp);
   if (this.star) this.star.update(dt, inp);
   if (this.gear) this.gear.update(dt, inp);
+  if (this.mono) this.mono.update(dt);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
   const cv1 = this.xeno ? this.xeno.camera(cv0, dt) : cv0, cv = this.star ? this.star.camera(cv1, dt) : cv1;
@@ -664,7 +666,7 @@ Game.prototype.frame = function (dt, inp) {
   const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], upV);
   const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || 700;
   const Pm = perspective(fov, W / H, 0.12, far);
-  const VP = mul(Pm, V.m);
+  const VP = mul(Pm, V.m); this.VP = VP; this.Pm5 = Pm[5];
   const fogDen = pal.fogDen * (wx ? wx.fog : 1);
   const set = (pr) => {
     const u = pr.u, v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); }, f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
@@ -697,6 +699,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt, past: true });
   } else if (SPACE) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
   } else {
     gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
     gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
@@ -713,6 +716,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.gear) this.gear.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -803,6 +807,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.fleet) this.fleet.drawGarageHud(this.hud);
   if (this.xeno && !SPACE) this.xeno.drawHud(this.hud);
   if (this.star) this.star.drawHud(this.hud);
+  if (this.mono) this.mono.drawHud(this.hud);
   if (window.realSky && realSky.enabled && !SPACE && !(this.xeno && this.xeno.tt) && !(this.star && this.star.involved())) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
     if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);

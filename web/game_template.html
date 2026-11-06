@@ -64,6 +64,7 @@
 <script>/*XENO*/</script>
 <script>/*STAR*/</script>
 <script>/*GEAR*/</script>
+<script>/*MONO*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -101,10 +102,12 @@
     F.renderUI(); labels();
   } else document.getElementById('fbtn').style.display='none';
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
+  addEventListener('click',e=>{ if(!game.mono||e.target.closest('button,#fp,#joy,#glyUI,#stMenu,#stUI,#gearUI')) return; game.mono.pick(e.clientX,e.clientY); });
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
     if(game.gear&&game.gear.key(e.code)){ e.preventDefault(); return; }
     if(game.star&&game.star.key(e.code)){ e.preventDefault(); return; }
+    if(e.code==='Enter'&&game.mono&&game.mono.enter()) return;
     if(e.code==='Enter'&&game.star&&game.star.enter()) return;
     if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
@@ -155,7 +158,7 @@
     el.addEventListener('touchend',e=>{e.preventDefault(); tb[id]=false;}); }
   document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
-  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.veh&&F){ F.exitVehicle(); return; } if(game.foot) game.foot.toggle(); });
+  document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.mono&&game.mono.enter()) return; if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.veh&&F){ F.exitVehicle(); return; } if(game.foot) game.foot.toggle(); });
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg||joy.y>0.3; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk||joy.y<-0.3;
     inp.steer=Math.max(-1,Math.min(1,((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0)-joy.x*1.1));
@@ -222,7 +225,7 @@
   let prev=performance.now();
   function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
-    { const ft=game.foot, xa=(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=game.veh&&F?(F.exitInfo()&&F.exitInfo().spot?'SCENDI':''):ft?(ft.active?((ft.nearCar()||(F&&F.nearParked()))?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
+    { const ft=game.foot, xa=(game.mono?game.mono.action():'')||(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=game.veh&&F?(F.exitInfo()&&F.exitInfo().spot?'SCENDI':''):ft?(ft.active?((ft.nearCar()||(F&&F.nearParked()))?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
       const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
       const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }
