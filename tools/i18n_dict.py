@@ -586,4 +586,10 @@ PAIRS = [
 ("HAI VINTO la corsa fino a", "YOU WON the race to"), ("sfida lanciata: corsa fino a", "challenge sent: race to"), ("CORSA fino a", "RACE to"), ("vince", "winner:"), ("tu:", "you:"),
 ("IL NEXUS", "THE NEXUS"), ("IL FARO DEL PORTO", "THE HARBOUR LIGHTHOUSE"), ("IL KAGE GARAGE", "THE KAGE GARAGE"),
 
+
+# KAGE SOUND
+("Musica", "Music"), ("🎵 Musica · KAGE SOUND", "🎵 Music · KAGE SOUND"), ("Ora suona:", "Now playing:"), ("Colonna sonora originale generata dal vivo: cambia con il mondo, l’ora e il cielo vero.", "Original soundtrack generated live: it changes with the world, the time and the real sky."),
+("♫ musica accesa", "♫ music on"), ("♪ musica spenta", "♪ music off"), ("⏭ variazione", "⏭ variation"), ("🔊 suoni 3D", "🔊 3D sounds"), ("Volume", "Volume"), ("Stile", "Style"), ("✦ automatico", "✦ automatic"),
+("CITTÀ · synthwave", "CITY · synthwave"), ("NOTTE · dark drive", "NIGHT · dark drive"), ("SPAZIO · ambient", "SPACE · ambient"), ("PASSATO · prateria", "PAST · meadow"), ("ODYSSEY · a bordo", "ODYSSEY · on board"), ("WARP · curvatura", "WARP · curvature"),
+
 ]

@@ -45,7 +45,7 @@ function AmpyOS(game) {
     { id: 'story', name: 'Missioni', ic: '📜', tag: 'sim' }, { id: 'tech', name: 'KAGE TECH', ic: '🔧', tag: 'sim' }, { id: 'camera', name: 'Fotocamera', ic: '📷', dual: 'camera' }, { id: 'gallery', name: 'Galleria', ic: '🖼', tag: 'sim' },
     { id: 'map', name: 'Mappa', ic: '🗺', tag: 'sim' }, { id: 'glyphs', name: 'Custodi', ic: '𓂀', tag: 'sim' }, { id: 'device', name: 'Dispositivo', ic: '📟', dual: 'status' },
     { id: 'notif', name: 'Notifiche', ic: '🔔', dual: 'notif' }, { id: 'sensors', name: 'Sensori', ic: '🧭', dual: 'sensors' }, { id: 'torch', name: 'Torcia', ic: '🔦', dual: 'torch' },
-    { id: 'ampy', name: 'App Ampy', ic: '◈', tag: 'real' }, { id: 'obj', name: 'AmpyOBJ', ic: '◳', tag: 'real' }, { id: 'build', name: 'Costruisci', ic: '🏗', tag: 'sim' }, { id: 'net', name: 'KAGE NET', ic: '🌐', tag: 'real' }, { id: 'settings', name: 'Impostazioni', ic: '⚙', tag: 'sim' }];
+    { id: 'ampy', name: 'App Ampy', ic: '◈', tag: 'real' }, { id: 'obj', name: 'AmpyOBJ', ic: '◳', tag: 'real' }, { id: 'build', name: 'Costruisci', ic: '🏗', tag: 'sim' }, { id: 'net', name: 'KAGE NET', ic: '🌐', tag: 'real' }, { id: 'music', name: 'Musica', ic: '🎵', tag: 'sim' }, { id: 'settings', name: 'Impostazioni', ic: '⚙', tag: 'sim' }];
   this.build(); this.theme();
 }
 AmpyOS.prototype.save = function () { LS.set('ampyos', JSON.stringify(this.cfg)); };
