@@ -1154,6 +1154,10 @@ FleetAudio.prototype.update = function (kind, st, wind) {
   } else if (kind === 'galleon') {   // wind in the sails, the hull through the water, creaking timbers, the fusion assist when on
     saws(48, 200, th > 0.9 ? 0.03 : 0); noise(320 + sp * 20, 0.8, 0.04 + wind.speed * 0.003 + sp * 0.004);
     if (t > this.nextCreak) { this.nextCreak = t + 3 + Math.random() * 5; this.blip(90 + Math.random() * 60, 60, 0.35, 0.07, 'sawtooth'); }
+  } else if (kind === 'jetpack') {   // twin rocket roar: low rumble + hiss that swell with the thrust
+    saws(32 + th * 25, 220 + th * 900, 0.02 + th * 0.07); noise(600 + th * 1800, 0.5, 0.02 + th * 0.16); am = 0.02 + th * 0.03; set(this.am.frequency, 18 + th * 12);
+  } else if (kind === 'skate') {   // urethane wheels on asphalt: a rolling rumble that rises with speed (silent in the air)
+    const r = st.air ? 0 : Math.min(1, vF / 8); noise(180 + vF * 60, 1.2, r * 0.09); saws(20 + vF * 4, 90 + vF * 25, r * 0.012); am = r * 0.02; set(this.am.frequency, 7 + vF * 2);
   } else if (kind === 'starship') {   // the ship's deep reactor hum; in warp a rising harmonic whine
     const w = st.warp || 0; saws(41, 140 + th * 200, 0.035 + th * 0.03); sines(82 + w * 28, 123 + w * 42, 0.025 + (w ? 0.05 : 0), w ? 4 : 0.5, 0.3 + w * 0.2); noise(900 + w * 300, 0.7, 0.006 + (w ? 0.03 : 0));
   } else { noise(400, 1, 0.01); }
@@ -1373,7 +1377,7 @@ function buildUfoInterior(o, lod) {
   // specimen tubes (stasis pods) along the right wall
   mb.part = 'capsule_stasi';
   for (let k = 0; k < 4; k++) { const a = -PI / 2 + (k - 1.5) * 0.36, x = Math.sin(a) * (R.rIn - 1.2), z = Math.cos(a) * (R.rIn - 1.2);
-    mb.push(T(x, R.floor, z)); mb.cyl(0, 0.3, 0.75, 0.75, N(20), dark); mb.cyl(0.3, 2.5, 0.6, 0.6, N(20), glass, false); mb.cyl(0.32, 2.48, 0.56, 0.56, N(16), mat([0.4, 1, 0.75], 0.35, 3), false);
+    mb.push(T(x, R.floor, z)); mb.cyl(0, 0.3, 0.75, 0.75, N(20), dark); for (let q = 0; q < 4; q++) { const b = q / 4 * TAU + 0.4; mb.rod([Math.sin(b) * 0.62, 0.3, Math.cos(b) * 0.62], [Math.sin(b) * 0.62, 2.5, Math.cos(b) * 0.62], 0.035, 6, dark); }   // the fluid column is drawn as a glow (see-through)
     mb.cyl(2.5, 2.85, 0.75, 0.6, N(20), dark); mb.torus(0.62, 0.04, N(20), 6, L); mb.pop(); }
   // engine room grilles + conduits on the left
   mb.part = 'condotti';
@@ -1491,7 +1495,11 @@ Object.assign(KF.KINDS, {
 KF.KINDS.alien = { build: (o, lod) => root.KagePilot.build(o, lod || (o && o.lod)), opts: { species: ['grigio', 'verde', 'nordico', 'scuro'], pose: ['in piedi', 'saluto', 'indica', 'braccia conserte', 'mani sui fianchi', 'pensieroso', 'esulta', 'cammina'] },
   names: { species: { grigio: 'GRIGIO', verde: 'PICCOLO VERDE', nordico: 'NORDICO', scuro: 'OMBRA' } }, def: { species: 'grigio', pose: 'in piedi' }, rig: {}, title: 'VISITATORI', extra: true };
 Object.assign(KF.OPT_TITLES, { legs: 'CARRELLO', metal: 'METALLO', glass: 'VETRI', species: 'SPECIE', pose: 'POSA' });
-root.KageXeno = { buildUfo, buildUfoInterior, buildBeam, buildChrono, buildVortex, lathe, UFO_RIG, CHRONO_RIG, UFO_DEF, CHRONO_DEF };
+/** see-through stasis fluid: an open glowing column (drawn glow-only, additive) */
+function buildPodGlow(c) { const mb = new MB(); mb.part = 'fluido_stasi'; mb.cyl(0, 2.2, 0.58, 0.58, 28, mat(c || [0.35, 1, 0.7], 0.07, 3), false);
+  for (let k = 0; k < 40; k++) { const a = k * 2.4, r = 0.1 + (k * 37 % 40) / 100, y = (k * 53 % 220) / 100; mb.ellipsoid(Math.sin(a) * r, y, Math.cos(a) * r, 0.015, 0.015, 0.015, 4, 3, mat([0.8, 1, 0.9], 1.2, 3, 1, [0, 0, 0])); }
+  return mb.finish(); }
+root.KageXeno = { buildPodGlow, buildUfo, buildUfoInterior, buildBeam, buildChrono, buildVortex, lathe, UFO_RIG, CHRONO_RIG, UFO_DEF, CHRONO_DEF };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* KAGE ODYSSEY (KX-01): an original deep-space starship — long lens-shaped command hull, engineering hull, two warp nacelles —
@@ -2375,6 +2383,31 @@ function poseSpec(name, t, opt) {
       rot.armL = [-A * aL, 0, run ? 0.18 : 0.1]; rot.armR = [-A * aR, 0, run ? -0.18 : -0.1];
       rot.foreL = [run ? -1.15 - 0.3 * Math.max(0, aL) : -0.22 - 0.3 * Math.max(0, aL), run ? 0.3 : 0.05, 0]; rot.foreR = [run ? -1.15 - 0.3 * Math.max(0, aR) : -0.22 - 0.3 * Math.max(0, aR), run ? -0.3 : -0.05, 0];
       rot.handL = [0, -1.25, run ? 0.2 : 0]; rot.handR = [0, 1.25, run ? -0.2 : 0];
+      break; }
+    case 'stasi': {   // suspended in a stasis pod: eyes closed posture, arms loose and slightly out, toes pointing down
+      const fl = Math.sin(t * 0.5) * 0.04;
+      rot.head = [0.25 + fl, 0, 0.05]; rot.neck = [0.1, 0, 0]; rot.spine = [0.05, 0, 0];
+      rot.armL = [0.15 + fl, 0, 0.35]; rot.armR = [0.1 - fl, 0, -0.35]; rot.foreL = [-0.35, 0, 0]; rot.foreR = [-0.3, 0, 0];
+      rot.thighL = [0.08, 0, 0.06]; rot.thighR = [0.02, 0, -0.06]; rot.shinL = [0.2, 0, 0]; rot.shinR = [0.15, 0, 0]; rot.footL = [0.7, 0, 0]; rot.footR = [0.7, 0, 0];
+      break; }
+    case 'jetpack': {
+      // hanging from the jetpack: legs together, slightly bent and trailing, hands on the two grips, chin up
+      const sw = Math.sin(t * 2.2) * 0.04, fw = clamp(opt.fwd || 0, -1, 1);
+      rot.thighL = [0.12 + fw * 0.25 + sw, 0, 0.04]; rot.thighR = [0.2 + fw * 0.25 - sw, 0, -0.04]; rot.shinL = [0.35 + fw * 0.2, 0, 0]; rot.shinR = [0.45 + fw * 0.2, 0, 0];
+      rot.footL = [0.55, 0, 0]; rot.footR = [0.6, 0, 0];
+      spec.ik.handL = { t: at(0.24, 1.08, 0.18), pole: [1, -0.5, -0.6] }; spec.ik.handR = { t: at(-0.24, 1.08, 0.18), pole: [-1, -0.5, -0.6] };
+      rot.handL = [0.3, -1.2, 0]; rot.handR = [0.3, 1.2, 0]; rot.head = [-0.12 - fw * 0.15, Math.sin(t * 0.7) * 0.15, 0]; rot.spine = [fw * 0.1, 0, 0];
+      break; }
+    case 'skate': case 'skate_push': {
+      // side stance on the board (feet along the board = character z), knees bent, arms out for balance; push = the back foot kicks the ground
+      const S2 = S, deck = 0.115 * S2, push = name === 'skate_push', ph = (t * 1.6) % 1, lean = clamp(opt.lean || 0, -0.5, 0.5);
+      spec.yaw = PI / 2 * 0.82; spec.root = [0, -0.1 * S2 + deck, 0];
+      spec.ik.footL = { t: [0.02 * S2, 0.088 * S2 + deck, 0.24 * S2], pole: [-1, 0.3, 0.6], world: 0 };
+      let back = [0.02 * S2, 0.088 * S2 + deck, -0.2 * S2];
+      if (push) { const k = Math.sin(ph * TAU); back = [-0.2 * S2, 0.088 * S2 + Math.max(0, -k) * 0.1 * S2, 0.15 * S2 - (0.5 + 0.5 * k) * 0.55 * S2]; spec.root[1] -= 0.04 * S2; }
+      spec.ik.footR = { t: back, pole: [-1, 0.3, -0.6], world: 0 };
+      rot.pelvis = [0.1, 0, lean * 0.5]; rot.spine = [0.18, -0.2, lean * 0.4]; rot.chest = [0.1, -0.35, 0]; rot.neck = [0, -0.4, 0]; rot.head = [0.05, -0.55, -lean * 0.3];
+      rot.armL = [0.3, 0, 0.9 + Math.sin(t * 1.3) * 0.08]; rot.armR = [-0.2, 0, -0.75 - Math.sin(t * 1.1) * 0.08]; rot.foreL = [-0.3, 0, 0]; rot.foreR = [-0.4, 0, 0];
       break; }
     case 'salta': rot.thighL = [-0.9, 0, 0.05]; rot.thighR = [-0.4, 0, -0.05]; rot.shinL = [1.3, 0, 0]; rot.shinR = [0.9, 0, 0]; rot.armL = [-0.6, 0, 0.6]; rot.armR = [-0.6, 0, -0.6]; break;
     case 'seduto': case 'barca': {

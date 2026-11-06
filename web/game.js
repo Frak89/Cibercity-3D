@@ -547,7 +547,8 @@ function Game(canvas, hud, opts) {
   this.nexus = window.KageNexus ? new KageNexus(this) : null;   // portal to ECO (web/nexus.js)
   this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
-  this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
+  this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
+  this.gear = window.KageGear && this.foot ? new KageGear(this) : null;   // jetpack + skateboard (web/gear.js)   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
 }
 /** model resolution for the KAGE GT: low / high / ultra */
 Game.prototype.setQuality = function (q) {
@@ -608,6 +609,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.nexus) this.nexus.update(dt);
   if (this.xeno) this.xeno.update(dt, inp);
   if (this.star) this.star.update(dt, inp);
+  if (this.gear) this.gear.update(dt, inp);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
   const cv1 = this.xeno ? this.xeno.camera(cv0, dt) : cv0, cv = this.star ? this.star.camera(cv1, dt) : cv1;
@@ -691,6 +693,7 @@ Game.prototype.frame = function (dt, inp) {
     // in the past too: your vehicle, your pilot on foot and the EPOCH cabin
     if (this.fleet) this.fleet.drawPlayer({ set, camX, camZ, t, pal, dt });
     if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
+    if (this.gear) this.gear.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt, past: true });
   } else if (SPACE) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
@@ -707,6 +710,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.fleet) this.fleet.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.nexus) this.nexus.drawWorld({ set, camX, camZ, t, pal, dt });
     if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
+    if (this.gear) this.gear.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
   }
@@ -760,6 +764,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.nexus && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.xeno && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.xeno.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.star) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.star.drawAdditive({ set, camX, camZ, t, pal, dt }); }
+  if (this.gear && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.gear.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   const rainAmt = SPACE ? 0 : UNDER ? 0.55 : eco ? 0.6 : wx ? wx.rain : past ? 0 : (o.rain || 0);
   if (rainAmt > 0) {
     gl.useProgram(P.rain.p); set(P.rain); gl.uniform1f(P.rain.u.uCamZ, camZ % 84);

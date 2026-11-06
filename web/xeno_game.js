@@ -14,6 +14,7 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const CREW = [
   { sp: 'grigio', x: -1.9, z: 4.55, h: 0.3, pose: 'pensieroso' }, { sp: 'verde', x: 2.1, z: 4.5, h: -0.25, pose: 'indica', wave: true },
   { sp: 'nordico', x: -4.4, z: -0.95, h: 0, pose: 'braccia conserte' }, { sp: 'scuro', x: 5.0, z: 0.4, h: -PI / 2, pose: 'in piedi' }];
+const FMs = k => new Float32Array([k, 0, 0, 0, 0, k, 0, 0, 0, 0, k, 0, 0, 0, 0, 1]);
 const PODS = [0, 1, 2, 3].map(k => { const a = -PI / 2 + (k - 1.5) * 0.36; return [Math.sin(a) * (R.rIn - 1.2), Math.cos(a) * (R.rIn - 1.2)]; });
 const EPOCH = { x: 30, z: 27, h: -PI / 2 };            // inside the KAGE GARAGE, door facing the opening
 const PEOPLE = [{ hair: 'lunghi', hairColor: 'biondo', suit: 'rosso', beard: 'nessuna', build: 'snello' }, { hair: 'ricci', hairColor: 'nero', suit: 'blu', skin: 'scura', beard: 'corta' },
@@ -94,7 +95,7 @@ XenoGame.prototype.enter = function () {
   if (f.xs) return true;
   const pad = this.toWorld(R.lift[0], R.lift[1]);
   if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) { f.xs = 'up'; f.xp = 0; f.x0 = f.x; f.z0 = f.z; return true; }
-  if (Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6) { this.tt = { phase: 'in', t: 0 }; return true; }
+  if (f.inEp) { this.tt = { phase: 'in', t: 0 }; return true; }
   return false;
 };
 XenoGame.prototype.leaveHelm = function () {
@@ -121,9 +122,11 @@ XenoGame.prototype.footUpdate = function (f, dt, inp) {
     return true;
   }
   if (f.xs !== 'in') {
-    // the EPOCH cabin is solid from outside
-    const dx = wrapD(f.x - EPOCH.x), dz = wrapD(f.z - EPOCH.z), d = Math.hypot(dx, dz);
-    if (d < 1.45 && d > 1e-3) { f.x = wrapP(EPOCH.x + dx / d * 1.45); f.z = wrapP(EPOCH.z + dz / d * 1.45); }
+    // the EPOCH cabin: glass walls all round, you walk in and out through the door (it opens when you come close)
+    const dx = wrapD(f.x - EPOCH.x), dz = wrapD(f.z - EPOCH.z), d = Math.hypot(dx, dz) || 1e-3;
+    const doorC = (dx * Math.sin(EPOCH.h) + dz * Math.cos(EPOCH.h)) / d, through = this.epDoor > 0.7 && doorC > 0.9;
+    if (d < 1.45 && d > 0.72 && !through) { const r = f.inEp ? 0.72 : 1.45; f.x = wrapP(EPOCH.x + dx / d * r); f.z = wrapP(EPOCH.z + dz / d * r); }
+    f.inEp = Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 0.8;
     return false;
   }
   // inside: same controls as on the street, in the ship's frame
@@ -145,11 +148,15 @@ XenoGame.prototype.footUpdate = function (f, dt, inp) {
 };
 /** keep the inside camera inside the hull */
 XenoGame.prototype.footCamera = function (f, cv) {
+  if ((f.inEp || (this.tt && this.tt.phase !== 'vortex')) && !f.xs) {   // inside the EPOCH: a close camera under the dome
+    const c = this.g.c, bx = EPOCH.x - Math.sin(f.h) * 0.55, bz = EPOCH.z - Math.cos(f.h) * 0.55, ex = wrapD(bx - c.x), ez = wrapD(bz - c.z);
+    return Object.assign({}, cv, { e: [ex, 1.95, ez], l: [ex + Math.sin(f.h) * 3, 1.25, ez + Math.cos(f.h) * 3], fov: 78 }); }
   if (f.xs !== 'in' && f.xs !== 'up' && f.xs !== 'down') return cv;
   const c = this.g.c, fpx = wrapD(f.x - c.x), fpz = wrapD(f.z - c.z);
   if (f.xs === 'in') {
     const s = this.state(); let e = cv.e;
-    for (let k = 0; k < 12; k++) { const wl = this.toLocal(wrapP(c.x + e[0]), wrapP(c.z + e[2])); if (Math.hypot(wl[0], wl[1]) < R.rIn - 0.5) break;
+    const bad = e => { for (let q = 1; q <= 5; q++) { const k = q / 5, wl = this.toLocal(wrapP(c.x + fpx + (e[0] - fpx) * k), wrapP(c.z + fpz + (e[2] - fpz) * k)), r = Math.hypot(wl[0], wl[1]); if (r < R.core + 0.5 || (q === 5 && r > R.rIn - 0.5)) return true; } return false; };
+    for (let k = 0; k < 14; k++) { if (!bad(e)) break;
       e = [fpx + (e[0] - fpx) * 0.82, e[1], fpz + (e[2] - fpz) * 0.82]; }
     e[1] = Math.min(e[1], s.y + R.ceil - 0.3);
     return Object.assign({}, cv, { e, l: [cv.l[0], Math.min(cv.l[1], s.y + R.ceil - 0.5), cv.l[2]], fov: 70 });
@@ -176,6 +183,10 @@ XenoGame.prototype.drawWorld = function (ctx) {
       const waves = c.wave && inside && Math.hypot(f.lx - c.x, f.lz - c.z) < 3.5;
       F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(c.x, R.floor, c.z), U.RY(c.h))), waves ? 'saluto' : c.pose, { key: 'ufo' + c.sp }, this.person({ species: c.sp }), t + c.x);
     }
+    // stasis pods: specimens floating asleep in the green fluid (slow bob, a little turn)
+    const SLEEP = ['grigio', 'verde', { species: 'umano', hair: 'lunghi', hairColor: 'biondo', suit: 'bianco', beard: 'nessuna', build: 'snello' }, 'nordico'];
+    PODS.forEach((p, i) => { const who = SLEEP[i % SLEEP.length], cfg = typeof who === 'string' ? { species: who } : who, sc = who === 'nordico' ? 0.95 : 1, bob = Math.sin(t * 0.6 + i * 1.7) * 0.05;
+      F.drawPilotPose(ctx.set, U.mul(Ms, U.mul(U.T(p[0], R.floor + 0.42 + bob, p[1]), U.mul(U.RY(Math.atan2(-p[0], -p[1]) + Math.sin(t * 0.2 + i) * 0.2), FMs(sc)))), 'stasi', {}, this.person(cfg), t + i); });
     gl.useProgram(P.p); ctx.set(P); }
   // whatever is going up the beam
   for (const it of this.items) {
@@ -184,7 +195,8 @@ XenoGame.prototype.drawWorld = function (ctx) {
   }
   // KAGE EPOCH (only in the garage of either era)
   const T = this.tt;
-  if (Math.hypot(wrapD(EPOCH.x - ctx.camX), wrapD(EPOCH.z - ctx.camZ)) < 300) F.drawModel(this.epoch, { x: EPOCH.x, y: 0, z: EPOCH.z, h: EPOCH.h, rot: t * (T ? 4 + T.t * 3 : 0.35) }, ctx);
+  { const f = g.foot, nearE = f && f.active && Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6; this.epDoor = (this.epDoor || 0) + (((nearE && !T) ? 1 : 0) - (this.epDoor || 0)) * Math.min(1, (ctx.dt || 0.016) * 3); }
+  if (Math.hypot(wrapD(EPOCH.x - ctx.camX), wrapD(EPOCH.z - ctx.camZ)) < 300) F.drawModel(this.epoch, { x: EPOCH.x, y: 0, z: EPOCH.z, h: EPOCH.h, rot: t * (T ? 4 + T.t * 3 : 0.35), hv: [this.epDoor || 0] }, ctx);
   // the vortex itself (glow shading, but opaque, so it hides the world)
   if (T && T.phase === 'vortex') {
     const cv = g.cv, fx = cv.l[0] - cv.e[0], fz = cv.l[2] - cv.e[2], hd = Math.atan2(fx, fz), d = T.t * 85 + 6;
@@ -194,6 +206,11 @@ XenoGame.prototype.drawWorld = function (ctx) {
   }
 };
 XenoGame.prototype.drawAdditive = function (ctx) {
+  { const g = this.g, gl = this.gl, s0 = this.state(), near = Math.hypot(wrapD(s0.x - ctx.camX), wrapD(s0.z - ctx.camZ));
+    if (near < 60 && this.g.fleet) { const P = g.P.veh, u = P.u; gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uGlowOnly, 1); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uRotA, ctx.t * 0.6);
+      this.podG = this.podG || g.vmesh(KX.buildPodGlow()); const Ms = this.shipM(ctx);
+      for (const p of PODS) { gl.uniformMatrix4fv(u.uModel, false, U.mul(Ms, U.T(p[0], R.floor + 0.3, p[1]))); g.draw(P, this.podG); }
+      gl.uniform1f(u.uGlowOnly, 0); } }
   if (this.beamA < 0.02 || !this.g.fleet) return;
   const g = this.g, gl = this.gl, P = g.P.veh, u = P.u, s = this.state();
   gl.useProgram(P.p); ctx.set(P);
@@ -217,7 +234,8 @@ XenoGame.prototype.drawHud = function (hud) {
     else {
       const pad = this.toWorld(R.lift[0], R.lift[1]);
       if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) line = 'INVIO · fatti prelevare dal raggio';
-      else if (Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6) line = 'INVIO · KAGE EPOCH: viaggia nel tempo';
+      else if (f.inEp) line = 'INVIO · KAGE EPOCH: viaggia nel tempo';
+      else if (Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 3) line = 'KAGE EPOCH · entra dalla porta';
       else if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 16) line = 'KAGE XENO · mettiti sotto il raggio';
     }
   }
@@ -240,7 +258,7 @@ XenoGame.prototype.action = function () {
   if (f.xs) return '';
   const pad = this.toWorld(R.lift[0], R.lift[1]);
   if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) return 'RAGGIO';
-  if (Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6) return 'TEMPO';
+  if (f.inEp) return 'TEMPO';
   return '';
 };
 /* ---------------- OnFoot extension ---------------- */

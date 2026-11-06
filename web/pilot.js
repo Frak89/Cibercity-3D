@@ -564,6 +564,31 @@ function poseSpec(name, t, opt) {
       rot.foreL = [run ? -1.15 - 0.3 * Math.max(0, aL) : -0.22 - 0.3 * Math.max(0, aL), run ? 0.3 : 0.05, 0]; rot.foreR = [run ? -1.15 - 0.3 * Math.max(0, aR) : -0.22 - 0.3 * Math.max(0, aR), run ? -0.3 : -0.05, 0];
       rot.handL = [0, -1.25, run ? 0.2 : 0]; rot.handR = [0, 1.25, run ? -0.2 : 0];
       break; }
+    case 'stasi': {   // suspended in a stasis pod: eyes closed posture, arms loose and slightly out, toes pointing down
+      const fl = Math.sin(t * 0.5) * 0.04;
+      rot.head = [0.25 + fl, 0, 0.05]; rot.neck = [0.1, 0, 0]; rot.spine = [0.05, 0, 0];
+      rot.armL = [0.15 + fl, 0, 0.35]; rot.armR = [0.1 - fl, 0, -0.35]; rot.foreL = [-0.35, 0, 0]; rot.foreR = [-0.3, 0, 0];
+      rot.thighL = [0.08, 0, 0.06]; rot.thighR = [0.02, 0, -0.06]; rot.shinL = [0.2, 0, 0]; rot.shinR = [0.15, 0, 0]; rot.footL = [0.7, 0, 0]; rot.footR = [0.7, 0, 0];
+      break; }
+    case 'jetpack': {
+      // hanging from the jetpack: legs together, slightly bent and trailing, hands on the two grips, chin up
+      const sw = Math.sin(t * 2.2) * 0.04, fw = clamp(opt.fwd || 0, -1, 1);
+      rot.thighL = [0.12 + fw * 0.25 + sw, 0, 0.04]; rot.thighR = [0.2 + fw * 0.25 - sw, 0, -0.04]; rot.shinL = [0.35 + fw * 0.2, 0, 0]; rot.shinR = [0.45 + fw * 0.2, 0, 0];
+      rot.footL = [0.55, 0, 0]; rot.footR = [0.6, 0, 0];
+      spec.ik.handL = { t: at(0.24, 1.08, 0.18), pole: [1, -0.5, -0.6] }; spec.ik.handR = { t: at(-0.24, 1.08, 0.18), pole: [-1, -0.5, -0.6] };
+      rot.handL = [0.3, -1.2, 0]; rot.handR = [0.3, 1.2, 0]; rot.head = [-0.12 - fw * 0.15, Math.sin(t * 0.7) * 0.15, 0]; rot.spine = [fw * 0.1, 0, 0];
+      break; }
+    case 'skate': case 'skate_push': {
+      // side stance on the board (feet along the board = character z), knees bent, arms out for balance; push = the back foot kicks the ground
+      const S2 = S, deck = 0.115 * S2, push = name === 'skate_push', ph = (t * 1.6) % 1, lean = clamp(opt.lean || 0, -0.5, 0.5);
+      spec.yaw = PI / 2 * 0.82; spec.root = [0, -0.1 * S2 + deck, 0];
+      spec.ik.footL = { t: [0.02 * S2, 0.088 * S2 + deck, 0.24 * S2], pole: [-1, 0.3, 0.6], world: 0 };
+      let back = [0.02 * S2, 0.088 * S2 + deck, -0.2 * S2];
+      if (push) { const k = Math.sin(ph * TAU); back = [-0.2 * S2, 0.088 * S2 + Math.max(0, -k) * 0.1 * S2, 0.15 * S2 - (0.5 + 0.5 * k) * 0.55 * S2]; spec.root[1] -= 0.04 * S2; }
+      spec.ik.footR = { t: back, pole: [-1, 0.3, -0.6], world: 0 };
+      rot.pelvis = [0.1, 0, lean * 0.5]; rot.spine = [0.18, -0.2, lean * 0.4]; rot.chest = [0.1, -0.35, 0]; rot.neck = [0, -0.4, 0]; rot.head = [0.05, -0.55, -lean * 0.3];
+      rot.armL = [0.3, 0, 0.9 + Math.sin(t * 1.3) * 0.08]; rot.armR = [-0.2, 0, -0.75 - Math.sin(t * 1.1) * 0.08]; rot.foreL = [-0.3, 0, 0]; rot.foreR = [-0.4, 0, 0];
+      break; }
     case 'salta': rot.thighL = [-0.9, 0, 0.05]; rot.thighR = [-0.4, 0, -0.05]; rot.shinL = [1.3, 0, 0]; rot.shinR = [0.9, 0, 0]; rot.armL = [-0.6, 0, 0.6]; rot.armR = [-0.6, 0, -0.6]; break;
     case 'seduto': case 'barca': {
       // seat geometry in vehicle-local coordinates relative to the seat origin (x = 0 on the seat centre line)

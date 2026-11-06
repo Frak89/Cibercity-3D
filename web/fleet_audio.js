@@ -67,6 +67,10 @@ FleetAudio.prototype.update = function (kind, st, wind) {
   } else if (kind === 'galleon') {   // wind in the sails, the hull through the water, creaking timbers, the fusion assist when on
     saws(48, 200, th > 0.9 ? 0.03 : 0); noise(320 + sp * 20, 0.8, 0.04 + wind.speed * 0.003 + sp * 0.004);
     if (t > this.nextCreak) { this.nextCreak = t + 3 + Math.random() * 5; this.blip(90 + Math.random() * 60, 60, 0.35, 0.07, 'sawtooth'); }
+  } else if (kind === 'jetpack') {   // twin rocket roar: low rumble + hiss that swell with the thrust
+    saws(32 + th * 25, 220 + th * 900, 0.02 + th * 0.07); noise(600 + th * 1800, 0.5, 0.02 + th * 0.16); am = 0.02 + th * 0.03; set(this.am.frequency, 18 + th * 12);
+  } else if (kind === 'skate') {   // urethane wheels on asphalt: a rolling rumble that rises with speed (silent in the air)
+    const r = st.air ? 0 : Math.min(1, vF / 8); noise(180 + vF * 60, 1.2, r * 0.09); saws(20 + vF * 4, 90 + vF * 25, r * 0.012); am = r * 0.02; set(this.am.frequency, 7 + vF * 2);
   } else if (kind === 'starship') {   // the ship's deep reactor hum; in warp a rising harmonic whine
     const w = st.warp || 0; saws(41, 140 + th * 200, 0.035 + th * 0.03); sines(82 + w * 28, 123 + w * 42, 0.025 + (w ? 0.05 : 0), w ? 4 : 0.5, 0.3 + w * 0.2); noise(900 + w * 300, 0.7, 0.006 + (w ? 0.03 : 0));
   } else { noise(400, 1, 0.01); }

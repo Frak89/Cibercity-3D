@@ -134,7 +134,7 @@ function buildUfoInterior(o, lod) {
   // specimen tubes (stasis pods) along the right wall
   mb.part = 'capsule_stasi';
   for (let k = 0; k < 4; k++) { const a = -PI / 2 + (k - 1.5) * 0.36, x = Math.sin(a) * (R.rIn - 1.2), z = Math.cos(a) * (R.rIn - 1.2);
-    mb.push(T(x, R.floor, z)); mb.cyl(0, 0.3, 0.75, 0.75, N(20), dark); mb.cyl(0.3, 2.5, 0.6, 0.6, N(20), glass, false); mb.cyl(0.32, 2.48, 0.56, 0.56, N(16), mat([0.4, 1, 0.75], 0.35, 3), false);
+    mb.push(T(x, R.floor, z)); mb.cyl(0, 0.3, 0.75, 0.75, N(20), dark); for (let q = 0; q < 4; q++) { const b = q / 4 * TAU + 0.4; mb.rod([Math.sin(b) * 0.62, 0.3, Math.cos(b) * 0.62], [Math.sin(b) * 0.62, 2.5, Math.cos(b) * 0.62], 0.035, 6, dark); }   // the fluid column is drawn as a glow (see-through)
     mb.cyl(2.5, 2.85, 0.75, 0.6, N(20), dark); mb.torus(0.62, 0.04, N(20), 6, L); mb.pop(); }
   // engine room grilles + conduits on the left
   mb.part = 'condotti';
@@ -252,5 +252,9 @@ Object.assign(KF.KINDS, {
 KF.KINDS.alien = { build: (o, lod) => root.KagePilot.build(o, lod || (o && o.lod)), opts: { species: ['grigio', 'verde', 'nordico', 'scuro'], pose: ['in piedi', 'saluto', 'indica', 'braccia conserte', 'mani sui fianchi', 'pensieroso', 'esulta', 'cammina'] },
   names: { species: { grigio: 'GRIGIO', verde: 'PICCOLO VERDE', nordico: 'NORDICO', scuro: 'OMBRA' } }, def: { species: 'grigio', pose: 'in piedi' }, rig: {}, title: 'VISITATORI', extra: true };
 Object.assign(KF.OPT_TITLES, { legs: 'CARRELLO', metal: 'METALLO', glass: 'VETRI', species: 'SPECIE', pose: 'POSA' });
-root.KageXeno = { buildUfo, buildUfoInterior, buildBeam, buildChrono, buildVortex, lathe, UFO_RIG, CHRONO_RIG, UFO_DEF, CHRONO_DEF };
+/** see-through stasis fluid: an open glowing column (drawn glow-only, additive) */
+function buildPodGlow(c) { const mb = new MB(); mb.part = 'fluido_stasi'; mb.cyl(0, 2.2, 0.58, 0.58, 28, mat(c || [0.35, 1, 0.7], 0.07, 3), false);
+  for (let k = 0; k < 40; k++) { const a = k * 2.4, r = 0.1 + (k * 37 % 40) / 100, y = (k * 53 % 220) / 100; mb.ellipsoid(Math.sin(a) * r, y, Math.cos(a) * r, 0.015, 0.015, 0.015, 4, 3, mat([0.8, 1, 0.9], 1.2, 3, 1, [0, 0, 0])); }
+  return mb.finish(); }
+root.KageXeno = { buildPodGlow, buildUfo, buildUfoInterior, buildBeam, buildChrono, buildVortex, lathe, UFO_RIG, CHRONO_RIG, UFO_DEF, CHRONO_DEF };
 })(typeof window !== 'undefined' ? window : globalThis);

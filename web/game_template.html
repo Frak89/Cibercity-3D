@@ -63,6 +63,7 @@
 <script>/*ONFOOT*/</script>
 <script>/*XENO*/</script>
 <script>/*STAR*/</script>
+<script>/*GEAR*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -102,6 +103,7 @@
   addEventListener('pointerdown',snd); addEventListener('touchstart',snd);
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
+    if(game.gear&&game.gear.key(e.code)){ e.preventDefault(); return; }
     if(game.star&&game.star.key(e.code)){ e.preventDefault(); return; }
     if(e.code==='Enter'&&game.star&&game.star.enter()) return;
     if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
@@ -193,7 +195,8 @@
   // test mode: scripted driving then a single frame
   if(ap&&q.has('shot')){ const T=parseFloat(q.get('t')||'3'); let s; for(let i=0;i<T*30;i++){ s=ap.step(game.c,1/30,null); NeonRun.stepCar(game.c,s,1/30,game.city); game.cam.h=game.c.h; }
     game.view=parseInt(q.get('view')||'0'); game.frame(1/30,s); window.__ap={x:game.c.x,z:game.c.z,h:game.c.h,v:Math.hypot(game.c.vx,game.c.vz),dir:ap.dir}; window.__done=true; return; }
-  if(q.has('shot')&&q.has('foot')&&game.foot){ const T=parseFloat(q.get('t')||'2'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); game.foot.toggle();
+  if(q.has('shot')&&q.has('foot')&&game.foot){ const T=parseFloat(q.get('t')||'2'), vi=JSON.parse(q.get('vin')||'{"fwd":1}'); game.foot.toggle(); game.foot.trans=null; game.foot.y=0;
+    if(q.get('gear')){ game.foot.gear=q.get('gear'); game.foot.gv=0; }
     { const sq=q.get('star'), Y=game.star, f=game.foot; if(sq&&Y){ Y.badge=true; const s=Y.ship;
         if(sq==='in'){ f.ss='in'; f.deck=parseInt(q.get('deck')||'1'); const p=(q.get('xl')||'0,12').split(',').map(Number); f.lx=p[0]; f.lz=p[1]; f.lh=parseFloat(q.get('xh')||'0'); f.v=0; Y.syncFoot(f); Y.greetT=5; }
         else if(sq==='helm'){ f.ss='helm'; f.deck=0; f.lx=0; f.lz=11.6; if(q.get('w')==='space'){ Y.toSpace(); s.loc=q.get('loc')||'terra'; } if(q.get('warp')){ s.course=q.get('warp'); if(q.get('wi')) s.warpI=+q.get('wi'); Y.engage(); } if(q.get('cmd')==='takeoff') Y.takeoff(); if(q.get('cmd')==='land') Y.land(); }
