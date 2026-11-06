@@ -575,4 +575,15 @@ PAIRS = [
 ("in piedi", "standing"), ("saluto", "wave"), ("esulta", "cheer"), ("braccia conserte", "arms crossed"), ("indica", "point"), ("mani sui fianchi", "hands on hips"), ("pensieroso", "thinking"),
 
 ("programma salvato:", "program saved:"), ("regole QUANDO attive (partono da sole)", "QUANDO rules active (they start by themselves)"), ("programmi in esecuzione", "programs running"), ("troppi passi: il programma non finisce mai?", "too many steps: does the program never end?"), ("manca FINE (blocco", "missing FINE (block"), ("FINE senza blocco", "FINE without a block"), ("ALTRIMENTI senza SE", "ALTRIMENTI without SE"), ("QUANDO va scritto fuori dai blocchi", "QUANDO must be outside other blocks"), ("riga", "line"),
+
+# KAGE NET
+("🌐 KAGE NET · multigiocatore locale", "🌐 KAGE NET · local multiplayer"), ("● attivo", "● on"), ("○ spento", "○ off"), ("Wi-Fi locale", "local Wi-Fi"), ("schede del browser", "browser tabs"),
+("Stessa rete Wi-Fi, nessun server: vi vedete nella stessa Cybercity, sulla ODYSSEY e sui pianeti.", "Same Wi-Fi network, no server: you see each other in the same Cybercity, on the ODYSSEY and on the planets."),
+("⏻ spegni", "⏻ turn off"), ("⏻ accendi KAGE NET", "⏻ turn on KAGE NET"), ("Il tuo nome", "Your name"), ("Piloti in rete", "Pilots on the network"), ("in KAGE GT", "in the KAGE GT"), ("sulla KAGE ODYSSEY · ponte", "on the KAGE ODYSSEY · deck"), ("sul pianeta", "on the planet"),
+("nessuno ancora. Accendi KAGE NET anche sull’altro telefono.", "nobody yet. Turn KAGE NET on on the other phone too."), ("Messaggi rapidi", "Quick messages"), ("🏁 lancia una sfida di corsa", "🏁 challenge to a race"), ("accendi prima KAGE NET", "turn KAGE NET on first"),
+("👋 Ciao!", "👋 Hi!"), ("🚀 Saliamo sulla ODYSSEY?", "🚀 Shall we board the ODYSSEY?"), ("🏁 Gara?", "🏁 Race?"), ("📸 Foto di gruppo!", "📸 Group photo!"), ("👀 Seguimi", "👀 Follow me"), ("🆘 Aiuto!", "🆘 Help!"), ("✨ Grande!", "✨ Great!"),
+("KAGE NET attivo", "KAGE NET on"), ("è entrato in Cybercity", "joined Cybercity"), ("è uscito", "left"), ("non risponde", "isn't responding"), ("ti sfida: corsa fino a", "challenges you: race to"), ("ha vinto la corsa!", "won the race!"),
+("HAI VINTO la corsa fino a", "YOU WON the race to"), ("sfida lanciata: corsa fino a", "challenge sent: race to"), ("CORSA fino a", "RACE to"), ("vince", "winner:"), ("tu:", "you:"),
+("IL NEXUS", "THE NEXUS"), ("IL FARO DEL PORTO", "THE HARBOUR LIGHTHOUSE"), ("IL KAGE GARAGE", "THE KAGE GARAGE"),
+
 ]

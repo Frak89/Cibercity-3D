@@ -550,6 +550,7 @@ function Game(canvas, hud, opts) {
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
   this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
   this.post = [];
+  this.net = window.KageNet && this.foot ? new KageNet(this) : null;   // KAGE NET local multiplayer (web/net.js)
   this.photo = window.KagePhoto && this.foot ? new KagePhoto(this) : null;   // AmpyCam photo mode (web/photo.js)
   this.editor = window.KageEditor && this.foot ? new KageEditor(this) : null;   // KAGE BUILD city decorations (web/editor.js)
   this.story = window.KageStory && this.foot ? new KageStory(this) : null;   // the campaign (web/story.js)
@@ -622,6 +623,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.tech) this.tech.update(dt);
   if (this.story) this.story.update(dt);
   if (this.editor) this.editor.update(dt);
+  if (this.net) this.net.update(dt);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
   const cv1 = this.xeno ? this.xeno.camera(cv0, dt) : cv0, cv = this.star ? this.star.camera(cv1, dt) : cv1;
@@ -708,10 +710,12 @@ Game.prototype.frame = function (dt, inp) {
     if (this.gear) this.gear.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt, past: true });
     if (this.story) this.story.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.net) this.net.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
   } else if (SPACE) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.net) this.net.drawWorld({ set, camX, camZ, t, pal, dt });
   } else {
     gl.useProgram(P.ground.p); set(P.ground); this.draw(P.ground, this.M.ground);
     gl.useProgram(P.building.p); set(P.building); for (const m of this.M.chunks) this.draw(P.building, m);
@@ -731,6 +735,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.editor) this.editor.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.net) this.net.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.story) this.story.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
@@ -751,6 +756,7 @@ Game.prototype.frame = function (dt, inp) {
     { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
     gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35 + (this.dayK || 0) * 0.75); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
+    if (this.net) this.net.drawCars({ camX, camZ, dt, hdState });
     if (this.fleet && this.view !== 3 && !FOOT) { this.fleet.drawPilot(set, carM, 'car'); gl.useProgram(P.hd.p); set(P.hd); }
   } else if (cv.drawCar && !this.hd) {
     gl.useProgram(P.solid.p); set(P.solid);
@@ -827,6 +833,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.tech) this.tech.drawHud(this.hud);
   if (this.story) this.story.drawHud(this.hud);
   if (this.editor) this.editor.drawHud(this.hud);
+  if (this.net) this.net.drawHud(this.hud);
   if (window.realSky && realSky.enabled && !SPACE && !(this.xeno && this.xeno.tt) && !(this.star && this.star.involved())) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
     if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);

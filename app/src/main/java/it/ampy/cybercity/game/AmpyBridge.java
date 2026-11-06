@@ -172,6 +172,41 @@ public class AmpyBridge {
         try { Object[] o = outs.remove(h); if (o == null) return ""; ((OutputStream) o[0]).close(); return (String) o[1]; } catch (Exception e) { return ""; }
     }
 
+    /* ---- KAGE NET: small UDP broadcasts on the local Wi-Fi (no server). netStart → bool, netSend(json), netPoll → [{ip, m}] ---- */
+    private java.net.DatagramSocket sock; private Thread rx; private android.net.wifi.WifiManager.MulticastLock mlock; private int netPort;
+    private final java.util.concurrent.ConcurrentLinkedQueue<String[]> inbox = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    @JavascriptInterface public synchronized boolean netStart(int port) {
+        if (sock != null) return true;
+        try {
+            netPort = port; sock = new java.net.DatagramSocket(null); sock.setReuseAddress(true); sock.setBroadcast(true); sock.bind(new java.net.InetSocketAddress(port));
+            android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager) act.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (wm != null) { mlock = wm.createMulticastLock("kage-net"); mlock.setReferenceCounted(false); mlock.acquire(); }
+            final java.net.DatagramSocket s = sock;
+            rx = new Thread(() -> { byte[] buf = new byte[8192]; while (!s.isClosed()) { try { java.net.DatagramPacket p = new java.net.DatagramPacket(buf, buf.length); s.receive(p);
+                if (inbox.size() < 400) inbox.add(new String[] { p.getAddress().getHostAddress(), new String(p.getData(), 0, p.getLength(), java.nio.charset.StandardCharsets.UTF_8) }); } catch (Exception e) { if (s.isClosed()) break; } } }, "kage-net");
+            rx.setDaemon(true); rx.start(); return true;
+        } catch (Exception e) { netStop(); return false; }
+    }
+    @JavascriptInterface public void netSend(String json) {
+        java.net.DatagramSocket s = sock; if (s == null) return;
+        try {
+            byte[] b = json.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            java.util.Enumeration<java.net.NetworkInterface> it = java.net.NetworkInterface.getNetworkInterfaces(); boolean sent = false;
+            while (it != null && it.hasMoreElements()) { java.net.NetworkInterface ni = it.nextElement(); if (!ni.isUp() || ni.isLoopback()) continue;
+                for (java.net.InterfaceAddress ia : ni.getInterfaceAddresses()) { java.net.InetAddress bc = ia.getBroadcast(); if (bc == null) continue; s.send(new java.net.DatagramPacket(b, b.length, bc, netPort)); sent = true; } }
+            if (!sent) s.send(new java.net.DatagramPacket(b, b.length, java.net.InetAddress.getByName("255.255.255.255"), netPort));
+        } catch (Exception ignored) { }
+    }
+    @JavascriptInterface public String netPoll() {
+        JSONArray a = new JSONArray(); String[] q; int n = 0;
+        while ((q = inbox.poll()) != null && n++ < 200) { try { JSONObject o = new JSONObject(); o.put("ip", q[0]); o.put("m", q[1]); a.put(o); } catch (Exception ignored) { } }
+        return a.toString();
+    }
+    @JavascriptInterface public synchronized void netStop() {
+        try { if (sock != null) sock.close(); } catch (Exception ignored) { } sock = null; inbox.clear();
+        try { if (mlock != null && mlock.isHeld()) mlock.release(); } catch (Exception ignored) { } mlock = null;
+    }
+
     /** the real torch (no camera permission needed) */
     @JavascriptInterface public boolean torch(boolean on) {
         try {
