@@ -47,6 +47,14 @@ async function unzip(buf) {
   return out;
 }
 
+/** a zip to the phone (Download/Cybercity, Android app) or the browser's downloads → where it went */
+async function saveZip(z, fn) {
+  const B = window.AmpyBridge;
+  if (B && B.fileBegin) { const u = new Uint8Array(await z.arrayBuffer()), h = B.fileBegin(fn, 'application/zip'); if (!h) throw new Error('impossibile creare il file');
+    for (let i = 0; i < u.length; i += 393216) { let s = ''; const ch = u.subarray(i, i + 393216); for (let j = 0; j < ch.length; j += 32768) s += String.fromCharCode.apply(null, ch.subarray(j, j + 32768)); B.fileChunk(h, btoa(s)); }
+    const w = B.fileEnd(h); if (!w) throw new Error('salvataggio non riuscito'); return w; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); return 'download del browser';
+}
 /* ===================== EXPORT: game mesh → OBJ + MTL + palette texture ===================== */
 const SLOT = ['base', 'vernice', 'accento', 'led', 'vetro', 'membrana', 'pelle', 'capelli'];
 const MODE = ['', 'rotore_orario', 'rotore_antiorario', 'elica', 'vela', 'bandiera', 'disco_rotore', 'luce_lampeggiante'];
@@ -323,11 +331,7 @@ function install(OS) {
       return; }
     if (k === 'objexp') { const c = this.objCat[+v], log = this.view().querySelector('#objlog'); if (!c) return; log.innerHTML = '<small>costruzione di ' + esc(c[1]) + ' in ULTRA…</small>';
       setTimeout(async () => { try { const m = c[2](), r = await exportMesh(m, c[0], c[1]), z = zip(r.files), fn = c[0] + '_ultra.zip';
-          let where = ''; const B = window.AmpyBridge;
-          if (B && B.fileBegin) { const u = new Uint8Array(await z.arrayBuffer()), h = B.fileBegin(fn, 'application/zip'); if (!h) throw new Error('impossibile creare il file');
-            for (let i = 0; i < u.length; i += 393216) { let s = ''; const ch = u.subarray(i, i + 393216); for (let j = 0; j < ch.length; j += 32768) s += String.fromCharCode.apply(null, ch.subarray(j, j + 32768)); B.fileChunk(h, btoa(s)); }
-            where = B.fileEnd(h); if (!where) throw new Error('salvataggio non riuscito'); }
-          else { const a = document.createElement('a'); a.href = URL.createObjectURL(z); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); where = 'download del browser'; }
+          const where = await saveZip(z, fn);
           log.innerHTML = '✓ <b>' + esc(fn) + '</b> · ' + r.parts + ' parti · ' + r.tris.toLocaleString('it-IT') + ' triangoli · ' + r.mats + ' materiali · ' + (z.size / 1048576).toFixed(1) + ' MB<br><small>salvato in ' + esc(where) + '</small>'; this.vib(25);
           window.__lastExport = { name: fn, size: z.size, parts: r.parts }; }
         catch (er) { log.innerHTML = '✖ ' + esc(er.message); } }, 30); return; }
@@ -336,5 +340,5 @@ function install(OS) {
   const ap = OS.prototype; const i0 = ap.constructor; void i0;
 }
 if (window.AmpyOS) install(window.AmpyOS);
-window.KageAmpyObj = AmpyObj; window.AmpyObjLib = { zip, unzip, exportMesh, parseObj, parseMtl, catalogue, recordFrom, load };
+window.KageAmpyObj = AmpyObj; window.AmpyObjLib = { saveZip, zip, unzip, exportMesh, parseObj, parseMtl, catalogue, recordFrom, load };
 })();

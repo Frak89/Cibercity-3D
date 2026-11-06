@@ -561,4 +561,12 @@ PAIRS = [
 ("🌱 SEME DEI CUSTODI RACCOLTO", "🌱 SEED OF THE CUSTODIANS COLLECTED"), ("🌱 il seme dei Custodi è con te", "🌱 the seed of the Custodians is with you"), ("tocca o premi INVIO per continuare", "tap or press ENTER to continue"),
 ("✦ Campagna completata", "✦ Campaign completed"), ("Capitolo", "Chapter"), ("📡 riascolta VEGA", "📡 replay VEGA"), ("↺ ricomincia la campagna", "↺ restart the campaign"), ("bloccato", "locked"), ("Tocca di nuovo per ricominciare da capo", "Tap again to start over"), ("◆ OBIETTIVO", "◆ OBJECTIVE"),
 
+
+# KAGE BUILD
+("Costruisci", "Build"), ("🏗 Costruisci · KAGE BUILD", "🏗 Build · KAGE BUILD"), ("Decora Cybercity", "Decorate Cybercity"), ("Scegli un pezzo: il tablet si chiude e lo piazzi davanti a te (griglia 0,5 m, rotazione 15°). Pezzi tuoi in città:", "Pick a piece: the tablet closes and you place it in front of you (0.5 m grid, 15° turns). Your pieces in the city:"), ("Testo", "Text"), ("Colore", "Colour"), ("Pezzi", "Pieces"), ("Asset importati (AmpyOBJ)", "Imported assets (AmpyOBJ)"), ("Modelli del gioco", "Game models"), ("La tua scena", "Your scene"),
+("⬆ esporta la scena (OBJ + MTL + texture)", "⬆ export the scene (OBJ + MTL + textures)"), ("🗑 svuota tutto", "🗑 clear everything"), ("Tocca di nuovo per svuotare la scena", "Tap again to clear the scene"), ("nessun pezzo da esportare", "no pieces to export"), ("esportazione…", "exporting…"),
+("Insegna al neon", "Neon sign"), ("Lampione", "Street lamp"), ("Albero cyber", "Cyber tree"), ("Panchina", "Bench"), ("Fioriera", "Planter"), ("Cassa", "Crate"), ("Barriera", "Barrier"), ("Ologramma", "Hologram"), ("Cono stradale", "Traffic cone"), ("Monolite inciso", "Carved monolith"),
+("MODALITÀ COSTRUZIONE", "BUILD MODE"), ("piazzato", "placed"), ("pezzi", "pieces"), ("nessun pezzo vicino", "no piece nearby"), ("rimosso", "removed"), ("preso:", "picked up:"), ("griglia 0,5 m", "0.5 m grid"), ("scala", "scale"), ("quota", "height"),
+("✔ PIAZZA", "✔ PLACE"), ("✋ PRENDI", "✋ PICK UP"), ("# GRIGLIA", "# GRID"), ("✕ FINE", "✕ DONE"), ("lo trovi davanti a te: spostalo da AmpyOBJ", "it's in front of you: move it from AmpyOBJ"),
+
 ]
