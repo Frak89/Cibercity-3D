@@ -206,11 +206,12 @@ AmpyOS.prototype.app_camera = function () {
   const real = this.real('camera');
   const b = this.frame('📷 Fotocamera · ' + (real ? 'REALE' : 'SIMULATA'), '', '<button class="btn" data-act="cammode">' + (real ? 'passa al gioco' : 'passa al telefono') + '</button>');
   b.style.padding = '0';
-  b.innerHTML = (real ? '<video autoplay playsinline muted></video>' : '<canvas class="prev"></canvas>') + '<div class="camtools">' + (real ? '<button class="btn" data-act="flip">⟲ fronte/retro</button>' : '<span class="btn">trascina per girarti</span>') + '</div><button class="shut" data-act="shoot"></button><div class="flash"></div>';
+  b.innerHTML = (real ? '<video autoplay playsinline muted></video>' : '<canvas class="prev"></canvas>') + '<div class="camtools">' + (real ? '<button class="btn" data-act="flip">⟲ fronte/retro</button>' : '<button class="btn" data-act="camfx">🎞 ' + ((window.AmpyCamFX && window.AmpyCamFX.FILTERS[this.camFx || 'naturale'].name) || 'filtro') + '</button><button class="btn" data-act="photomode">📸 MODALITÀ FOTO</button>') + '</div><button class="shut" data-act="shoot"></button><div class="flash"></div>';
   if (real) this.startCam(b.querySelector('video'));
   else { const cv = b.querySelector('canvas'), gc = this.g.canvas || document.getElementById('c'), hud = document.getElementById('hud');
-    this.liveCam = true; const tick = () => { if (!this.liveCam) return; requestAnimationFrame(() => { if (!this.liveCam) return; const w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w) { cv.width = w; cv.height = h; }
-      const c2 = cv.getContext('2d'), sw = gc.width, sh = gc.height, k = Math.max(w / sw, h / sh); try { c2.drawImage(gc, (w - sw * k) / 2, (h - sh * k) / 2, sw * k, sh * k); } catch (e) { } tick(); }); }; tick();
+    this.liveCam = true; void gc; void hud; const FX = window.AmpyCamFX, tick = src => { if (!this.liveCam || this.app !== 'camera') { const i = this.g.post.indexOf(tick); if (i >= 0) this.g.post.splice(i, 1); return; } const w = cv.clientWidth, h = cv.clientHeight; if (!w) return; if (cv.width !== w) { cv.width = w; cv.height = h; }
+      const c2 = cv.getContext('2d'); if (FX) FX.render(c2, src, w, h, this.camFx || 'naturale', performance.now() / 1000); else { const k = Math.max(w / src.width, h / src.height); c2.drawImage(src, (w - src.width * k) / 2, (h - src.height * k) / 2, src.width * k, src.height * k); } };
+    if (this.g.post) this.g.post.push(tick);
     let dx0 = null; cv.addEventListener('pointerdown', e => { dx0 = e.clientX; cv.setPointerCapture(e.pointerId); });
     cv.addEventListener('pointermove', e => { if (dx0 === null) return; const f = this.g.foot, d = (e.clientX - dx0) * 0.006; dx0 = e.clientX; if (f) { f.h -= d; if (f.camH !== undefined) f.camH -= d; } });
     cv.addEventListener('pointerup', () => { dx0 = null; }); }
@@ -230,11 +231,14 @@ AmpyOS.prototype.shoot = function () {
       this.toast(saved ? 'Foto salvata nel gioco e in ' + saved : 'Foto salvata nella Galleria del gioco'); }); };
   if (this.real('camera')) { const v = b.querySelector('video'); if (!v || !v.videoWidth) { this.toast('fotocamera non pronta'); return; }
     const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; const x = c.getContext('2d'); if (this.facing === 'user') { x.translate(c.width, 0); x.scale(-1, 1); } x.drawImage(v, 0, 0); done(c.toDataURL('image/jpeg', 0.9), 'telefono'); }
-  else { const gc = this.g.canvas || document.getElementById('c'), hud = document.getElementById('hud');
-    requestAnimationFrame(() => requestAnimationFrame(() => { const c = document.createElement('canvas'); c.width = gc.width; c.height = gc.height; const x = c.getContext('2d'); try { x.drawImage(gc, 0, 0); if (hud) x.drawImage(hud, 0, 0, c.width, c.height); } catch (e) { }
+  else { const g = this.g, FX = window.AmpyCamFX, once = gc => { g.post.splice(g.post.indexOf(once), 1); const c = document.createElement('canvas'); c.width = gc.width; c.height = gc.height; const x = c.getContext('2d');
+      try { if (FX) FX.render(x, gc, c.width, c.height, this.camFx || 'naturale', 0); else x.drawImage(gc, 0, 0); } catch (e) { }
       x.font = 'bold ' + Math.round(c.height * 0.025) + 'px monospace'; x.fillStyle = 'rgba(255,255,255,.75)'; x.fillText('CYBERCITY 3D · ' + this.where() + ' · ' + new Date().toLocaleString('it-IT'), c.height * 0.03, c.height * 0.96);
-      done(c.toDataURL('image/jpeg', 0.9), 'gioco'); })); }
+      done(c.toDataURL('image/jpeg', 0.9), 'gioco'); }; g.post.push(once); }
 };
+/** a finished photo (data URL) into the Gallery and, if chosen, Pictures/Cybercity */
+AmpyOS.prototype.savePhoto = function (url, src) { const p = { id: Date.now(), t: new Date().toISOString(), src: src || 'gioco', where: this.where(), url };
+  return DB.put(p).then(() => { const B = BR(); return this.cfg.savePhone && B ? B.saveImage(url, 'cybercity_' + p.id) : ''; }); };
 AmpyOS.prototype.toast = function (t) { const d = document.createElement('div'); d.className = 'card'; d.style.cssText = 'position:absolute;left:50%;bottom:9vmin;transform:translateX(-50%);z-index:9;max-width:80%;box-shadow:0 0 2vmin rgba(0,0,0,.6)'; d.textContent = t;
   this.root.querySelector('.scr').appendChild(d); setTimeout(() => d.remove(), 2600); };
 
@@ -355,6 +359,8 @@ AmpyOS.prototype.act = function (a, el) {
   const [k, v, w] = a.split(':');
   if (k === 'shoot') this.shoot();
   else if (k === 'flip') { this.facing = this.facing === 'user' ? 'environment' : 'user'; this.launch('camera'); }
+  else if (k === 'camfx') { const K = Object.keys(window.AmpyCamFX.FILTERS); this.camFx = K[(K.indexOf(this.camFx || 'naturale') + 1) % K.length]; this.launch('camera'); }
+  else if (k === 'photomode') { this.close(); setTimeout(() => { if (this.g.photo) this.g.photo.begin(); }, 3000); }
   else if (k === 'cammode') { this.cfg.mode.camera = this.real('camera') ? 'sim' : 'real'; this.save(); this.launch('camera'); }
   else if (k === 'mode') { this.cfg.mode[v] = this.real(v) ? 'sim' : 'real'; this.save(); this.launch(this.app); }
   else if (k === 'set') { this.cfg.mode[v] = w; this.save(); if (v === 'torch') this.setTorch(false); this.launch('settings'); }

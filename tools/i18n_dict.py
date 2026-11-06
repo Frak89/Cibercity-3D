@@ -569,4 +569,9 @@ PAIRS = [
 ("MODALITÀ COSTRUZIONE", "BUILD MODE"), ("piazzato", "placed"), ("pezzi", "pieces"), ("nessun pezzo vicino", "no piece nearby"), ("rimosso", "removed"), ("preso:", "picked up:"), ("griglia 0,5 m", "0.5 m grid"), ("scala", "scale"), ("quota", "height"),
 ("✔ PIAZZA", "✔ PLACE"), ("✋ PRENDI", "✋ PICK UP"), ("# GRIGLIA", "# GRID"), ("✕ FINE", "✕ DONE"), ("lo trovi davanti a te: spostalo da AmpyOBJ", "it's in front of you: move it from AmpyOBJ"),
 
+
+# AmpyCam
+("📸 MODALITÀ FOTO", "📸 PHOTO MODE"), ("Naturale", "Natural"), ("Infrarosso", "Infrared"), ("Pellicola", "Film"), ("🎞 Naturale", "🎞 Natural"), ("📸 AmpyCam · trascina per girare · due dita / rotella per avvicinarti", "📸 AmpyCam · drag to orbit · two fingers / wheel to get closer"),
+("in piedi", "standing"), ("saluto", "wave"), ("esulta", "cheer"), ("braccia conserte", "arms crossed"), ("indica", "point"), ("mani sui fianchi", "hands on hips"), ("pensieroso", "thinking"),
+
 ]

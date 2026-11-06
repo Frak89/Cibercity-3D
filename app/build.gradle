@@ -8,8 +8,8 @@ android {
         applicationId 'it.ampy.cybercity'
         minSdk 26
         targetSdk 36
-        versionCode 33
-        versionName '3.15.0'
+        versionCode 34
+        versionName '3.16.0'
     }
     // Stable signing only through GitHub Actions secrets. Never commit a keystore.
     if (System.getenv('CYBERCITY_KEYSTORE_PATH') != null) {

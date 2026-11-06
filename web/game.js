@@ -549,6 +549,8 @@ function Game(canvas, hud, opts) {
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
   this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
+  this.post = [];
+  this.photo = window.KagePhoto && this.foot ? new KagePhoto(this) : null;   // AmpyCam photo mode (web/photo.js)
   this.editor = window.KageEditor && this.foot ? new KageEditor(this) : null;   // KAGE BUILD city decorations (web/editor.js)
   this.story = window.KageStory && this.foot ? new KageStory(this) : null;   // the campaign (web/story.js)
   this.ampyobj = window.KageAmpyObj ? new KageAmpyObj(this) : null;   // imported OBJ assets placed in the world (web/ampyobj.js)   // AmpybiOS tablet shell (web/ampyos.js)
@@ -828,6 +830,8 @@ Game.prototype.frame = function (dt, inp) {
   if (window.realSky && realSky.enabled && !SPACE && !(this.xeno && this.xeno.tt) && !(this.star && this.star.involved())) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
     if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);
+  // readers of the finished frame (photo preview / capture): the drawing buffer is only valid right now
+  if (this.post && this.post.length) for (const fn of this.post.slice()) { try { fn(this.canvas); } catch (e) { } }
 };
 
 /* ===================================================================== HUD (2D canvas) */

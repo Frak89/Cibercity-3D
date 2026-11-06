@@ -70,6 +70,7 @@
 <script>/*AOBJ*/</script>
 <script>/*STORY*/</script>
 <script>/*EDIT*/</script>
+<script>/*PHOTO*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -110,6 +111,7 @@
   addEventListener('click',e=>{ if(!game.mono||e.target.closest('button,#fp,#joy,#glyUI,#stMenu,#stUI,#gearUI')) return; game.mono.pick(e.clientX,e.clientY); });
   addEventListener('keydown',e=>{ keys[e.code]=true; snd();
     if(e.code==='KeyN'&&game.nexus) game.nexus.dial();
+    if(game.photo&&game.photo.key(e.code)){ e.preventDefault(); return; }
     if(game.editor&&game.editor.keyDown(e.code)){ e.preventDefault(); return; }
     if(game.tech&&game.tech.key(e.code)){ e.preventDefault(); return; }
     if(game.gear&&game.gear.key(e.code)){ e.preventDefault(); return; }
