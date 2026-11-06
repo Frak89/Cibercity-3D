@@ -73,6 +73,7 @@
 <script>/*PHOTO*/</script>
 <script>/*NET*/</script>
 <script>/*MUSIC*/</script>
+<script>/*POWER*/</script>
 <script>
 (function(){
   const q=new URLSearchParams(location.search);
@@ -91,8 +92,8 @@
   if(q.has('nexus')&&game.nexus){ game.nexus.active=Nexus0(); game.nexus.st='open'; game.nexus.portal=1; game.nexus.locks=8; }
   function Nexus0(){ return KageNexus.RINGS[0]; }
   if(q.has('view')) game.view=parseInt(q.get('view'));
-  function resize(){ const s=Math.min(window.devicePixelRatio||1,2); cv.width=hud.width=Math.round(innerWidth*s); cv.height=hud.height=Math.round(innerHeight*s); }
-  addEventListener('resize',resize); resize();
+  function resize(){ const s=Math.min(window.devicePixelRatio||1,2)*(window.__kageScale||1); cv.width=hud.width=Math.round(innerWidth*s); cv.height=hud.height=Math.round(innerHeight*s); }
+  addEventListener('resize',resize); resize(); window.__kageResize=resize;
   const inp={gas:false,brake:false,steer:0,hand:false,boost:false};
   const keys={};
   const snd=()=>{ if(game.audio) game.audio.start(); if(game.fleet) game.fleet.audio.start(); };
@@ -234,7 +235,7 @@
     game.frame(1/30,{gas:true,brake:q.has('brake'),steer:steer,hand:false,boost:false}); window.__done=true; return;
   }
   let prev=performance.now();
-  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now;
+  function loop(now){ if(game.power&&!game.power.tick(now)){ requestAnimationFrame(loop); return; } const dt=Math.min(0.05,(now-prev)/1000); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
     { const ft=game.foot, xa=(game.mono?game.mono.action():'')||(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=game.veh&&F?(F.exitInfo()&&F.exitInfo().spot?'SCENDI':''):ft?(ft.active?((ft.nearCar()||(F&&F.nearParked()))?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }

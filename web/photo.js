@@ -105,7 +105,7 @@ Photo.prototype.buildUI = function () {
   pv.addEventListener('wheel', e => { e.preventDefault(); this.cam.d = Math.max(0.8, Math.min(40, this.cam.d * (e.deltaY > 0 ? 1.1 : 0.9))); }, { passive: false });
   // live filtered preview (drawn over the game canvas)
   const live = ui.querySelector('canvas.live'), loop = gc => { if (!this.on) return; const w = Math.round(innerWidth * 0.5), h = Math.round(innerHeight * 0.5);
-    if (live.width !== w) { live.width = w; live.height = h; } if (this.filter === 'naturale') { live.style.display = 'none'; return; } live.style.display = ''; render(live.getContext('2d'), gc, w, h, this.filter, performance.now() / 1000); };
+    if (live.width !== w) { live.width = w; live.height = h; } if (this.filter === 'naturale' || (this.g.power && !this.g.power.cfg().live)) { live.style.display = 'none'; return; } live.style.display = ''; render(live.getContext('2d'), gc, w, h, this.filter, performance.now() / 1000); };
   this.g.post.push(loop);
 };
 Photo.prototype.sync = function () { const q = s => this.ui.querySelector(s);

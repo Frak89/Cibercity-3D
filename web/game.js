@@ -550,6 +550,7 @@ function Game(canvas, hud, opts) {
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
   this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
   this.post = [];
+  this.power = window.KagePower && !opts.preserve ? new KagePower(this) : null;   // KAGE POWER battery-aware quality (web/power.js)
   this.music = window.KageMusic ? new KageMusic(this) : null;   // KAGE SOUND soundtrack + 3D sounds (web/music.js)
   this.net = window.KageNet && this.foot ? new KageNet(this) : null;   // KAGE NET local multiplayer (web/net.js)
   this.photo = window.KagePhoto && this.foot ? new KagePhoto(this) : null;   // AmpyCam photo mode (web/photo.js)
@@ -678,13 +679,13 @@ Game.prototype.frame = function (dt, inp) {
     let Rr = [F0[1] * 0 - F0[2] * 1, F0[2] * 0 - F0[0] * 0, F0[0] * 1 - F0[1] * 0]; const rl = Math.hypot(Rr[0], Rr[1], Rr[2]) || 1; Rr = Rr.map(v => v / rl);
     const cr = Math.cos(cv.roll), sr = Math.sin(cv.roll); upV = [upV[0] * cr + Rr[0] * sr, upV[1] * cr + Rr[1] * sr, upV[2] * cr + Rr[2] * sr]; }
   const V = lookAt(eye, [cv.l[0] - cv.e[0], cv.l[1], cv.l[2] - cv.e[2]], upV);
-  const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || 700;
+  const fov = cv.fov * Math.PI / 180, far = (this.star && this.star.far) || Math.round(700 * (this.power ? this.power.cfg().far : 1));
   const Pm = perspective(fov, W / H, 0.12, far);
   const VP = mul(Pm, V.m); this.VP = VP; this.Pm5 = Pm[5];
   const fogDen = pal.fogDen * (wx ? wx.fog : 1);
   const set = (pr) => {
     const u = pr.u, v3 = (n, a) => { if (u[n]) gl.uniform3fv(u[n], a); }, f1 = (n, a) => { if (u[n]) gl.uniform1f(u[n], a); };
-    f1('uTime', t % 3600); f1('uL', S); f1('uFar', far > 700 ? far * 0.92 : 620); f1('uZOff', 0.5); f1('uCamX', camX); f1('uWrapX', S); f1('uCamZ', camZ);
+    f1('uTime', t % 3600); f1('uL', S); f1('uFar', far > 700 ? far * 0.92 : Math.min(620, far * 0.89)); f1('uZOff', 0.5); f1('uCamX', camX); f1('uWrapX', S); f1('uCamZ', camZ);
     f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW); f1('uGlitch', eco ? 1 : 0);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
@@ -794,7 +795,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.star) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.star.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.gear && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.gear.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   // warp-field lensing: copy the frame and re-draw it bent around the ship (only while the KAGE ODYSSEY is in curvature)
-  if (this.star && P.lens) { const li = this.star.lens({ camX, camZ }); if (li) {
+  if (this.star && P.lens && !(this.power && !this.power.cfg().lens)) { const li = this.star.lens({ camX, camZ }); if (li) {
     let cx = 0.5, cy = 0.47, R = 0.3, k = li.k * 0.3;
     if (!li.inside) { const v = [li.p[0], li.p[1], li.p[2], 1], q = [0, 0, 0, 0]; for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) q[i] += VP[j * 4 + i] * v[j];
       if (q[3] > 1) { cx = 0.5 + 0.5 * q[0] / q[3]; cy = 0.5 + 0.5 * q[1] / q[3]; R = Math.min(0.9, li.r * Pm[5] / q[3] * 0.5); k = li.k; } }

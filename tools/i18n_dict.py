@@ -592,4 +592,11 @@ PAIRS = [
 ("♫ musica accesa", "♫ music on"), ("♪ musica spenta", "♪ music off"), ("⏭ variazione", "⏭ variation"), ("🔊 suoni 3D", "🔊 3D sounds"), ("Volume", "Volume"), ("Stile", "Style"), ("✦ automatico", "✦ automatic"),
 ("CITTÀ · synthwave", "CITY · synthwave"), ("NOTTE · dark drive", "NIGHT · dark drive"), ("SPAZIO · ambient", "SPACE · ambient"), ("PASSATO · prateria", "PAST · meadow"), ("ODYSSEY · a bordo", "ODYSSEY · on board"), ("WARP · curvatura", "WARP · curvature"),
 
+
+# KAGE POWER
+("Energia", "Power"), ("⚡ Energia · KAGE POWER", "⚡ Power · KAGE POWER"), ("Ora:", "Now:"), ("risoluzione", "resolution"), ("fps max · misurati", "fps max · measured"), ("Batteria", "Battery"), ("risparmio Android", "Android power saver"), ("temperatura", "temperature"),
+("normale", "normal"), ("tiepido", "warm"), ("calda", "hot"), ("alta", "high"), ("critica", "critical"), ("Modalità", "Mode"), ("✦ AUTOMATICA · segue la batteria vera", "✦ AUTOMATIC · follows the real battery"), ("🔥 PIENA", "🔥 FULL"), ("⚖ BILANCIATA", "⚖ BALANCED"), ("🔋 RISPARMIO", "🔋 SAVER"),
+("RISPARMIO: risoluzione 60%, 30 fps, niente distorsione warp né filtro foto dal vivo, vista più corta.", "SAVER: 60% resolution, 30 fps, no warp distortion or live photo filter, shorter view."),
+("modalità", "mode"), ("PIENA", "FULL"), ("BILANCIATA", "BALANCED"), ("RISPARMIO", "SAVER"), ("il telefono si sta scaldando", "the phone is getting hot"), ("risparmio energetico di Android", "Android power saver"), ("batteria al", "battery at"), ("telefono tiepido", "phone is warm"), ("scelta manuale", "manual choice"),
+
 ]
