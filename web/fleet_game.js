@@ -625,7 +625,7 @@ FleetGame.prototype.drawPlayer = function (ctx) {
   const gl = this.gl, P = this.g.P.veh, u = P.u;
   gl.useProgram(P.p); ctx.set(P); gl.uniform1f(u.uTraffic, 0); gl.uniform1f(u.uScale, 1); gl.uniform3f(u.uTint, -1, 0, 0); gl.uniform1f(u.uLit, 1); gl.uniform1f(u.uDay, this.g.dayK || 0); gl.uniform1f(u.uGlowOnly, 0);
   const ease2 = (st, m, tgt) => { if (!m.hinges || !m.hinges.length) return; st.hv = st.hv || []; for (let i = 0; i < m.hinges.length; i++) { const t = typeof tgt === 'function' ? tgt(m.hinges[i].name) : tgt; st.hv[i] = (st.hv[i] || 0) + (t - (st.hv[i] || 0)) * Math.min(1, (ctx.dt || 0.016) * 2.5); } };
-  if (this.parked) { const P = this.parked; ease2(P.st, P.model, n => /CAVALLETTO|TETTUCCIO|CABINA|CUPOLA|RAMPA/.test(n) ? 1 : 0); this.drawModel(P.model, P.st, ctx); }
+  if (this.parked) { const P = this.parked; ease2(P.st, P.model, n => P.ovr && P.ovr[n] !== undefined ? P.ovr[n] : /CAVALLETTO|TETTUCCIO|CABINA|CUPOLA|RAMPA/.test(n) ? 1 : 0); this.drawModel(P.model, P.st, ctx); }
   if (this.kind && this.st && this.pm) { const st = this.st, k = this.kind;
     ease2(st, this.pm, n => (/CARRELLO/.test(n) && st.y > 3) || (/PATTINO/.test(n) && st.y > 2.5) ? 1 : /GIMBAL/.test(n) ? clamp(0.3 + (st.pitch || 0), 0, 1) : /PORTELLI/.test(n) ? ((st.cool || 0) > 2 ? 1 : 0) : 0); }
   if (this.kind && this.cv && this.cv.drawCar) {

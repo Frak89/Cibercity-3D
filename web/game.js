@@ -548,6 +548,7 @@ function Game(canvas, hud, opts) {
   this.foot = window.KageOnFoot ? new KageOnFoot(this) : null;   // walk around as your pilot (web/onfoot.js)
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
+  this.tech = window.KageTech && this.foot ? new KageTech(this) : null;   // technician's tablet (web/tech.js)
   this.mono = window.KageGlyphs && this.foot ? new KageGlyphs(this) : null;   // monoliths + the CUSTODI language (web/monolith.js)
   this.gear = window.KageGear && this.foot ? new KageGear(this) : null;   // jetpack + skateboard (web/gear.js)   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
 }
@@ -612,6 +613,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.star) this.star.update(dt, inp);
   if (this.gear) this.gear.update(dt, inp);
   if (this.mono) this.mono.update(dt);
+  if (this.tech) this.tech.update(dt);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
   const cv1 = this.xeno ? this.xeno.camera(cv0, dt) : cv0, cv = this.star ? this.star.camera(cv1, dt) : cv1;
@@ -674,7 +676,7 @@ Game.prototype.frame = function (dt, inp) {
     f1('uFogDen', fogDen); f1('uFlash', this.flash); f1('uPitch', GP); f1('uRoad', RW); f1('uGlitch', eco ? 1 : 0);
     v3('uFog', pal.fog); v3('uSkyTop', pal.top); v3('uWinA', pal.winA); v3('uWinB', pal.winB); v3('uWinC', pal.winC);
     v3('uNeonA', pal.neonA); v3('uNeonB', pal.neonB); v3('uEye', eye);
-    if (u.uHL) { const fx = Math.sin(c.h), fz = Math.cos(c.h); gl.uniform4f(u.uHL, carRel[0] + fx * 2.3, carRel[2] + fz * 2.3, fx, fz); f1('uHLOn', VEH ? 0 : past ? 0.35 : 1); }
+    if (u.uHL) { const fx = Math.sin(c.h), fz = Math.cos(c.h); gl.uniform4f(u.uHL, carRel[0] + fx * 2.3, carRel[2] + fz * 2.3, fx, fz); f1('uHLOn', VEH ? 0 : (past ? 0.35 : 1) * (this.techHL === undefined ? 1 : this.techHL)); }
     if (u.uHarbor) gl.uniform4f(u.uHarbor, HARBOR.x0, HARBOR.z0, HARBOR.x1, HARBOR.z1);
     if (u.uVP) gl.uniformMatrix4fv(u.uVP, false, VP); if (u.uV) gl.uniformMatrix4fv(u.uV, false, V.m); if (u.uP) gl.uniformMatrix4fv(u.uP, false, Pm);
   };
@@ -726,7 +728,8 @@ Game.prototype.frame = function (dt, inp) {
   this.roof = (this.roof || 0) + Math.max(-dt / 5, Math.min(dt / 5, (o.roof ? 1 : 0) - (this.roof || 0)));
   this.chronoPh = (this.chronoPh || 0) + dt * (1 + this.tj.charge * 14);
   this.doorT = Math.max(0, (this.doorT || 0) - dt); const doorK = this.doorT > 0 ? Math.sin(Math.min(1, (1.8 - this.doorT) / 1.8) * Math.PI) : 0;
-  const hdState = { hood: 0, doorL: doorK, doorR: 0, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
+  this.techDoorK = (this.techDoorK || 0) + ((this.techDoor || 0) - (this.techDoorK || 0)) * Math.min(1, dt * 2.5); this.techHoodK = (this.techHoodK || 0) + ((this.techHood || 0) - (this.techHoodK || 0)) * Math.min(1, dt * 2.5);
+  const hdState = { hood: this.techHoodK, doorL: Math.max(doorK, this.techDoorK), doorR: this.techDoorK, wheelSteer: c.steer * 0.5, steerWheel: c.steer * 2.6, spin: c.spin, roof: this.roof, power: o.power || 'v8', time: t,
     exhaust: o.exhaust || 'serie', chrono: !!o.chrono, chronoPh: this.chronoPh, fly: fsm,
     kit: this.car.kit, rim: this.car.rim, livery: this.car.livery, text: this.car.text, hand: (this.handK = (this.handK || 0) + ((inp.hand ? 1 : 0) - (this.handK || 0)) * Math.min(1, dt * 12)) };
   if (VEH) { /* the player's vehicle is drawn by the fleet */ }
@@ -808,6 +811,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.xeno && !SPACE) this.xeno.drawHud(this.hud);
   if (this.star) this.star.drawHud(this.hud);
   if (this.mono) this.mono.drawHud(this.hud);
+  if (this.tech) this.tech.drawHud(this.hud);
   if (window.realSky && realSky.enabled && !SPACE && !(this.xeno && this.xeno.tt) && !(this.star && this.star.involved())) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
     if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);

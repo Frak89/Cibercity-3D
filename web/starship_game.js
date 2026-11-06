@@ -107,7 +107,7 @@ Star.prototype.update = function (dt, inp) {
   // the crew on the move
   for (const c of CREW) if (c.path) { c.ph = (c.ph || Math.random() * 10) + dt * (c.dwell ? 0.05 : 0.08); }
   this.wake = this.wake && this.wake.t > 0 ? (this.wake.t -= dt, this.wake) : null; this.repT = Math.max(0, (this.repT || 0) - dt); this.boostT = Math.max(0, (this.boostT || 0) - dt);
-  { const f2 = this.foot(), nearLift = f2 && f2.ss === 'in' && Math.hypot(f2.lx, f2.lz - KS.LIFT_Z) < 3 && !(f2.rideT > 0); this.liftK = ease(this.liftK || 0, nearLift ? 1 : 0, 6, dt); }
+  { const f2 = this.foot(), nearLift = f2 && f2.ss === 'in' && Math.hypot(f2.lx, f2.lz - KS.LIFT_Z) < 3 && !(f2.rideT > 0); this.liftK = ease(this.liftK || 0, this.techLift !== undefined && !(f2 && f2.rideT > 0) ? this.techLift : nearLift ? 1 : 0, 6, dt); }
   // audio
   if (this.au && this.au.ctx) { {
     this.au.on = this.aboard() || (f && f.ss === 'eva'); this.au.update(this.au.on ? 'starship' : null, { thrust: s.mode === 'warp' ? 1 : Math.abs(s.imp), vx: 0, vz: 0, warp: s.mode === 'warp' ? KS.WARP_STEPS[s.warpI] : 0 }); } }

@@ -52,7 +52,7 @@ XenoGame.prototype.update = function (dt, inp) {
   const pad = this.toWorld(R.lift[0], R.lift[1]);
   const nearFoot = f && f.active && !f.xs && Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 16;
   const want = fly ? !!s.beam : (this.items.length > 0 || nearFoot || (f && (f.xs === 'up' || f.xs === 'down')));
-  this.beamA = ease(this.beamA, want ? 1 : 0, 4, dt);
+  this.beamA = ease(this.beamA, (this.techBeam !== undefined && !fly ? this.techBeam : want) ? 1 : 0, 4, dt);
   if (!fly) { this.ambT -= dt; if (this.ambT <= 0 && !this.items.length) { this.ambT = 18 + Math.random() * 16; this.spawn(pad); } }
   else if (s.beam && !this.items.length && s.y < 90 && s.y > 3) this.spawn(pad);
   for (const it of this.items) { it.x = pad[0]; it.z = pad[1]; it.y += dt * (2.2 + it.y * 0.06); it.h += dt * 1.4; it.top = s.y + R.emitY; }
@@ -195,7 +195,7 @@ XenoGame.prototype.drawWorld = function (ctx) {
   }
   // KAGE EPOCH (only in the garage of either era)
   const T = this.tt;
-  { const f = g.foot, nearE = f && f.active && Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6; this.epDoor = (this.epDoor || 0) + (((nearE && !T) ? 1 : 0) - (this.epDoor || 0)) * Math.min(1, (ctx.dt || 0.016) * 3); }
+  { const f = g.foot, nearE = f && f.active && Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 2.6; this.epDoor = (this.epDoor || 0) + ((this.techEp !== undefined && !T ? this.techEp : (nearE && !T) ? 1 : 0) - (this.epDoor || 0)) * Math.min(1, (ctx.dt || 0.016) * 3); }
   if (Math.hypot(wrapD(EPOCH.x - ctx.camX), wrapD(EPOCH.z - ctx.camZ)) < 300) F.drawModel(this.epoch, { x: EPOCH.x, y: 0, z: EPOCH.z, h: EPOCH.h, rot: t * (T ? 4 + T.t * 3 : 0.35), hv: [this.epDoor || 0] }, ctx);
   // the vortex itself (glow shading, but opaque, so it hides the world)
   if (T && T.phase === 'vortex') {
