@@ -151,6 +151,27 @@ public class AmpyBridge {
         } catch (Exception e) { return ""; }
     }
 
+    /** big files from the page (AmpyOBJ exports) in base64 chunks → Download/Cybercity. fileBegin → handle, fileChunk, fileEnd → path */
+    private final java.util.HashMap<String, Object[]> outs = new java.util.HashMap<>();
+    @JavascriptInterface public String fileBegin(String name, String mime) {
+        try {
+            String fn = name.replaceAll("[^A-Za-z0-9_.-]", "_"), h = String.valueOf(System.nanoTime());
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues cv = new ContentValues(); cv.put(MediaStore.Downloads.DISPLAY_NAME, fn); cv.put(MediaStore.Downloads.MIME_TYPE, mime);
+                cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Cybercity");
+                Uri u = act.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv); if (u == null) return "";
+                outs.put(h, new Object[] { act.getContentResolver().openOutputStream(u), "Download/Cybercity/" + fn });
+            } else { File dir = act.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS); if (dir == null) return ""; File f = new File(dir, fn); outs.put(h, new Object[] { new FileOutputStream(f), f.getAbsolutePath() }); }
+            return h;
+        } catch (Exception e) { return ""; }
+    }
+    @JavascriptInterface public boolean fileChunk(String h, String b64) {
+        try { Object[] o = outs.get(h); if (o == null) return false; ((OutputStream) o[0]).write(Base64.decode(b64, Base64.DEFAULT)); return true; } catch (Exception e) { return false; }
+    }
+    @JavascriptInterface public String fileEnd(String h) {
+        try { Object[] o = outs.remove(h); if (o == null) return ""; ((OutputStream) o[0]).close(); return (String) o[1]; } catch (Exception e) { return ""; }
+    }
+
     /** the real torch (no camera permission needed) */
     @JavascriptInterface public boolean torch(boolean on) {
         try {

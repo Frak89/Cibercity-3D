@@ -22,6 +22,17 @@ import it.ampy.cybercity.Prefs;
 public class TrackActivity extends Activity {
     private WebView web;
     private android.webkit.PermissionRequest pendingCam;
+    private android.webkit.ValueCallback<Uri[]> pendingFiles;
+    @Override protected void onActivityResult(int code, int res, android.content.Intent data) {
+        super.onActivityResult(code, res, data);
+        if (code != 78 || pendingFiles == null) return;
+        Uri[] out = null;
+        if (res == RESULT_OK && data != null) {
+            if (data.getClipData() != null) { int n = data.getClipData().getItemCount(); out = new Uri[n]; for (int i = 0; i < n; i++) out[i] = data.getClipData().getItemAt(i).getUri(); }
+            else if (data.getData() != null) out = new Uri[] { data.getData() };
+        }
+        pendingFiles.onReceiveValue(out); pendingFiles = null;
+    }
     @Override public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
         super.onRequestPermissionsResult(code, perms, res);
         if (code == 77 && pendingCam != null) { if (res.length > 0 && res[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) pendingCam.grant(new String[] { android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE }); else pendingCam.deny(); pendingCam = null; }
@@ -41,6 +52,14 @@ public class TrackActivity extends Activity {
         web.addJavascriptInterface(new AmpyBridge(this), "AmpyBridge");   // the in-game AmpybiOS tablet's link to the real phone
         web.setWebChromeClient(new WebChromeClient() {
             // the real camera for the tablet (getUserMedia): ask Android for CAMERA the first time, then grant the page
+            // <input type=file> (AmpyOBJ import): the Android picker, several files at once
+            @Override public boolean onShowFileChooser(WebView v, android.webkit.ValueCallback<Uri[]> cb, FileChooserParams p) {
+                if (pendingFiles != null) pendingFiles.onReceiveValue(null);
+                pendingFiles = cb;
+                android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).addCategory(android.content.Intent.CATEGORY_OPENABLE).setType("*/*").putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true);
+                try { startActivityForResult(i, 78); } catch (Exception e) { pendingFiles = null; return false; }
+                return true;
+            }
             @Override public void onPermissionRequest(final android.webkit.PermissionRequest req) {
                 runOnUiThread(() -> {
                     boolean video = false; for (String r : req.getResources()) if (android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) video = true;

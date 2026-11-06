@@ -549,6 +549,7 @@ function Game(canvas, hud, opts) {
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
   this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
+  this.ampyobj = window.KageAmpyObj ? new KageAmpyObj(this) : null;   // imported OBJ assets placed in the world (web/ampyobj.js)   // AmpybiOS tablet shell (web/ampyos.js)
   this.tech = window.KageTech && this.foot ? new KageTech(this) : null;   // technician's tablet (web/tech.js)
   this.mono = window.KageGlyphs && this.foot ? new KageGlyphs(this) : null;   // monoliths + the CUSTODI language (web/monolith.js)
   this.gear = window.KageGear && this.foot ? new KageGear(this) : null;   // jetpack + skateboard (web/gear.js)   // KAGE ODYSSEY starship, space, planets (web/starship_game.js)
@@ -700,6 +701,7 @@ Game.prototype.frame = function (dt, inp) {
     if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
     if (this.gear) this.gear.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt, past: true });
+    if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
   } else if (SPACE) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
@@ -720,6 +722,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
