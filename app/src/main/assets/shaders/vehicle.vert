@@ -64,7 +64,8 @@ void main(){
     } else if (mode < 0.5 && aAnim.w > 9.5) {    // animated part #(w - 10): door, hatch, canopy, landing leg…
         int hi = int(aAnim.w - 9.5); vec4 HP = vec4(0.0), HA = vec4(0.0, 1.0, 0.0, 0.0);
         for (int k = 0; k < 6; k++) { if (k == hi) { HP = uHP[k]; HA = uHA[k]; } }
-        if (HA.w < 0.5) { vec3 ax = normalize(HA.xyz); p = rotAx(p - HP.xyz, ax, HP.w) + HP.xyz; n = rotAx(n, ax, HP.w); }
+        if (dot(HA.xyz, HA.xyz) < 1e-6 || abs(HP.w) < 1e-5) { }   // not animated / uniforms not set (traffic copies)
+        else if (HA.w < 0.5) { vec3 ax = normalize(HA.xyz); p = rotAx(p - HP.xyz, ax, HP.w) + HP.xyz; n = rotAx(n, ax, HP.w); }
         else p += HA.xyz * HP.w;
     } else if (mode < 0.5 && aAnim.w > 1.5 && aAnim.w < 2.5) {   // steered part: yaw about (x, z) = (a, b)
         p.xz = rot2(p.xz - aAnim.yz, -uSteer) + aAnim.yz; n.xz = rot2(n.xz, -uSteer);
