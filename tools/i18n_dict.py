@@ -164,7 +164,7 @@ PAIRS = [
 
 ("PORTALE APERTO · attraversalo per tornare a casa", "PORTAL OPEN · cross it to go home"),
 ("PORTALE APERTO · attraversalo per entrare in ECO", "PORTAL OPEN · cross it to enter ECO"),
-("KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"),
+("KAGE NEXUS · premi N per comporre l'indirizzo", "KAGE NEXUS · press N to dial the address"), ("KAGE NEXUS · tocca NEXUS per comporre l'indirizzo", "KAGE NEXUS · tap NEXUS to dial the address"), ("SU", "UP"),
 ("COMPOSIZIONE INDIRIZZO · BLOCCO", "DIALLING ADDRESS · LOCK"),
 ("ECO · UNIVERSO PARALLELO", "ECO · PARALLEL UNIVERSE"),
 ("🌀 VAI AL PORTALE (N = componi)", "🌀 GO TO THE PORTAL (N = dial)"),
@@ -608,4 +608,5 @@ PAIRS = [
 ("Torcia: schermo o flash vero.", "Torch: screen or real flash."), ("Apri le tue app AmpyXXX installate.", "Open your installed AmpyXXX apps."), ("Importa ed esporta modelli OBJ.", "Import and export OBJ models."), ("Decora Cybercity con insegne, luci, alberi e modelli.", "Decorate Cybercity with signs, lights, trees and models."),
 ("Multigiocatore sulla stessa Wi-Fi.", "Multiplayer on the same Wi-Fi."), ("Colonna sonora e suoni 3D.", "Soundtrack and 3D sounds."), ("Batteria e prestazioni.", "Battery and performance."), ("Tema, funzioni simulate o reali, foto.", "Theme, simulated or real functions, photos."),
 
+("A PIEDI · joystick: muoviti (in fondo = corri) · trascina sullo schermo per girare la visuale · SALTA · AZIONE vicino all'auto", "ON FOOT · joystick: move (all the way = run) · drag on the screen to turn the view · JUMP · ACTION near the car"),
 ]

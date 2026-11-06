@@ -88,7 +88,7 @@ Story.prototype.reset = function () { this.st = { ch: 0, done: {}, base: {}, fla
 /* ---------------- VEGA on the radio ---------------- */
 Story.prototype.buildUI = function () {
   const st = document.createElement('style');
-  st.textContent = '#vega{position:fixed;left:50%;bottom:6vmin;transform:translateX(-50%);width:min(92vw,110vmin);z-index:45;display:none;gap:2vmin;align-items:center;background:rgba(6,10,20,.9);border:2px solid rgba(110,200,255,.7);border-radius:2vmin;padding:1.6vmin 2vmin;color:#e8f6ff;font:2.1vmin system-ui,sans-serif;box-shadow:0 0 3vmin rgba(80,180,255,.3);cursor:pointer}'
+  st.textContent = '#vega{position:fixed;left:50%;top:16vmin;transform:translateX(-50%);width:min(80vw,100vmin);z-index:45;display:none;gap:2vmin;align-items:center;background:rgba(6,10,20,.9);border:2px solid rgba(110,200,255,.7);border-radius:2vmin;padding:1.6vmin 2vmin;color:#e8f6ff;font:2.1vmin system-ui,sans-serif;box-shadow:0 0 3vmin rgba(80,180,255,.3);cursor:pointer}'
     + '#vega .face{flex:none;width:11vmin;height:11vmin;border-radius:50%;background:radial-gradient(circle at 50% 38%,#ffd9c0 0 22%,transparent 23%),radial-gradient(circle at 50% 100%,#2b6dff 0 45%,transparent 46%),radial-gradient(circle at 50% 30%,#2a1a3a 0 34%,transparent 35%),#0c1630;border:2px solid #7fc8ff;position:relative}'
     + '#vega .face::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #7fc8ff;opacity:.5;animation:vegaP 1.2s ease-out infinite}@keyframes vegaP{to{inset:-14px;opacity:0}}'
     + '#vega b{color:#8fd6ff;letter-spacing:.12em;font-size:1.7vmin} #vega .tx{min-height:6vmin;line-height:1.35} #vega small{opacity:.6;font-size:1.5vmin}';

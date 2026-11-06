@@ -50,6 +50,28 @@ jobs:
           else
             echo "No signing secrets: using the debug key"
           fi
+      # Same signature on every build (so the phone can update the app without uninstalling): without the stable-key
+      # secrets, the debug keystore is created once and then always restored from the Actions cache instead of a new
+      # random one per runner.
+      - name: Restore the shared debug key
+        if: env.CYBERCITY_KEYSTORE_PATH == ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: cybercity-debug-keystore-v1
+      - name: Create the shared debug key (first build only)
+        if: env.CYBERCITY_KEYSTORE_PATH == ''
+        shell: bash
+        run: |
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            mkdir -p "$HOME/.android"
+            keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            echo "new shared debug key created"
+          else
+            echo "shared debug key restored"
+          fi
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android | grep -E "SHA256:" | head -1
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:

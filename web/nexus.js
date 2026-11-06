@@ -67,7 +67,7 @@ Nexus.prototype.update = function (dt) {
   this.burst = Math.max(0, this.burst - dt * 1.4);
   // nearest console in reach
   this.near = null; this.dist = 1e9;
-  for (const r of RINGS) { if (r.water !== (p.kind === 'boat' || p.kind === 'galleon') && p.kind !== 'drone') continue;
+  for (const r of RINGS) { if (!!r.water !== (p.kind === 'boat' || p.kind === 'galleon') && p.kind !== 'drone') continue;
     const d = Math.hypot(wrapD(r.con.x - p.x), wrapD(r.con.z - p.z)); if (d < this.dist) { this.dist = d; this.nearR = r; } if (d < (r.water ? 30 : 10)) this.near = r; }
   this.t += dt;
   if (this.st === 'dial') {
@@ -252,7 +252,7 @@ Nexus.prototype.drawHud = function (hud) {
   let line = '';
   if (this.st === 'dial') line = 'COMPOSIZIONE INDIRIZZO · BLOCCO ' + this.locks + '/7';
   else if (this.st === 'open') line = this.g.world === 'eco' ? 'PORTALE APERTO · attraversalo per tornare a casa' : 'PORTALE APERTO · attraversalo per entrare in ECO';
-  else if (this.near) line = 'KAGE NEXUS · premi N per comporre l\'indirizzo';
+  else if (this.near) line = document.body.classList.contains('touch') ? 'KAGE NEXUS · tocca NEXUS per comporre l\'indirizzo' : 'KAGE NEXUS · premi N per comporre l\'indirizzo';
   else if (this.dist < 180) line = 'KAGE NEXUS · ' + Math.round(this.dist) + ' m';
   if (line) {
     g.font = 'bold ' + (m * 0.026 | 0) + 'px monospace';

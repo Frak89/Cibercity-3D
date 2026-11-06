@@ -23,7 +23,7 @@
   #tdn{display:none!important} body.touch.veh-drone #tdn,body.touch.veh-sub #tdn{display:flex!important}
   #tnx{display:none!important} body.touch.nx #tnx{display:flex!important}
   #tex{display:none!important} body.touch.ex #tex{display:flex!important}
-  #tdn{} body.touch.veh-ufo #tdn{display:flex!important}
+  #tdn{} body.touch.veh-ufo #tdn{display:flex!important} body.touch.veh-foot.jet #tdn{display:flex!important}
   #tfr{display:none!important} body.touch.veh-ufo #tfr{display:flex!important}
   #tgar{display:none!important} body.touch.gar #tgar{display:flex!important}
   body.touch.veh-foot #tn,body.touch.veh-foot #tg,body.touch.veh-foot #tbk{display:flex}
@@ -177,6 +177,11 @@
   document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
   document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.mono&&game.mono.enter()) return; if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.veh&&F){ F.exitVehicle(); return; } if(game.foot) game.foot.toggle(); });
+  { const cvs=document.getElementById('c'); let lt=null;
+    cvs.addEventListener('touchstart',e=>{ if(lt===null&&e.changedTouches.length){ const t=e.changedTouches[0]; if(t.clientX>innerWidth*0.33) lt={id:t.identifier,x:t.clientX}; } },{passive:true});
+    cvs.addEventListener('touchmove',e=>{ if(!lt) return; for(const t of e.changedTouches) if(t.identifier===lt.id){ const dx=t.clientX-lt.x; lt.x=t.clientX; const f=game.foot; if(!f||!f.active||game.veh||(game.photo&&game.photo.on)) return; const k=-dx*0.006;
+      if(f.ss==='in'){ f.lcam=(f.lcam===undefined?f.lh:f.lcam)+k; } else if(f.ss==='planet'){ f.pcam=(f.pcam===undefined?f.h:f.pcam)+k; } else if(!f.ss){ f.camH=(f.camH===undefined?f.h:f.camH)+k; } } },{passive:true});
+    const lend=e=>{ if(lt) for(const t of e.changedTouches) if(t.identifier===lt.id) lt=null; }; cvs.addEventListener('touchend',lend); cvs.addEventListener('touchcancel',lend); }
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg||joy.y>0.3; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk||joy.y<-0.3;
     inp.steer=Math.max(-1,Math.min(1,((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0)-joy.x*1.1));
@@ -246,6 +251,7 @@
     { const ft=game.foot, xa=(game.mono?game.mono.action():'')||(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=game.veh&&F?(F.exitInfo()&&F.exitInfo().spot?'SCENDI':''):ft?(ft.active?((ft.nearCar()||(F&&F.nearParked()))?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
       const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
+      const jet=!!(ft&&ft.active&&ft.gear==='jet'); if(jet!==loop.jet){ document.body.classList.toggle('jet',jet); loop.jet=jet; const th=document.getElementById('th'); if(th&&labels.k==='foot') th.textContent=jet?'SU':'SALTA'; }
       const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }
     { const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null; const b1=gp&&gp.buttons[1]&&gp.buttons[1].pressed; if(b1&&!loop.b1&&game.nexus) game.nexus.dial(); loop.b1=b1; } if(ap) Object.assign(inp,ap.step(game.c,dt,game)); else readInput(); game.frame(dt,inp); requestAnimationFrame(loop); }
 

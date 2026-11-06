@@ -103,7 +103,7 @@ OnFoot.prototype.draw = function (ctx) {
 OnFoot.prototype.drawHud = function (hud) {
   const g = hud.getContext('2d'), W = hud.width, H = hud.height, m = Math.min(W, H);
   let line = '';
-  if (this.trans) line = ''; else if (this.active) line = this.g.fleet && this.g.fleet.nearParked() ? 'INVIO · risali sul veicolo' : this.nearCar() ? 'INVIO · sali in auto' : ('A PIEDI · WASD / joystick: muoviti · Q/E gira la visuale · SHIFT corri · SPAZIO salta · INVIO vicino all\'auto per salire');
+  if (this.trans) line = ''; else if (this.active) line = this.g.fleet && this.g.fleet.nearParked() ? 'INVIO · risali sul veicolo' : this.nearCar() ? 'INVIO · sali in auto' : (document.body.classList.contains('touch') ? 'A PIEDI · joystick: muoviti (in fondo = corri) · trascina sullo schermo per girare la visuale · SALTA · AZIONE vicino all\'auto' : 'A PIEDI · WASD / joystick: muoviti · Q/E gira la visuale · SHIFT corri · SPAZIO salta · INVIO vicino all\'auto per salire');
   else if (this.canExit()) line = 'INVIO · scendi dall\'auto';
   if (!line) return;
   g.font = (m * 0.02 | 0) + 'px monospace'; g.textAlign = 'center';
