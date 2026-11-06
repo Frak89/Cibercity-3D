@@ -549,6 +549,7 @@ function Game(canvas, hud, opts) {
   this.xeno = window.KageXenoGame && this.fleet ? new KageXenoGame(this) : null;   // UFO, crew, time cabin (web/xeno_game.js)
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
   this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
+  this.story = window.KageStory && this.foot ? new KageStory(this) : null;   // the campaign (web/story.js)
   this.ampyobj = window.KageAmpyObj ? new KageAmpyObj(this) : null;   // imported OBJ assets placed in the world (web/ampyobj.js)   // AmpybiOS tablet shell (web/ampyos.js)
   this.tech = window.KageTech && this.foot ? new KageTech(this) : null;   // technician's tablet (web/tech.js)
   this.mono = window.KageGlyphs && this.foot ? new KageGlyphs(this) : null;   // monoliths + the CUSTODI language (web/monolith.js)
@@ -616,6 +617,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.gear) this.gear.update(dt, inp);
   if (this.mono) this.mono.update(dt);
   if (this.tech) this.tech.update(dt);
+  if (this.story) this.story.update(dt);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
   const cv1 = this.xeno ? this.xeno.camera(cv0, dt) : cv0, cv = this.star ? this.star.camera(cv1, dt) : cv1;
@@ -701,6 +703,7 @@ Game.prototype.frame = function (dt, inp) {
     if (FOOT) this.foot.draw({ set, camX, camZ, t, pal, dt });
     if (this.gear) this.gear.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.xeno) this.xeno.drawWorld({ set, camX, camZ, t, pal, dt, past: true });
+    if (this.story) this.story.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
   } else if (SPACE) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
@@ -723,6 +726,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.star) this.star.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.story) this.story.drawWorld({ set, camX, camZ, t, pal, dt });
   }
   // body: heading + flight bank (gyroscopic roll into the turn) and pitch with the throttle
   const U = CarRenderUtil, fl = this.fly || 0;
@@ -816,6 +820,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.star) this.star.drawHud(this.hud);
   if (this.mono) this.mono.drawHud(this.hud);
   if (this.tech) this.tech.drawHud(this.hud);
+  if (this.story) this.story.drawHud(this.hud);
   if (window.realSky && realSky.enabled && !SPACE && !(this.xeno && this.xeno.tt) && !(this.star && this.star.involved())) { const g2 = this.hud.getContext('2d'), m2 = Math.min(this.hud.width, this.hud.height), ln = realSky.line();
     if (ln) { g2.font = (m2 * 0.019 | 0) + 'px monospace'; g2.textAlign = 'center'; g2.fillStyle = 'rgba(236,252,255,0.75)'; g2.fillText(ln, this.hud.width / 2, m2 * 0.03); g2.textAlign = 'left'; } }
   if (this.nexus) this.nexus.drawHud(this.hud);

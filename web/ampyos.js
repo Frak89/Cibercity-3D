@@ -42,7 +42,7 @@ function AmpyOS(game) {
   this.cfg = Object.assign({ theme: 'cyberpunk', savePhone: true, mode: { camera: 'sim', status: 'real', notif: 'real', sensors: 'real', torch: 'real' } }, J(LS.get('ampyos', '{}')) || {});
   this.cfg.mode = Object.assign({ camera: 'sim', status: 'real', notif: 'real', sensors: 'real', torch: 'real' }, this.cfg.mode || {});
   this.APPS = [
-    { id: 'tech', name: 'KAGE TECH', ic: '🔧', tag: 'sim' }, { id: 'camera', name: 'Fotocamera', ic: '📷', dual: 'camera' }, { id: 'gallery', name: 'Galleria', ic: '🖼', tag: 'sim' },
+    { id: 'story', name: 'Missioni', ic: '📜', tag: 'sim' }, { id: 'tech', name: 'KAGE TECH', ic: '🔧', tag: 'sim' }, { id: 'camera', name: 'Fotocamera', ic: '📷', dual: 'camera' }, { id: 'gallery', name: 'Galleria', ic: '🖼', tag: 'sim' },
     { id: 'map', name: 'Mappa', ic: '🗺', tag: 'sim' }, { id: 'glyphs', name: 'Custodi', ic: '𓂀', tag: 'sim' }, { id: 'device', name: 'Dispositivo', ic: '📟', dual: 'status' },
     { id: 'notif', name: 'Notifiche', ic: '🔔', dual: 'notif' }, { id: 'sensors', name: 'Sensori', ic: '🧭', dual: 'sensors' }, { id: 'torch', name: 'Torcia', ic: '🔦', dual: 'torch' },
     { id: 'ampy', name: 'App Ampy', ic: '◈', tag: 'real' }, { id: 'obj', name: 'AmpyOBJ', ic: '◳', tag: 'real' }, { id: 'settings', name: 'Impostazioni', ic: '⚙', tag: 'sim' }];
@@ -260,6 +260,7 @@ AmpyOS.prototype.app_map = function () {
     const mark = (x, z, col, lab) => { const sx = X(x), sz = Z(z); if (sx < -20 || sx > w + 20 || sz < -20 || sz > h + 20) return; c.fillStyle = col; c.beginPath(); c.arc(sx, sz, 5, 0, 7); c.fill(); c.font = '11px system-ui'; c.fillStyle = '#fff'; c.fillText(lab, sx + 8, sz + 4); };
     if (g.world === 'city') { mark(g.c.x, g.c.z, '#ff4f7a', 'KAGE GT'); if (g.fleet && g.fleet.parked) mark(g.fleet.parked.st.x, g.fleet.parked.st.z, '#ffd166', 'veicolo'); mark(30, 27, '#f2ba57', 'EPOCH'); mark(24, 54, '#13dff9', 'ODYSSEY (garage)');
       if (g.xeno) { const pd = g.xeno.toWorld(0, -4.2); mark(pd[0], pd[1], '#7cff6b', 'XENO'); } mark(4 * GP, 2 * GP + 42, '#43d0c3', 'NEXUS');
+      if (g.story) { const tg = g.story.target(); if (tg) mark(tg[0], tg[1], '#ffe08a', '◆ OBIETTIVO'); }
       if (g.mono) for (const sp of g.mono.spots) if (!sp.site && sp.deck === undefined) mark(sp.x, sp.z, g.mono.st.solved.includes(sp.id) ? '#9dff8a' : '#57ffbf', sp.kind === 'mono' ? sp.title.split(' · ')[0].replace('MONOLITE ', 'M') : '·'); }
     c.save(); c.translate(w / 2, h / 2); c.rotate(-(f ? f.h : g.c.h) + PI); c.fillStyle = getComputedStyle(this.root).getPropertyValue('--ac') || '#cf4eff'; c.beginPath(); c.moveTo(0, -10); c.lineTo(7, 8); c.lineTo(0, 4); c.lineTo(-7, 8); c.closePath(); c.fill(); c.restore();
     c.fillStyle = 'rgba(255,255,255,.7)'; c.font = '12px system-ui'; c.fillText('x ' + Math.round(px) + ' · z ' + Math.round(pz) + '  ·  ' + this.where(), 10, h - 10); };
