@@ -8,7 +8,10 @@
   /* touch: no text selection / callout / grey flash on buttons and controls (inputs stay editable) */
   html,body,button,label,.tb,[data-act],[data-app],[data-nav],[data-p]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
   button{touch-action:manipulation} input,textarea,select{-webkit-user-select:text;user-select:text}
-  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:none}
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:manipulation}
+  canvas{touch-action:none} #joy,.tb{touch-action:none}
+  /* every panel and menu scrolls smoothly with the finger, also in landscape */
+  #fleet,#stMenu,#glyUI,#techUI .body,#aos .body,#aos .view,#cust,#fcust,#vsel,#bar,#specs,#fp,#techUI .log{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;scroll-behavior:smooth}
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   #title{position:fixed;left:3vmin;top:3vmin;pointer-events:none}
   #title h1{margin:0;font-size:4.2vmin;letter-spacing:.25em;color:var(--a);text-shadow:0 0 14px var(--a)}
@@ -33,7 +36,16 @@
   #fcust{position:fixed;left:3vmin;top:14vmin;width:min(52vmin,440px);display:none;flex-wrap:wrap;gap:1vmin;background:rgba(7,11,19,.82);border:1px solid var(--a);padding:1.6vmin}
   #fcust.open{display:flex}
   #fcust b{width:100%;color:var(--a);letter-spacing:.2em;font-size:1.5vmin}
-  body.fleet .caronly{display:none} .fleetonly{display:none} body.fleet .fleetonly{display:inline-block} body.kpil .fleetonly{display:none}
+  /* the panels never run off the screen: they scroll (portrait and landscape) */
+  #specs,#cust,#fcust{max-height:calc(100vh - 34vmin);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scrollbar-width:thin}
+  #specs::-webkit-scrollbar,#cust::-webkit-scrollbar,#fcust::-webkit-scrollbar,#bar::-webkit-scrollbar,#vsel::-webkit-scrollbar{width:4px;height:4px} #specs::-webkit-scrollbar-thumb,#cust::-webkit-scrollbar-thumb,#fcust::-webkit-scrollbar-thumb,#bar::-webkit-scrollbar-thumb,#vsel::-webkit-scrollbar-thumb{background:var(--a);border-radius:4px}
+  @media (orientation:landscape){
+    #bar,#vsel{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;scroll-snap-type:x proximity;scrollbar-width:thin;padding-bottom:.6vmin}
+    #bar button,#vsel button{flex:none;scroll-snap-align:start}
+    #vsel{max-width:62vw;left:auto;right:3vmin;transform:none}
+    #specs,#cust,#fcust{max-height:calc(100vh - 34vmin)} #specs{top:13vmin} #bar{padding-left:13vmin}
+  }
+  body.fleet .caronly{display:none} .fleetonly{display:none} body.fleet .fleetonly{display:inline-block} body.kpil .fleetonly{display:none} body.nocock .cockable{display:none}
 </style>
 </head>
 <body style="--a:#00ffe2">
@@ -89,7 +101,7 @@
 <div id="fcust"></div>
 <div id="bar">
   <button id="bTurn" class="on">⟳ RUOTA</button><button class="caronly" id="bHood">COFANO</button><button class="caronly" id="bDoors">PORTIERE</button>
-  <button class="caronly" id="bInt">INTERNI</button><button id="bCock">ABITACOLO</button><button class="caronly" id="bEng">MOTORE</button>
+  <button class="caronly" id="bInt">INTERNI</button><button class="cockable" id="bCock">ABITACOLO</button><button class="caronly" id="bEng">MOTORE</button>
   <button class="caronly" id="bSteer">STERZO</button><button class="caronly on" id="bLights">LUCI</button><button class="caronly" id="bPaint">COLORE</button>
   <button id="bPal">ATMOSFERA</button><button id="bSpecs">SCHEDA TECNICA</button>
   <button class="caronly" id="bRoof">CAPOTE: CHIUSA</button><button class="caronly" id="bPower">V8 BITURBO IBRIDO</button><button class="caronly" id="bExh">SCARICO: SERIE</button><button class="caronly" id="bChrono">MODULO CRONO</button><button class="caronly" id="bFly">VOLO</button><button id="bCustom">🎨 PERSONALIZZA</button><button id="bQual">RISOLUZIONE: ALTA</button><button id="bSpots" class="on">💡 RIFLETTORI: ON</button><button class="fleetonly" id="bFSnd">🔊 SUONO: OFF</button><button class="fleetonly rev" id="bFRev">⚡ A TUTTA POTENZA</button><button class="caronly on" id="bMotor">MOTORE ON</button><button class="caronly rev" id="bRev">🔥 SU DI GIRI</button>
@@ -4703,7 +4715,7 @@ SR.prototype.frame = function (dt) {
   const cy = (k === 'pilot' || k === 'alien') ? b[4] * 0.6 : (b[1] + b[4]) / 2 * (k === 'galleon' ? 0.55 : 1) + hover;
   let eye, tgt, fov = 40;
   if (cam.mode === 'cockpit') {
-    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : KF.GALLEON_RIG.eye;
+    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : k === 'ufo' ? [0, KF.KINDS.ufo.rig.floor + 1.4, 5.15] : k === 'chrono' ? [0, 1.55, -0.2] : KF.GALLEON_RIG.eye;
     eye = toWorld(E); const yaw = cam.look, pp = cam.lookP - 0.05;
     tgt = toWorld([E[0] + Math.sin(yaw) * 20, E[1] + Math.sin(pp) * 20, E[2] + Math.cos(yaw) * 20]); fov = k === 'drone' ? 95 : 70;
   } else {
@@ -4814,7 +4826,7 @@ SR.prototype.frame = function (dt) {
       if(d.rnd){ if(PIL){ const r={}; for(const key in KagePilot.OPTS){ const O=KagePilot.OPTS[key]; r[key]=O[Math.random()*O.length|0]; } r.inVehicle=sr.F.cfg.inVehicle; sr.F.cfg=r; } else sr.F.cfg=KageFleet.randomCfg(k); }
       if(PIL) KagePilot.save(sr.F.cfg); else KageFleet.saveCfg(k,sr.F.cfg); sr.rebuildFleet(); fpanel(); specs(); }); };
   const pickV=v=>{ document.querySelectorAll('#vsel button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-    sr.setVehicle(v); document.body.classList.toggle('fleet',v!=='car'); document.body.classList.toggle('kpil',v==='pilot'||v==='alien'); if(v!=='car'&&sr.tg.engine) $('bMotor').onclick();
+    sr.setVehicle(v); document.body.classList.toggle('fleet',v!=='car'); document.body.classList.toggle('kpil',v==='pilot'||v==='alien'); document.body.classList.toggle('nocock',v==='pilot'||v==='alien'||v==='starship'); if((v==='pilot'||v==='alien'||v==='starship')&&sr.cam.mode==='cockpit') sr.cam.mode='orbit'; if(v!=='car'&&sr.tg.engine) $('bMotor').onclick();
     if(v!=='car'){ sr.tg.engine=false; sr.audio.on=false; $('cust').classList.remove('open'); if(sr.cam.mode!=='orbit'&&sr.cam.mode!=='cockpit') sr.cam.mode='orbit'; } else { fcust.classList.remove('open'); }
     tog('bCock',sr.cam.mode==='cockpit'); fpanel(); specs(); };
   document.querySelectorAll('#vsel button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); pickV(b.dataset.v); });

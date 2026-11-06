@@ -158,7 +158,7 @@ SR.prototype.frame = function (dt) {
   const cy = (k === 'pilot' || k === 'alien') ? b[4] * 0.6 : (b[1] + b[4]) / 2 * (k === 'galleon' ? 0.55 : 1) + hover;
   let eye, tgt, fov = 40;
   if (cam.mode === 'cockpit') {
-    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : KF.GALLEON_RIG.eye;
+    const E = k === 'drone' ? KF.DRONE_RIG.fpv : k === 'boat' ? [0, 2.15, 1.4] : k === 'moto' ? [0, 1.45, -0.05] : k === 'hover' ? [0, 1.7, 0.9] : k === 'sub' ? [0, 0.3, 2.4] : k === 'ufo' ? [0, KF.KINDS.ufo.rig.floor + 1.4, 5.15] : k === 'chrono' ? [0, 1.55, -0.2] : KF.GALLEON_RIG.eye;
     eye = toWorld(E); const yaw = cam.look, pp = cam.lookP - 0.05;
     tgt = toWorld([E[0] + Math.sin(yaw) * 20, E[1] + Math.sin(pp) * 20, E[2] + Math.cos(yaw) * 20]); fov = k === 'drone' ? 95 : 70;
   } else {

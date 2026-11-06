@@ -8,7 +8,10 @@
   /* touch: no text selection / callout / grey flash on buttons and controls (inputs stay editable) */
   html,body,button,label,.tb,[data-act],[data-app],[data-nav],[data-p]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
   button{touch-action:manipulation} input,textarea,select{-webkit-user-select:text;user-select:text}
-  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:none}
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:ui-monospace,Consolas,monospace;color:#ecfcff;touch-action:manipulation}
+  canvas{touch-action:none} #joy,.tb{touch-action:none}
+  /* every panel and menu scrolls smoothly with the finger, also in landscape */
+  #fleet,#stMenu,#glyUI,#techUI .body,#aos .body,#aos .view,#cust,#fcust,#vsel,#bar,#specs,#fp,#techUI .log{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;scroll-behavior:smooth}
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   #err{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;color:#ff6177}
   .tb{position:fixed;bottom:4vmin;width:15vmin;height:15vmin;border:2px solid rgba(0,255,226,.5);border-radius:50%;background:rgba(7,11,19,.35);color:#ecfcff;font:bold 2.8vmin monospace;display:none;align-items:center;justify-content:center;user-select:none}

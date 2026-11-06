@@ -13,6 +13,8 @@ import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.content.res.Configuration;
 import android.widget.TextView;
 
 /** Full-screen live preview with a small panel: set as screensaver / settings. Tap to hide the panel. */
@@ -20,6 +22,7 @@ public class MainActivity extends Activity {
     private CityView city;
     private ClockOverlay clock;
     private LinearLayout panel;
+    private ScrollView panelScroll;
     private String previewWeather = null;   // null = follow the settings
     private Button weatherBtn;
     private final Runnable label = new Runnable() {
@@ -47,7 +50,11 @@ public class MainActivity extends Activity {
         panel.setPadding(dp(16), dp(14), dp(16), dp(14));
         GradientDrawable g = new GradientDrawable();
         g.setColor(0xd9070b13); g.setStroke(dp(1), 0xff00ffe2); g.setCornerRadius(dp(8));
-        panel.setBackground(g);
+        // the menu scrolls (smoothly, with fading edges) when it doesn't fit — e.g. in landscape
+        panelScroll = new ScrollView(this);
+        panelScroll.setBackground(g); panelScroll.setVerticalFadingEdgeEnabled(true); panelScroll.setFadingEdgeLength(dp(24)); panelScroll.setSmoothScrollingEnabled(true);
+        panelScroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS); panelScroll.setVerticalScrollBarEnabled(true); panelScroll.setScrollbarFadingEnabled(true);
+        panelScroll.addView(panel, new FrameLayout.LayoutParams(-1, -2));
         TextView t = new TextView(this);
         t.setText("// CYBERCITY 3D");
         t.setTextColor(0xff00ffe2); t.setTextSize(18); t.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -82,13 +89,19 @@ public class MainActivity extends Activity {
         });
         panel.addView(weatherBtn);
         previewWeather = getIntent().getStringExtra("previewWeather");
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(300), -2, Gravity.TOP | Gravity.END);
-        lp.setMargins(dp(16), dp(40), dp(16), dp(16));
-        root.addView(panel, lp);
-        root.setOnClickListener(v -> panel.setVisibility(panel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+        root.addView(panelScroll, panelParams(getResources().getConfiguration()));
+        root.setOnClickListener(v -> panelScroll.setVisibility(panelScroll.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
         setContentView(root);
         if (android.os.Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
     }
+
+    /** portrait: a column on the right; landscape: wider and from the top, scrolling */
+    private FrameLayout.LayoutParams panelParams(Configuration c) {
+        boolean land = c.orientation == Configuration.ORIENTATION_LANDSCAPE;
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(land ? 340 : 300), -2, Gravity.TOP | Gravity.END);
+        lp.setMargins(dp(16), dp(land ? 12 : 40), dp(16), dp(land ? 12 : 16)); return lp;
+    }
+    @Override public void onConfigurationChanged(Configuration c) { super.onConfigurationChanged(c); if (panelScroll != null) panelScroll.setLayoutParams(panelParams(c)); }
 
     private void applyPreview() {
         Prefs p = Prefs.get(this);
