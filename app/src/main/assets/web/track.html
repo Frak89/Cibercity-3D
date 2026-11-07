@@ -64,15 +64,7 @@
   const obs = new MutationObserver(ms => { for (const m of ms) { if (m.type === 'characterData') doNode(m.target); else for (const a of m.addedNodes) doNode(a); } });
   const start = () => { doNode(document.body || document.documentElement); document.title = tr(document.title); obs.observe(document.documentElement, { childList: true, subtree: true, characterData: true }); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
-  // small language switch (bottom-left corner)
-  addEventListener('load', () => {
-    if (/[?&](demo|auto)=/.test(location.search) || window.top !== window) return;   // screensaver scenes: no UI
-    const b = document.createElement('div'); b.id = 'langPill';
-    b.textContent = 'EN · IT'; b.title = 'Language / Lingua';
-    b.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:9999;font:bold 11px monospace;color:#ecfcff;background:rgba(7,11,19,.55);border:1px solid rgba(0,255,227,.5);border-radius:9px;padding:3px 7px;opacity:.75;cursor:pointer';
-    b.onclick = () => window.setLang(lang === 'it' ? 'en' : 'it');
-    document.body.appendChild(b);
-  });
+  // the language is chosen only in the app's main menu and in the KAGE tablet (quick settings): no switch on the game screens
 })();
 </script>
 <canvas id="c"></canvas>

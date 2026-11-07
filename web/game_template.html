@@ -132,10 +132,9 @@
     if(e.code==='Enter'&&game.star&&game.star.enter()) return;
     if(e.code==='Enter'&&game.xeno&&game.xeno.enter()) return;
     if(e.code==='Enter'&&!game.veh&&game.foot){ game.foot.toggle(); return; }
-    if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); if(e.code==='KeyL') setLang(LANG==='it'?'en':'it'); return; }
+    if(game.foot&&game.foot.active&&!game.veh){ if(e.code==='KeyG'&&F){ F.renderUI(); fp.classList.toggle('open'); } if(e.code==='KeyC') game.view=(game.view+1)%3; if(e.code==='Space'||e.code.startsWith('Arrow')) e.preventDefault(); return; }
     if(e.code==='KeyO'&&window.getRealSky){ const RS=getRealSky(); RS.setEnabled(!RS.enabled); }
     if(e.code==='KeyB'&&game.audio) game.audio.toggle();
-    if(e.code==='KeyL') setLang(LANG==='it'?'en':'it');
     if(game.veh){
       if(e.code==='KeyG'){ F.renderUI(); fp.classList.toggle('open'); }
       if(e.code==='KeyC') game.view=(game.view+1)%5;
