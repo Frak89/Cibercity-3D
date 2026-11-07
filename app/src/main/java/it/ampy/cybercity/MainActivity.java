@@ -57,11 +57,11 @@ public class MainActivity extends Activity {
         panelScroll.addView(panel, new FrameLayout.LayoutParams(-1, -2));
         TextView t = new TextView(this);
         t.setText("// CYBERCITY 3D");
-        t.setTextColor(0xff00ffe2); t.setTextSize(18); t.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        t.setTextColor(0xff00ffe2); t.setTextSize(22); t.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         panel.addView(t);
         TextView s = new TextView(this);
         s.setText(L.t("Anteprima dal vivo · tocca per nascondere"));
-        s.setTextColor(0xff86adbf); s.setTextSize(11); s.setTypeface(Typeface.MONOSPACE);
+        s.setTextColor(0xff86adbf); s.setTextSize(13); s.setTypeface(Typeface.MONOSPACE);
         panel.addView(s);
         // Cybercity 3D: the story (everything — vehicles, ODYSSEY, NEXUS, tablet… — unlocks as you play), the showroom, the screensaver
         panel.addView(button(L.t("▶ GIOCA · IL SEGNALE DEI CUSTODI"), true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "game.html"))));
@@ -75,7 +75,7 @@ public class MainActivity extends Activity {
             catch (Exception e) { startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS)); }
         }));
         panel.addView(button(L.t("⚙ IMPOSTAZIONI"), false, v -> startActivity(new Intent(this, SettingsActivity.class))));
-        panel.addView(button(L.english() ? "🌐 LANGUAGE: ENGLISH · tap for ITALIANO" : "🌐 LINGUA: ITALIANO · tocca per ENGLISH", false, v -> {
+        panel.addView(button(L.english() ? "🌐 LANGUAGE: ENGLISH" : "🌐 LINGUA: ITALIANO", false, v -> {
             L.set(this, !L.english());
             Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
             if (i != null) { i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); startActivity(i); }
@@ -99,7 +99,7 @@ public class MainActivity extends Activity {
     /** portrait: a column on the right; landscape: wider and from the top, scrolling */
     private FrameLayout.LayoutParams panelParams(Configuration c) {
         boolean land = c.orientation == Configuration.ORIENTATION_LANDSCAPE;
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(land ? 340 : 300), -2, Gravity.TOP | Gravity.END);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.min(dp(land ? 420 : 340), getResources().getDisplayMetrics().widthPixels - dp(32)), -2, Gravity.TOP | Gravity.END);
         lp.setMargins(dp(16), dp(land ? 12 : 40), dp(16), dp(land ? 12 : 16)); return lp;
     }
     @Override public void onConfigurationChanged(Configuration c) { super.onConfigurationChanged(c); if (panelScroll != null) panelScroll.setLayoutParams(panelParams(c)); }
@@ -123,7 +123,11 @@ public class MainActivity extends Activity {
         g.setColor(primary ? 0xff00ffe2 : 0x00000000); g.setStroke(dp(1), 0xff00ffe2); g.setCornerRadius(dp(4));
         b.setBackground(g);
         b.setOnClickListener(l);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(44));
+        // readable: the button grows with its text (two lines if needed) instead of cutting it in half
+        b.setAllCaps(false); b.setTextSize(15); b.setLetterSpacing(0.02f); b.setLineSpacing(dp(2), 1f); b.setMaxLines(2);
+        b.setGravity(Gravity.CENTER); b.setMinHeight(dp(52)); b.setMinimumHeight(dp(52)); b.setPadding(dp(14), dp(10), dp(14), dp(10)); b.setIncludeFontPadding(true);
+        b.setStateListAnimator(null);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.topMargin = dp(10);
         b.setLayoutParams(lp);
         return b;
