@@ -49,7 +49,7 @@ function Gear(game) {
   const B = (label, fn) => { const b = document.createElement('button'); b.textContent = label; const go = e => { e.preventDefault(); e.stopPropagation(); fn(); }; b.addEventListener('click', go); b.addEventListener('touchstart', go); ui.appendChild(b); return b; };
   this.bJet = B('🚀 JETPACK', () => this.toggle('jet')); this.bSk = B('🛹 SKATE', () => this.toggle('skate'));
 }
-Gear.prototype.locks = function () { const S = this.g.story; if (!S) return; const j = !S.can('jet'), k = !S.can('skate'); if (this.lj !== j) { this.lj = j; this.bJet.textContent = (j ? '🔒 ' : '') + '🚀 JETPACK'; this.bJet.style.opacity = j ? 0.5 : 1; } if (this.lk !== k) { this.lk = k; this.bSk.textContent = (k ? '🔒 ' : '') + '🛹 SKATE'; this.bSk.style.opacity = k ? 0.5 : 1; } };
+Gear.prototype.locks = function () { const S = this.g.story; if (!S) return; const j = !S.can('jet'), k = !S.can('skate'); if (this.lj !== j) { this.lj = j; this.bJet.style.display = j ? 'none' : ''; } if (this.lk !== k) { this.lk = k; this.bSk.style.display = k ? 'none' : ''; } };
 Gear.prototype.mesh = function (k, fn) { if (!this.meshes[k]) { const m = fn(); this.meshes[k] = this.g.vmesh(m); } return this.meshes[k]; };
 Gear.prototype.free = function (f) { return f && f.active && !f.ss && !f.xs && !f.trans && !this.g.veh; };
 Gear.prototype.toggle = function (k) {
@@ -110,7 +110,7 @@ Gear.prototype.sound = function (f) {
   this.au.on = !!f.gear; this.au.update(f.gear === 'jet' ? 'jetpack' : f.gear === 'skate' ? 'skate' : null, { thrust: f.thr || 0, vx: f.gv || 0, vz: 0, vF: f.gv || 0, air: f.air });
 };
 Gear.prototype.update = function () { this.locks();
-  const f = this.g.foot, show = this.free(f) && this.g.world !== 'space' && this.g.world !== 'planet';
+  const f = this.g.foot, show = this.free(f) && this.g.world !== 'space' && this.g.world !== 'planet' && !(this.lj && this.lk);
   const v = show ? 'flex' : 'none'; if (this.ui.style.display !== v) this.ui.style.display = v;
   if (show) { this.bJet.classList.toggle('on', f.gear === 'jet'); this.bSk.classList.toggle('on', f.gear === 'skate'); }
   if (f && !f.active && f.gear) { f.gear = null; if (this.au) { this.au.on = false; this.au.update(null); } }

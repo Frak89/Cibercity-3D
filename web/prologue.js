@@ -136,7 +136,7 @@ Prologue.prototype.finish = function (skipped) {
 /* ---------------- per frame ---------------- */
 Prologue.prototype.loop = function () {
   if (!this.on) return; requestAnimationFrame(() => this.loop());
-  const now = performance.now(), dt = Math.min(0.05, (now - (this.last || now)) / 1000); this.last = now; this.t += dt; this.sceneT = (this.sceneT || 0) + dt; this.msgT -= dt;
+  const now = performance.now(), dt = Math.max(0, Math.min(0.05, (now - (this.last || now)) / 1000)); this.last = now; this.t += dt; this.sceneT = (this.sceneT || 0) + dt; this.msgT -= dt;
   if (this.cur && this.shown < this.cur.length) this.shown = Math.min(this.cur.length, this.shown + dt * 38);
   else if (this.cur && this.lines.length) { this.lineT += dt; if (this.lineT > 2.2) { this.lineT = 0; this.cur = this.lines.shift(); this.shown = 0; } }
   // hints if you're stuck on the console

@@ -27,6 +27,10 @@
   #tfr{display:none!important} body.touch.veh-ufo #tfr{display:flex!important}
   #tgar{display:none!important} body.touch.gar #tgar{display:flex!important}
   body.touch.veh-foot #tn,body.touch.veh-foot #tg,body.touch.veh-foot #tbk{display:flex}
+  /* buttons only where they're useful: FLOTTA in the garage or on a fleet vehicle; nothing of the car's on the ODYSSEY bridge */
+  #fbtn{display:none} body.gar #fbtn,body.inveh #fbtn{display:block} body.touch.gar #tgar{display:none!important}
+  body.touch.helm #th,body.touch.helm #tn,body.touch.eva #tn{display:none!important} body.touch.eva #tdn{display:flex!important} body.touch .tb.nolab{display:none!important}
+  body.inship #fbtn{display:none!important}
   #fbtn{position:fixed;right:2vmin;top:2vmin;border:1px solid rgba(0,255,226,.6);background:rgba(7,11,19,.55);color:#ecfcff;font:bold 12px monospace;padding:7px 10px;border-radius:8px;cursor:pointer;z-index:5}
   #fleet{position:fixed;right:2vmin;top:7vmin;max-width:min(560px,94vw);max-height:84vh;overflow:auto;background:rgba(7,11,19,.86);border:1px solid rgba(0,255,226,.6);border-radius:10px;padding:10px 12px;font:12px monospace;display:none;z-index:6}
   #fleet.open{display:block}
@@ -75,6 +79,7 @@
 <script>/*AOS*/</script>
 <script>/*AOBJ*/</script>
 <script>/*PROLOGUE*/</script>
+<script>/*CUTS*/</script>
 <script>/*STORY*/</script>
 <script>/*EDIT*/</script>
 <script>/*PHOTO*/</script>
@@ -111,7 +116,7 @@
   const F=game.fleet, fp=document.getElementById('fleet');
   const labels=()=>{ const k=game.veh?game.veh.kind:(game.foot&&game.foot.active?'foot':'car'); labels.k=k; document.body.className=document.body.className.replace(/\bveh-\w+/g,'')+' veh-'+k;
     const L={car:['GAS','FRENO','DRIFT','N₂O'],drone:['AVANTI','INDIETRO','SU','BOOST'],boat:['GAS','RETRO','—','N₂O'],galleon:['VELE +','VELE −','FUOCO','ASSIST'],moto:['GAS','FRENO','—','BOOST'],hover:['SPINTA','RETRO','—','BOOST'],sub:['AVANTI','INDIETRO','SU','BOOST'],ufo:['AVANTI','INDIETRO','SU','BOOST'],foot:['AVANTI','INDIETRO','SALTA','CORRI']}[k]||['GAS','FRENO','—','BOOST'];
-    ['tg','tbk','th','tn'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.textContent=L[i]; }); };
+    ['tg','tbk','th','tn'].forEach((id,i)=>{ const el=document.getElementById(id); if(el){ el.textContent=L[i]; el.classList.toggle('nolab',L[i]==='—'); } }); };
   if(F){ F.buildUI(fp,(what,v)=>{ if(what==='vehicle'){ o.vehicle=v; labels(); } if(what==='quality'){ o.quality=v; try{localStorage.setItem('kageQuality',v);}catch(e){} } save(); });
     document.getElementById('fbtn').onclick=e=>{ e.stopPropagation(); F.renderUI(); fp.classList.toggle('open'); };
     fp.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -253,11 +258,12 @@
     game.frame(1/30,{gas:true,brake:q.has('brake'),steer:steer,hand:false,boost:false}); window.__done=true; return;
   }
   let prev=performance.now();
-  function loop(now){ if(game.power&&!game.power.tick(now)){ requestAnimationFrame(loop); return; } const dt=Math.min(0.05,(now-prev)/1000); prev=now;
+  function loop(now){ if(game.power&&!game.power.tick(now)){ requestAnimationFrame(loop); return; } const dt=Math.max(0,Math.min(0.05,(now-prev)/1000)); prev=now;
     if(game.nexus){ const nx=!!game.nexus.near&&game.nexus.st==='idle'; if(nx!==loop.nx){ document.body.classList.toggle('nx',nx); loop.nx=nx; } }
     { const ft=game.foot, xa=(game.mono?game.mono.action():'')||(game.star?game.star.action():'')||(game.xeno?game.xeno.action():''), ca=game.veh&&F?(F.exitInfo()&&F.exitInfo().spot?'SCENDI':''):ft?(ft.active?((ft.nearCar()||(F&&F.nearParked()))?'SALI':''):(ft.canExit()?'SCENDI':'')):'', lab=xa||ca, ex=!!lab;
       if(ex!==loop.ex){ document.body.classList.toggle('ex',ex); loop.ex=ex; } if(lab&&lab!==loop.lab){ document.getElementById('tex').textContent=tr(lab); loop.lab=lab; }
       const gar=!!(F&&F.inGarage()); if(gar!==loop.gar){ document.body.classList.toggle('gar',gar); loop.gar=gar; }
+      { const B=document.body.classList, on=(c,v)=>{ if(B.contains(c)!==v) B.toggle(c,v); }; on('inveh',!!game.veh); on('helm',!!(ft&&ft.active&&ft.ss==='helm')); on('eva',!!(ft&&ft.active&&ft.ss==='eva')); on('inship',!!(ft&&ft.active&&ft.ss)); }
       const jet=!!(ft&&ft.active&&ft.gear==='jet'); if(jet!==loop.jet){ document.body.classList.toggle('jet',jet); loop.jet=jet; const th=document.getElementById('th'); if(th&&labels.k==='foot') th.textContent=jet?'SU':'SALTA'; }
       const lk=game.veh?game.veh.kind:(ft&&ft.active?'foot':'car'); if(lk!==labels.k) labels(); }
     { const gp=navigator.getGamepads?[...navigator.getGamepads()].find(p=>p):null; const b1=gp&&gp.buttons[1]&&gp.buttons[1].pressed; if(b1&&!loop.b1&&game.nexus) game.nexus.dial(); loop.b1=b1; } if(ap) Object.assign(inp,ap.step(game.c,dt,game)); else readInput(); game.frame(dt,inp); requestAnimationFrame(loop); }

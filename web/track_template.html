@@ -111,7 +111,7 @@
     inp.hand=keys.Space||tb.th; inp.boost=keys.ShiftLeft||keys.ShiftRight||tb.tn; }
   if(q.has('shot')){ $('menu').classList.remove('open'); race.setup(opts()); race.state='run'; const T=parseFloat(q.get('t')||'2'); for(let i=0;i<T*30;i++) race.frame(1/30,{gas:true,brake:false,steer:0,hand:false,boost:false}); window.__done=true; return; }
   let prev=performance.now();
-  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; readInput(); const paused=$('menu').classList.contains('open')||$('pit').classList.contains('open'); if(!paused) race.frame(dt,inp); requestAnimationFrame(loop); }
+  function loop(now){ const dt=Math.max(0,Math.min(0.05,(now-prev)/1000)); prev=now; readInput(); const paused=$('menu').classList.contains('open')||$('pit').classList.contains('open'); if(!paused) race.frame(dt,inp); requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
 })();
 </script>

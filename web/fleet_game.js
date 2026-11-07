@@ -802,7 +802,7 @@ FleetGame.prototype.buildUI = function (el, onChange) {
       for (const c of COURSES[k] || []) { const r = self.records[c.id] || {}; h += '<button data-race="' + c.id + '">🏁 ' + c.name + ' · ' + c.laps + ' GIRI' + (r.lap ? ' · REC ' + fmt(r.lap) : '') + '</button>'; }
       h += '<button data-free="1">GIRO LIBERO</button></div>';
     }
-    if (self.g.nexus) h += '<div class="ftitle">KAGE NEXUS</div><div class="fgrid"><button data-nexus="1">🌀 VAI AL PORTALE (N = componi)</button>' + (self.g.world === 'eco' ? '<button data-home="1">⟲ TORNA SUBITO IN CITTÀ</button>' : '') + '</div>';
+    if (self.g.nexus && (!self.g.story || self.g.story.can('nexus'))) h += '<div class="ftitle">KAGE NEXUS</div><div class="fgrid"><button data-nexus="1">🌀 VAI AL PORTALE (N = componi)</button>' + (self.g.world === 'eco' ? '<button data-home="1">⟲ TORNA SUBITO IN CITTÀ</button>' : '') + '</div>';
     el.innerHTML = h;
     el.querySelectorAll('button').forEach(b => b.onclick = e => {
       e.stopPropagation(); const d = b.dataset;

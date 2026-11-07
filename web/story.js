@@ -75,6 +75,7 @@ function Story(game) {
   if (!this.st.prologue && (this.st.ch > 0 || Object.keys(this.st.done || {}).length)) { this.st.prologue = 1; this.save(); }   // saves from before the prologue
   this.gates();
   this.pro = window.KagePrologue ? new KagePrologue(game, this) : null;
+  this.cuts = window.KageCuts ? new KageCuts(game) : null;   // illustrated scenes between chapters (web/cutscenes.js)
   if (q.has('shot')) return;
   setTimeout(() => { if (!this.st.prologue && this.pro) this.pro.start(); else if (!this.finished() && !this.st.seen[this.cur().id]) this.radio(); }, 1200);
 }
@@ -116,8 +117,9 @@ Story.prototype.update = function (dt) {
   for (const o of ch.obj) { if (this.st.done[o.id]) continue; let ok = false; try { ok = o.done(); } catch (e) { } if (ok) { this.st.done[o.id] = 1; changed = true; this.toast('✔ ' + o.t); this.chime(1); } else break; }   // in order
   if (changed) this.save();
   if (ch.obj.every(o => this.st.done[o.id])) { this.st.ch++; this.save(); this.chime(2); this.unlocks(this.st.ch);
-    if (this.finished()) { this.toast('✦ IL SEGNALE DEI CUSTODI · COMPLETATO ✦'); this.reward(); setTimeout(() => this.radio(EPILOGUE, 'EPILOGO'), 1800); }
-    else { this.toast(ch.title + ' · COMPLETATO'); setTimeout(() => this.radio(), 1800); } }
+    const sc = this.cuts && this.cuts.forChapter(this.st.ch);
+    if (this.finished()) { this.toast('✦ IL SEGNALE DEI CUSTODI · COMPLETATO ✦'); this.reward(); setTimeout(() => this.radio(EPILOGUE, 'EPILOGO', null, () => { if (sc) this.cuts.play(sc); }), 1800); }
+    else { this.toast(ch.title + ' · COMPLETATO'); setTimeout(() => { if (sc) this.cuts.play(sc, () => this.radio()); else this.radio(); }, 1800); } }
 };
 Story.prototype.reward = function () { const m = this.g.mono; if (m) { m.st.keys = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; m.save(); } };
 Story.prototype.chime = function (k) { if (!window.FleetAudio) return; if (!this.au) this.au = new FleetAudio(); this.au.start(); const N = k === 2 ? [523, 659, 784, 1046] : k === 3 ? [392, 523, 784] : [660, 880];
@@ -246,11 +248,13 @@ function install(OS) {
     this.frame('📜 Missioni · IL SEGNALE DEI CUSTODI', '<div class="card"><b>' + (done ? '✦ Campagna completata' : 'Capitolo ' + (st.ch + 1) + ' / ' + Sg.C.length) + '</b><div class="meter"><i style="width:' + Math.round(st.ch / Sg.C.length * 100) + '%"></i></div>'
       + '<button class="btn" data-act="radio">📡 riascolta VEGA</button> <button class="btn" data-act="storyreset">↺ nuova partita (dal prologo)</button> <button class="btn ' + (st.free ? 'on' : '') + '" data-act="storyfree">' + (st.free ? '🔓 modalità libera: tutto sbloccato' : '🔒 sblocco con la storia') + '</button></div>'
       + Sg.C.map((c, i) => { const cur = i === st.ch, past = i < st.ch; if (i > st.ch) return '<div class="card" style="opacity:.45"><b>' + c.title + '</b><br><small>bloccato</small></div>';
-        return '<div class="card ' + (cur ? 'n' : '') + '"><b>' + (past ? '✔ ' : '◆ ') + c.title + '</b>' + c.obj.map(o => '<div style="margin-top:.5vmin">' + (st.done[o.id] ? '☑' : '☐') + ' ' + o.t + '</div>').join('') + '</div>'; }).join(''));
+        return '<div class="card ' + (cur ? 'n' : '') + '"><b>' + (past ? '✔ ' : '◆ ') + c.title + '</b>' + c.obj.map(o => '<div style="margin-top:.5vmin">' + (st.done[o.id] ? '☑' : '☐') + ' ' + o.t + '</div>').join('') + '</div>'; }).join('')
+      + (Sg.cuts ? '<div class="card"><b>🎬 Scene della storia</b><br>' + (Sg.st.prologue ? '<button class="btn" data-act="cut" data-id="prologo">▶ IL RISVEGLIO</button> ' : '') + Sg.cuts.list().map(x => (Sg.cuts.seen().includes(x.id) || st.free || st.ch >= x.at) ? '<button class="btn" data-act="cut" data-id="' + x.id + '">▶ ' + x.title + '</button> ' : '<button class="btn" disabled style="opacity:.4">🔒 ' + x.title + '</button> ').join('') + '</div>' : ''));
   };
   const act0 = OS.prototype.act;
   OS.prototype.act = function (a, el) { const Sg = this.g.story;
     if (a === 'radio' && Sg) { this.close(); setTimeout(() => Sg.finished() ? Sg.radio(EPILOGUE, 'EPILOGO') : Sg.radio(), 3000); return; }
+    if (a === 'cut' && Sg && el) { const id = el.dataset.id; this.close(); setTimeout(() => { if (id === 'prologo') { if (Sg.pro) Sg.pro.replay ? Sg.pro.replay() : Sg.pro.start(); } else if (Sg.cuts) Sg.cuts.play(id); }, 2600); return; }
     if (a === 'storyfree' && Sg) { Sg.st.free = !Sg.st.free; Sg.save(); this.launch('story'); return; }
     if (a === 'storyreset' && Sg) { if (this.confirmReset) { this.confirmReset = false; this.close(); setTimeout(() => Sg.reset(), 3000); } else { this.confirmReset = true; this.toast('Tocca di nuovo per ricominciare da capo'); setTimeout(() => { this.confirmReset = false; }, 3000); } return; }
     return act0.call(this, a, el); };

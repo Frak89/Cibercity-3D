@@ -219,7 +219,7 @@
     sr.frame(0.001); window.__done=true; return;
   }
   let prev=performance.now();
-  function loop(now){ const dt=Math.min(0.05,(now-prev)/1000); prev=now; sr.frame(dt); requestAnimationFrame(loop); }
+  function loop(now){ const dt=Math.max(0,Math.min(0.05,(now-prev)/1000)); prev=now; sr.frame(dt); requestAnimationFrame(loop); }
   requestAnimationFrame(loop);
 })();
 </script>

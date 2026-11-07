@@ -643,7 +643,7 @@ Game.prototype.frame = function (dt, inp) {
   if (this.eng && !VEH) {
     if (this.eng.type !== (o.power || 'v8')) { this.eng.setType(o.power || 'v8'); this.eng.rpm = this.eng.T.idle; }
     this.eng.race = o.exhaust === 'race';
-    this.eng.update(dt, { speed: phys.vF, throttle: inp.gas ? 1 : 0, boost: phys.boosting, slip: phys.slip, wheelspin: phys.wheelspin, brakeHard: phys.brakeHard, brake: inp.brake, airborne: (this.fly || 0) > 0.3 });
+    this.eng.update(dt, { speed: phys.vF, throttle: inp.gas && !FOOT ? 1 : 0, boost: phys.boosting && !FOOT, slip: phys.slip, wheelspin: phys.wheelspin, brakeHard: phys.brakeHard && !FOOT, brake: inp.brake && !FOOT, airborne: (this.fly || 0) > 0.3 });
     // live telemetry for the cockpit HUD + cluster: g forces, 0-100 / 0-200 timers
     const T = this.tel = this.tel || { gx: 0, gy: 0, v0: 0, run: -1, t100: null, t200: null };
     const vNow = Math.abs(phys.vF);
@@ -763,7 +763,7 @@ Game.prototype.frame = function (dt, inp) {
   else if (cv.drawCar && this.hd) {
     gl.useProgram(P.hd.p); set(P.hd); this.hd.setMaterials(o.paint, pal.neonA, pal.neonB, kageExtra(this.car));
     { const e = this.eng, u = P.hd.u; if (u.uSpd) { gl.uniform1f(u.uSpd, Math.abs(phys.vF) * 3.6); gl.uniform1f(u.uRpmK, e ? e.rpm / e.T.limiter : 0); gl.uniform1f(u.uGear, e ? e.gear : 0); gl.uniform1f(u.uFuelK, e ? e.fuelK || 0 : 1); gl.uniform1f(u.uGx, this.tel ? this.tel.gx : 0); } }
-    gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35 + (this.dayK || 0) * 0.75); gl.uniform1f(P.hd.u.uLights, 1); gl.uniform1f(P.hd.u.uBrake, inp.brake ? 1 : 0);
+    gl.uniform1f(P.hd.u.uKey, past ? 1.0 : 0.35 + (this.dayK || 0) * 0.75); gl.uniform1f(P.hd.u.uLights, FOOT ? 0.35 : 1); gl.uniform1f(P.hd.u.uBrake, inp.brake && !FOOT ? 1 : 0);
     this.hd.draw(carM, hdState, 'opaque');
     if (this.net) this.net.drawCars({ camX, camZ, dt, hdState });
     if (this.fleet && this.view !== 3 && !FOOT) { this.fleet.drawPilot(set, carM, 'car'); gl.useProgram(P.hd.p); set(P.hd); }
@@ -780,8 +780,9 @@ Game.prototype.frame = function (dt, inp) {
   }
   if (this.eng && !VEH && !SPACE) {
     const tp = EngineFX.tipsFrom(carM, o.exhaust === 'race');
-    this.fx.update(dt, tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, tp.hubs);
-    this.fx.tyreSmoke(dt, carM, Math.max(this.eng.burn || 0, (this.eng.tyre || 0) * 0.7), [c.vx, 0, c.vz], CarHD.RIG.kitTrack[this.car.kit || 0]);
+    // parked while you walk: engine off — no exhaust, no tyre smoke (what's in the air fades away)
+    this.fx.update(dt, FOOT ? [] : tp.tips, tp.dir, [c.vx, 0, c.vz], this.eng, FOOT ? [] : tp.hubs);
+    if (!FOOT) this.fx.tyreSmoke(dt, carM, Math.max(this.eng.burn || 0, (this.eng.tyre || 0) * 0.7), [c.vx, 0, c.vz], CarHD.RIG.kitTrack[this.car.kit || 0]);
     if (o.chrono && this.tj.charge > 0.05) this.fx.chronoArcs(carM, this.tj.charge, [c.vx, 0, c.vz]);
     if (this.tj.arrive) { this.tj.arrive = 0; this.fx.ring(carM, 2.2, [c.vx, 0, c.vz], 120); }
     gl.useProgram(P.fx.p); set(P.fx); this.fxgl.draw(this.fx, H / (2 * Math.tan(fov / 2)));
@@ -793,7 +794,7 @@ Game.prototype.frame = function (dt, inp) {
   gl.uniformMatrix4fv(P.glow.u.uModel, false, model(c.h, carRel[0], 0, carRel[2]));
   gl.uniform1f(P.glow.u.uGlow, 0.55 + 0.15 * Math.sin(t * 3)); this.draw(P.glow, this.CM.under);
   gl.uniform1f(P.glow.u.uGlow, 1); this.draw(P.glow, this.CM.heads);
-  gl.uniform1f(P.glow.u.uGlow, inp.brake ? 1.8 : 0.7); this.draw(P.glow, this.CM.tail);
+  gl.uniform1f(P.glow.u.uGlow, FOOT ? 0.25 : inp.brake ? 1.8 : 0.7); this.draw(P.glow, this.CM.tail);
   }
   if (this.fleet && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.fleet.drawAdditive({ set, camX, camZ, t, pal, dt }); }
   if (this.nexus && !SPACE) { gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); this.nexus.drawAdditive({ set, camX, camZ, t, pal, dt }); }
