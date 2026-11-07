@@ -550,6 +550,8 @@ function Game(canvas, hud, opts) {
   this.star = window.KageStarGame && this.fleet ? new KageStarGame(this) : null;
   this.aos = window.AmpyOS && this.foot ? new AmpyOS(this) : null;   // AmpybiOS tablet shell (web/ampyos.js)
   this.post = [];
+  this.people = window.KagePeople && this.foot ? new KagePeople(this) : null;   // citizens on the pavements (web/people.js)
+  this.trophies = window.KageTrophies && this.foot ? new KageTrophies(this) : null;   // achievements (web/trophies.js)
   this.power = window.KagePower && !opts.preserve ? new KagePower(this) : null;   // KAGE POWER battery-aware quality (web/power.js)
   this.music = window.KageMusic ? new KageMusic(this) : null;   // KAGE SOUND soundtrack + 3D sounds (web/music.js)
   this.net = window.KageNet && this.foot ? new KageNet(this) : null;   // KAGE NET local multiplayer (web/net.js)
@@ -627,6 +629,8 @@ Game.prototype.frame = function (dt, inp) {
   if (this.story) this.story.update(dt);
   if (this.editor) this.editor.update(dt);
   if (this.net) this.net.update(dt);
+  if (this.people) this.people.update(dt);
+  if (this.trophies) this.trophies.update(dt);
   if (this.music) this.music.update(dt);
   const c = this.c;
   const cv0 = VEH ? this.fleet.camera(this.view, dt, t) : FOOT ? this.foot.camera(this.view, dt) : cameraFor(this.view, c, this.cam, dt, t);
@@ -739,6 +743,7 @@ Game.prototype.frame = function (dt, inp) {
     if (this.mono) this.mono.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.ampyobj) this.ampyobj.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.editor) this.editor.drawWorld({ set, camX, camZ, t, pal, dt });
+    if (this.people) this.people.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.net) this.net.drawWorld({ set, camX, camZ, t, pal, dt });
     if (this.story) this.story.drawWorld({ set, camX, camZ, t, pal, dt });
   }

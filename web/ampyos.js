@@ -45,7 +45,7 @@ function AmpyOS(game) {
     { id: 'story', name: 'Missioni', ic: '📜', tag: 'sim' }, { id: 'tech', name: 'KAGE TECH', ic: '🔧', tag: 'sim' }, { id: 'camera', name: 'Fotocamera', ic: '📷', dual: 'camera' }, { id: 'gallery', name: 'Galleria', ic: '🖼', tag: 'sim' },
     { id: 'map', name: 'Mappa', ic: '🗺', tag: 'sim' }, { id: 'glyphs', name: 'Custodi', ic: '𓂀', tag: 'sim' }, { id: 'device', name: 'Dispositivo', ic: '📟', dual: 'status' },
     { id: 'notif', name: 'Notifiche', ic: '🔔', dual: 'notif' }, { id: 'sensors', name: 'Sensori', ic: '🧭', dual: 'sensors' }, { id: 'torch', name: 'Torcia', ic: '🔦', dual: 'torch' },
-    { id: 'ampy', name: 'App Ampy', ic: '◈', tag: 'real' }, { id: 'obj', name: 'AmpyOBJ', ic: '◳', tag: 'real' }, { id: 'build', name: 'Costruisci', ic: '🏗', tag: 'sim' }, { id: 'net', name: 'KAGE NET', ic: '🌐', tag: 'real' }, { id: 'music', name: 'Musica', ic: '🎵', tag: 'sim' }, { id: 'power', name: 'Energia', ic: '⚡', tag: 'real' }, { id: 'settings', name: 'Impostazioni', ic: '⚙', tag: 'sim' }];
+    { id: 'ampy', name: 'App Ampy', ic: '◈', tag: 'real' }, { id: 'obj', name: 'AmpyOBJ', ic: '◳', tag: 'real' }, { id: 'build', name: 'Costruisci', ic: '🏗', tag: 'sim' }, { id: 'net', name: 'KAGE NET', ic: '🌐', tag: 'real' }, { id: 'music', name: 'Musica', ic: '🎵', tag: 'sim' }, { id: 'power', name: 'Energia', ic: '⚡', tag: 'real' }, { id: 'trophy', name: 'Trofei', ic: '🏆', tag: 'sim' }, { id: 'save', name: 'Salvataggi', ic: '💾', tag: 'real' }, { id: 'settings', name: 'Impostazioni', ic: '⚙', tag: 'sim' }];
   this.build(); this.theme();
 }
 AmpyOS.prototype.save = function () { LS.set('ampyos', JSON.stringify(this.cfg)); };
@@ -198,7 +198,7 @@ AmpyOS.prototype.where = function () { const g = this.g, f = g.foot, Y = g.star;
 const DOCK = ['story', 'camera', 'map', 'tech'];
 const INFO = { story: 'La campagna: obiettivi, radio di VEGA, capitoli.', tech: 'Collegati ai dispositivi: telemetria, funzioni, programmi, diagnosi.', camera: 'Foto del gioco con filtri AmpyCam o fotocamera vera del telefono.', gallery: 'Le tue foto, nel gioco e sul telefono.',
   map: 'Mappa della città con obiettivo, veicoli e monoliti.', glyphs: 'Lingua dei Custodi: chiavi e iscrizioni.', device: 'Stato della tuta o del telefono vero.', notif: 'Messaggi del gioco o notifiche vere.', sensors: 'Bussola del gioco o sensori veri.',
-  torch: 'Torcia: schermo o flash vero.', ampy: 'Apri le tue app AmpyXXX installate.', obj: 'Importa ed esporta modelli OBJ.', build: 'Decora Cybercity con insegne, luci, alberi e modelli.', net: 'Multigiocatore sulla stessa Wi-Fi.', music: 'Colonna sonora e suoni 3D.', power: 'Batteria e prestazioni.', settings: 'Tema, funzioni simulate o reali, foto.' };
+  torch: 'Torcia: schermo o flash vero.', ampy: 'Apri le tue app AmpyXXX installate.', obj: 'Importa ed esporta modelli OBJ.', build: 'Decora Cybercity con insegne, luci, alberi e modelli.', net: 'Multigiocatore sulla stessa Wi-Fi.', music: 'Colonna sonora e suoni 3D.', power: 'Batteria e prestazioni.', trophy: 'I tuoi trofei e i progressi.', save: 'Salva e ripristina tutti i progressi su file.', settings: 'Tema, funzioni simulate o reali, foto.' };
 AmpyOS.prototype.home = function () {
   this.leave(); this.app = null;
   const tagOf = a => a.dual ? (this.real(a.dual) ? 'real' : 'sim') : a.tag, icon = a => '<button class="ico" data-app="' + a.id + '"><i>' + a.ic + '</i><span class="lbl">' + esc(a.name) + '</span><span class="tag ' + tagOf(a) + '">' + (tagOf(a) === 'real' ? 'REALE' : 'SIMULATO') + '</span></button>';

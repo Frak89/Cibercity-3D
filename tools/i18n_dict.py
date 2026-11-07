@@ -609,4 +609,24 @@ PAIRS = [
 ("Multigiocatore sulla stessa Wi-Fi.", "Multiplayer on the same Wi-Fi."), ("Colonna sonora e suoni 3D.", "Soundtrack and 3D sounds."), ("Batteria e prestazioni.", "Battery and performance."), ("Tema, funzioni simulate o reali, foto.", "Theme, simulated or real functions, photos."),
 
 ("A PIEDI · joystick: muoviti (in fondo = corri) · trascina sullo schermo per girare la visuale · SALTA · AZIONE vicino all'auto", "ON FOOT · joystick: move (all the way = run) · drag on the screen to turn the view · JUMP · ACTION near the car"),
+
+# save / trophies
+("Salvataggi", "Backups"), ("💾 Salvataggi · KAGE SAVE", "💾 Backups · KAGE SAVE"), ("Fai un salvataggio", "Make a backup"), ("Ripristina", "Restore"), ("Automatico", "Automatic"), ("💾 salva adesso", "💾 back up now"), ("📂 scegli il salvataggio", "📂 choose the backup"),
+("Tutto in un file zip: campagna, alfabeto dei Custodi, programmi e riparazioni di KAGE TECH, pezzi di KAGE BUILD, configurazione dei veicoli e del pilota, impostazioni, foto della Galleria e asset di AmpyOBJ.", "Everything in one zip file: campaign, Custodians' alphabet, KAGE TECH programs and repairs, KAGE BUILD pieces, vehicles and pilot setup, settings, Gallery photos and AmpyOBJ assets."),
+("Va in Download/Cybercity sul telefono.", "It goes to Download/Cybercity on the phone."), ("Viene scaricato dal browser.", "The browser downloads it."), ("Fallo prima di disinstallare o cambiare telefono.", "Do it before uninstalling or changing phone."),
+("Scegli un file cybercity_salvataggio_….zip: i progressi tornano come erano e il gioco si riavvia.", "Pick a cybercity_salvataggio_….zip file: your progress comes back and the game restarts."), ("salvataggio automatico ogni 3 giorni", "automatic backup every 3 days"),
+("ultimo salvataggio:", "last backup:"), ("nessun salvataggio ancora", "no backup yet"), ("salvataggio…", "backing up…"), ("ripristino…", "restoring…"), ("ripristinato", "restored"), ("voci", "entries"), ("riavvio…", "restarting…"),
+("non è un salvataggio di Cybercity (manca save.json)", "not a Cybercity backup (save.json missing)"), ("salvataggio non riconosciuto", "backup not recognised"),
+("Trofei", "Trophies"), ("TROFEO", "TROPHY"), ("I tuoi trofei e i progressi.", "Your trophies and progress."), ("Salva e ripristina tutti i progressi su file.", "Back up and restore all your progress to a file."),
+("Primi passi", "First steps"), ("Scendi dall’auto e cammina per 100 m", "Get out of the car and walk 100 m"), ("Velocista", "Sprinter"), ("Corri per 2 km in totale", "Run 2 km in total"), ("Pilota della flotta", "Fleet pilot"),
+("Guida tutti i veicoli KAGE (moto, hover, drone, barca, sottomarino, galeone, XENO)", "Drive every KAGE vehicle (bike, hover, drone, boat, sub, galleon, XENO)"), ("Uomo razzo", "Rocket man"), ("Vola 60 secondi col jetpack", "Fly 60 seconds with the jetpack"),
+("Re dello skate", "Skate king"), ("Percorri 1 km in skateboard", "Ride 1 km on the skateboard"), ("Rapito!", "Abducted!"), ("Fatti prelevare dal raggio del KAGE XENO", "Get lifted by the KAGE XENO beam"), ("Viaggiatore del tempo", "Time traveller"),
+("Viaggia nel passato con l’EPOCH", "Travel to the past with the EPOCH"), ("Oltre il portale", "Beyond the portal"), ("Entra in ECO attraverso il NEXUS", "Enter ECO through the NEXUS"), ("Benvenuto a bordo", "Welcome aboard"), ("Teletrasportati sulla KAGE ODYSSEY", "Beam aboard the KAGE ODYSSEY"),
+("Capitano", "Captain"), ("Siediti al posto del capitano", "Take the captain's chair"), ("Vai in curvatura al massimo fattore", "Go to warp at the top factor"), ("Esploratore", "Explorer"), ("Scendi su tutti i pianeti e le lune", "Land on every planet and moon"),
+("Passeggiata spaziale", "Spacewalk"), ("Esci nello spazio dal portello EVA", "Go out into space through the EVA hatch"), ("Risveglio", "Awakening"), ("Risveglia un ospite dalla stasi", "Wake a guest from stasis"), ("Lettore di pietre", "Stone reader"),
+("Leggi tutti e 10 i monoliti", "Read all 10 monoliths"), ("Decifratore", "Codebreaker"), ("Decifra 5 iscrizioni", "Decipher 5 inscriptions"), ("Tecnico esperto", "Expert technician"), ("Ripara 5 guasti con KAGE TECH", "Repair 5 faults with KAGE TECH"),
+("Automazione", "Automation"), ("Fai scattare una regola QUANDO di KAGE SCRIPT", "Trigger a KAGE SCRIPT QUANDO rule"), ("Fotografo", "Photographer"), ("Scatta 10 foto", "Take 10 photos"), ("Architetto", "Architect"), ("Piazza 15 pezzi con KAGE BUILD", "Place 15 pieces with KAGE BUILD"),
+("Non sei solo", "You're not alone"), ("Incontra un altro pilota su KAGE NET", "Meet another pilot on KAGE NET"), ("Campione", "Champion"), ("Vinci una sfida di corsa su KAGE NET", "Win a race challenge on KAGE NET"), ("Il Segnale dei Custodi", "The Signal of the Custodians"),
+("Completa la campagna", "Complete the campaign"), ("Leggenda di Cybercity", "Legend of Cybercity"), ("Sblocca tutti gli altri trofei", "Unlock every other trophy"),
+
 ]
