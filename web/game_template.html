@@ -180,11 +180,15 @@
   document.getElementById('tgar').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); if(F){ F.renderUI(); fp.classList.toggle('open'); } });
   document.getElementById('tnx').addEventListener('touchstart',e=>{ e.preventDefault(); snd(); if(game.nexus) game.nexus.dial(); });
   document.getElementById('tex').addEventListener('touchstart',e=>{ e.preventDefault(); if(game.mono&&game.mono.enter()) return; if(game.star&&game.star.enter()) return; if(game.xeno&&game.xeno.enter()) return; if(game.veh&&F){ F.exitVehicle(); return; } if(game.foot) game.foot.toggle(); });
-  { const cvs=document.getElementById('c'); let lt=null;
-    cvs.addEventListener('touchstart',e=>{ if(lt===null&&e.changedTouches.length){ const t=e.changedTouches[0]; if(t.clientX>innerWidth*0.33) lt={id:t.identifier,x:t.clientX}; } },{passive:true});
-    cvs.addEventListener('touchmove',e=>{ if(!lt) return; for(const t of e.changedTouches) if(t.identifier===lt.id){ const dx=t.clientX-lt.x; lt.x=t.clientX; const f=game.foot; if(!f||!f.active||game.veh||(game.photo&&game.photo.on)) return; const k=-dx*0.006;
-      if(f.ss==='in'){ f.lcam=(f.lcam===undefined?f.lh:f.lcam)+k; } else if(f.ss==='planet'){ f.pcam=(f.pcam===undefined?f.h:f.pcam)+k; } else if(!f.ss){ f.camH=(f.camH===undefined?f.h:f.camH)+k; } } },{passive:true});
-    const lend=e=>{ if(lt) for(const t of e.changedTouches) if(t.identifier===lt.id) lt=null; }; cvs.addEventListener('touchend',lend); cvs.addEventListener('touchcancel',lend); }
+  /* look around on foot: any finger that isn't on the joystick or a button (also a second finger while the first walks),
+     or the mouse dragged on the 3D view: left / right = turn, up / down = tilt. Also on the ODYSSEY decks and on planets. */
+  { const looks=new Map(), SKIP='button,.tb,#joy,#aos,#fleet,#stMenu,#glyUI,#techUI,#buildUI,#photoUI,#vega,#gearUI,#stUI,#langPill,input,textarea,label,#techBtn';
+    const lookOK=()=>{ const f=game.foot; return f&&f.active&&!game.veh&&!(game.photo&&game.photo.on)&&!(game.aos&&game.aos.isOpen)&&f.ss!=='helm'; };
+    addEventListener('pointerdown',e=>{ if(e.target.closest&&e.target.closest(SKIP)) return; if(!lookOK()) return; if(e.pointerType==='mouse'&&e.button!==0) return; looks.set(e.pointerId,{x:e.clientX,y:e.clientY,moved:0}); },true);
+    addEventListener('pointermove',e=>{ const L=looks.get(e.pointerId); if(!L||!lookOK()) return; const dx=e.clientX-L.x, dy=e.clientY-L.y; L.x=e.clientX; L.y=e.clientY; L.moved+=Math.abs(dx)+Math.abs(dy);
+      const f=game.foot, m=Math.min(innerWidth,innerHeight), ky=-dx/m*3.2, kp=dy/m*2.2; f.lookT=2.5;
+      if(f.ss==='in'){ f.lcam=(f.lcam===undefined?f.lh:f.lcam)+ky; } else if(f.ss==='planet'){ f.pcam=(f.pcam===undefined?f.h:f.pcam)+ky; } else if(!f.ss){ f.camH=(f.camH===undefined?f.h:f.camH)+ky; f.camP=Math.max(-0.35,Math.min(1.15,(f.camP===undefined?0.22:f.camP)+kp)); } },true);
+    const lend=e=>{ looks.delete(e.pointerId); }; addEventListener('pointerup',lend,true); addEventListener('pointercancel',lend,true); }
   function readInput(){
     inp.gas=keys.KeyW||keys.ArrowUp||tb.tg||joy.y>0.3; inp.brake=keys.KeyS||keys.ArrowDown||tb.tbk||joy.y<-0.3;
     inp.steer=Math.max(-1,Math.min(1,((keys.KeyA||keys.ArrowLeft||tb.tl)?1:0)-((keys.KeyD||keys.ArrowRight||tb.tr)?1:0)-joy.x*1.1));

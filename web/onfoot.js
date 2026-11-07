@@ -15,7 +15,7 @@ function dirMove(o, inp, dt, hKey, cKey, run) {
   const c = o[cKey], vx = Math.sin(c) * my - Math.cos(c) * mx, vz = Math.cos(c) * my + Math.sin(c) * mx, tgt = Math.atan2(vx, vz);
   const d = wrapA(tgt - o[hKey]); o[hKey] = wrapA(o[hKey] + d * Math.min(1, dt * 10));
   // the camera swings round behind you while you walk away from it (not when you walk towards it)
-  const back = Math.cos(o[hKey] - c); if (back > 0.2) o[cKey] = wrapA(c + wrapA(o[hKey] - c) * Math.min(1, dt * 1.4 * back));
+  const back = Math.cos(o[hKey] - c); if (back > 0.2 && !(o.lookT > 0)) o[cKey] = wrapA(c + wrapA(o[hKey] - c) * Math.min(1, dt * 1.4 * back));
   return mag * (run ? 9.5 : 1.9) * Math.max(0.15, Math.cos(d));   // jog / sprint
 }
 function OnFoot(game) { this.g = game; this.active = false; this.x = 0; this.z = 0; this.y = 0; this.h = 0; this.v = 0; this.vy = 0; this.ph = 0; this.camH = 0; this.air = false; this.t = 0; }
@@ -84,15 +84,35 @@ OnFoot.prototype.update = function (dt, inp) {
   // the game's car keeps its own state; this is the pilot
   return { vF: this.v };
 };
+/** third-person orbit camera: yaw camH, pitch camP (drag with a finger / the mouse, Q/E), smooth follow, pulled in by walls */
 OnFoot.prototype.camera = function (view, dt) {
-  const c = this.g.c;
-  const fx = Math.sin(this.camH), fz = Math.cos(this.camH), px = wrapD(this.x - c.x), pz = wrapD(this.z - c.z);
-  const far = view % 3 === 1, top = view % 3 === 2, D = far ? 6.5 : 3.3, H = far ? 2.8 : 1.95;
-  let e, l, fov = 58;
-  if (top) { e = [px - fx * 1, this.y + 28, pz - fz * 1]; l = [px + fx * 2, this.y, pz + fz * 2]; fov = 55; }
-  else { e = [px - fx * D, this.y + H, pz - fz * D]; l = [px + fx * 2.5, this.y + 1.45, pz + fz * 2.5]; }
+  const c = this.g.c, px = wrapD(this.x - c.x), pz = wrapD(this.z - c.z);
+  const far = view % 3 === 1, top = view % 3 === 2;
+  if (this.camP === undefined) this.camP = 0.22;
+  this.lookT = Math.max(0, (this.lookT || 0) - (dt || 0.016));
+  const head = [px, this.y + 1.55, pz];
+  let e, l, fov = 60;
+  if (top) { const fx = Math.sin(this.camH), fz = Math.cos(this.camH); e = [px - fx * 1, this.y + 28, pz - fz * 1]; l = [px + fx * 2, this.y, pz + fz * 2]; fov = 55; this.camOff = null; }
+  else {
+    const P = Math.max(-0.35, Math.min(1.15, this.camP)), D0 = (far ? 6.8 : 3.6) * (1 + Math.max(0, P) * 0.25), cp = Math.cos(P);
+    const want = [-Math.sin(this.camH) * cp * D0, Math.sin(P) * D0 + 0.35, -Math.cos(this.camH) * cp * D0];
+    // walls: walk the line from the head towards the camera and stop before the first building in the way
+    const k = this.camClear(head, want);
+    const tgt = want.map(v => v * k);
+    const s = Math.min(1, (dt || 0.016) * 12); this.camOff = this.camOff ? this.camOff.map((v, i) => v + (tgt[i] - v) * (tgt.every((t, j) => Math.abs(t) <= Math.abs(this.camOff[j]) + 0.01) ? 1 : s)) : tgt;
+    e = [head[0] + this.camOff[0], Math.max(this.y + 0.25, head[1] + this.camOff[1]), head[2] + this.camOff[2]];
+    l = [head[0] - this.camOff[0] * 0.25, head[1] - 0.1 - this.camOff[1] * 0.15, head[2] - this.camOff[2] * 0.25];
+  }
   this.cv = { e, l, fov, drawCar: true, cockpit: false };
   return this.cv;
+};
+/** fraction (0.15..1) of the head → camera offset that is free of buildings */
+OnFoot.prototype.camClear = function (head, off) {
+  if (this.g.world === 'meadow' || !this.g.city) return 1; const c = this.g.c, city = this.g.city;
+  const inside = (x, z, y) => { const wx = wrapP(c.x + x), wz = wrapP(c.z + z), bx = Math.floor(wx / GP), bz = Math.floor(wz / GP), ix = ((bx % 15) + 15) % 15, iz = ((bz % 15) + 15) % 15, sx = bx * GP - ix * GP, sz = bz * GP - iz * GP;
+    for (const q of city.blocks[iz * 15 + ix]) if (y < (q[4] || 8) && wx > q[0] + sx - 0.3 && wx < q[2] + sx + 0.3 && wz > q[1] + sz - 0.3 && wz < q[3] + sz + 0.3) return true; return false; };
+  for (let i = 1; i <= 12; i++) { const k = i / 12; if (inside(head[0] + off[0] * k, head[2] + off[2] * k, head[1] + off[1] * k)) return Math.max(0.15, (i - 1.5) / 12); }
+  return 1;
 };
 OnFoot.prototype.draw = function (ctx) {
   const f = this.g.fleet; if (!f) return;
