@@ -43,17 +43,12 @@
 
         <activity
             android:name=".game.GameActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Neon Run"
             android:icon="@drawable/ic_neonrun"
             android:screenOrientation="sensorLandscape"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
-            android:launchMode="singleTask">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:launchMode="singleTask" />
 
         <activity
             android:name=".game.TrackActivity"

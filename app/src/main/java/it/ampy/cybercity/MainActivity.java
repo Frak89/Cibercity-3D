@@ -63,17 +63,18 @@ public class MainActivity extends Activity {
         s.setText(L.t("Anteprima dal vivo · tocca per nascondere"));
         s.setTextColor(0xff86adbf); s.setTextSize(11); s.setTypeface(Typeface.MONOSPACE);
         panel.addView(s);
-        panel.addView(button(L.t("IMPOSTA COME SALVASCHERMO"), true, v -> {
+        // Cybercity 3D: the story (everything — vehicles, ODYSSEY, NEXUS, tablet… — unlocks as you play), the showroom, the screensaver
+        panel.addView(button(L.t("▶ GIOCA · IL SEGNALE DEI CUSTODI"), true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "game.html"))));
+        panel.addView(button(L.t("✦ NUOVA PARTITA · DAL PROLOGO"), false, v -> new android.app.AlertDialog.Builder(this)
+            .setTitle(L.t("Nuova partita")).setMessage(L.t("La storia ricomincia dal prologo e i veicoli tornano da sbloccare. Foto, costruzioni e trofei restano. Fai prima un salvataggio dal tablet se vuoi."))
+            .setPositiveButton(L.t("RICOMINCIA"), (d, w) -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "game.html").putExtra("new", true)))
+            .setNegativeButton(L.t("ANNULLA"), null).show()));
+        panel.addView(button(L.t("🎨 SHOWROOM · VEICOLI SBLOCCATI"), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "showroom.html").putExtra("vehicle", "car"))));
+        panel.addView(button(L.t("🌙 IMPOSTA COME SALVASCHERMO"), false, v -> {
             try { startActivity(new Intent(Settings.ACTION_DREAM_SETTINGS)); }
             catch (Exception e) { startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS)); }
         }));
-        panel.addView(button(L.t("▶ GIOCA · NEON RUN"), true, v -> startActivity(new Intent(this, it.ampy.cybercity.game.GameActivity.class))));
-        panel.addView(button("SHOWROOM · AMPY KAGE GT", false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.ShowroomActivity.class))));
-        panel.addView(button(L.t("🏁 KAGE CIRCUIT · PISTA 11 KM"), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class))));
-        panel.addView(button(L.t("🛠 SHOWROOM FLOTTA · DRONE, BARCA, GALEONE"), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "showroom.html").putExtra("vehicle", "drone"))));
-        for (String[] fv : new String[][]{{"car", "🌀 KAGE NEXUS · PORTALE PER ECO"}, {"drone", "🚁 DRONE · GARE IN CITTÀ"}, {"boat", "🚤 BARCA · LAGUNA"}, {"galleon", "⛵ GALEONE · REGATA"}})
-            panel.addView(button(L.t(fv[1]), false, v -> startActivity(new Intent(this, it.ampy.cybercity.game.TrackActivity.class).putExtra("page", "game.html").putExtra("vehicle", fv[0]))));
-        panel.addView(button(L.t("IMPOSTAZIONI"), false, v -> startActivity(new Intent(this, SettingsActivity.class))));
+        panel.addView(button(L.t("⚙ IMPOSTAZIONI"), false, v -> startActivity(new Intent(this, SettingsActivity.class))));
         panel.addView(button(L.english() ? "🌐 LANGUAGE: ENGLISH · tap for ITALIANO" : "🌐 LINGUA: ITALIANO · tocca per ENGLISH", false, v -> {
             L.set(this, !L.english());
             Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());

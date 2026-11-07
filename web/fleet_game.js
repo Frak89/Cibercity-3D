@@ -791,7 +791,7 @@ FleetGame.prototype.buildUI = function (el, onChange) {
   const self = this, kinds = ['car', 'moto', 'drone', 'hover', 'boat', 'sub', 'galleon', 'ufo'], titles = { ufo: '🛸 UFO', car: '🏎 KAGE GT', moto: '🏍 MOTO', drone: '🚁 DRONE', hover: '🛸 HOVERCRAFT', boat: '🚤 BARCA', sub: '🤿 SOTTOMARINO', galleon: '⛵ GALEONE' };
   const render = () => {
     const k = self.kind || 'car';
-    let h = '<b>FLOTTA KAGE</b><div class="frow">' + kinds.map(x => '<button data-v="' + x + '" class="' + (x === k ? 'on' : '') + '">' + titles[x] + '</button>').join('') + '</div>';
+    let h = '<b>FLOTTA KAGE</b><div class="frow">' + kinds.map(x => { const lk = x !== 'car' && self.g.story && !self.g.story.can(x); return '<button data-v="' + x + '" class="' + (x === k ? 'on' : '') + '" style="' + (lk ? 'opacity:.45' : '') + '">' + (lk ? '🔒 ' : '') + titles[x] + '</button>'; }).join('') + '</div>';
     if (window.getRealSky) { const RS = getRealSky(); h += '<div class="frow"><span>LUCE E METEO REALI</span><button data-real="1" class="' + (RS.enabled ? 'on' : '') + '">' + (RS.enabled ? 'ON' : 'OFF') + '</button></div>'; }
     h += '<div class="frow"><span>RISOLUZIONE MODELLI</span>' + ['low', 'high', 'ultra'].map(q => '<button data-q="' + q + '" class="' + (self.quality === q ? 'on' : '') + '">' + { low: 'BASSA', high: 'ALTA', ultra: 'ALTISSIMA' }[q] + '</button>').join('') + '</div>';
     if (k !== 'car') {

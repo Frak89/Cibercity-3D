@@ -94,7 +94,7 @@ XenoGame.prototype.enter = function () {
   }
   if (f.xs) return true;
   const pad = this.toWorld(R.lift[0], R.lift[1]);
-  if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) { f.xs = 'up'; f.xp = 0; f.x0 = f.x; f.z0 = f.z; return true; }
+  if (this.g.world === 'city' && Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) { f.xs = 'up'; f.xp = 0; f.x0 = f.x; f.z0 = f.z; return true; }
   if (f.inEp) { this.tt = { phase: 'in', t: 0 }; return true; }
   return false;
 };
@@ -237,7 +237,7 @@ XenoGame.prototype.drawHud = function (hud) {
       if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 3.2) line = 'INVIO · fatti prelevare dal raggio';
       else if (f.inEp) line = 'INVIO · KAGE EPOCH: viaggia nel tempo';
       else if (Math.hypot(wrapD(f.x - EPOCH.x), wrapD(f.z - EPOCH.z)) < 3) line = 'KAGE EPOCH · entra dalla porta';
-      else if (Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 16) line = 'KAGE XENO · mettiti sotto il raggio';
+      else if (g.world === 'city' && Math.hypot(wrapD(f.x - pad[0]), wrapD(f.z - pad[1])) < 16) line = 'KAGE XENO · mettiti sotto il raggio';
     }
   }
   if (!line && !big) return;

@@ -90,6 +90,7 @@ public class TrackActivity extends Activity {
         Prefs pr = Prefs.get(this);
         try { if (!pr.hasLocation() || pr.useGps()) it.ampy.cybercity.Weather.fromDevice(this, pr); } catch (Exception ignored) { }
         if (pr.hasLocation()) url += String.format(java.util.Locale.US, "&lat=%.4f&lon=%.4f&city=", pr.lat(), pr.lon()) + Uri.encode(pr.city().startsWith("posizione") ? "" : pr.city());
+        if (getIntent().getBooleanExtra("new", false)) url += "&new=1";   // new game: the story restarts from the prologue
         web.loadUrl(url);
     }
     @Override protected void onResume() {

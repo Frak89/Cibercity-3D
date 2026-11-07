@@ -135,7 +135,10 @@
     sr.setVehicle(v); document.body.classList.toggle('fleet',v!=='car'); document.body.classList.toggle('kpil',v==='pilot'||v==='alien'); document.body.classList.toggle('nocock',v==='pilot'||v==='alien'||v==='starship'); if((v==='pilot'||v==='alien'||v==='starship')&&sr.cam.mode==='cockpit') sr.cam.mode='orbit'; if(v!=='car'&&sr.tg.engine) $('bMotor').onclick();
     if(v!=='car'){ sr.tg.engine=false; sr.audio.on=false; $('cust').classList.remove('open'); if(sr.cam.mode!=='orbit'&&sr.cam.mode!=='cockpit') sr.cam.mode='orbit'; } else { fcust.classList.remove('open'); }
     tog('bCock',sr.cam.mode==='cockpit'); fpanel(); specs(); };
-  document.querySelectorAll('#vsel button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); pickV(b.dataset.v); });
+  // the showroom shows what the story has unlocked (same unlock table as web/story.js)
+  const UNL={moto:1,hover:2,drone:3,boat:5,sub:5,galleon:6,chrono:6,starship:3,ufo:8,alien:2}, story=(()=>{try{return JSON.parse(localStorage.getItem('kageStory')||'{}')}catch(e){return {}}})();
+  const unlocked=v=>q.has('shot')||story.free||UNL[v]===undefined||(story.prologue&&(story.ch||0)>=UNL[v]);
+  document.querySelectorAll('#vsel button').forEach(b=>{ if(!unlocked(b.dataset.v)){ b.style.opacity=.42; b.textContent='🔒 '+b.textContent; } b.onclick=e=>{ e.stopPropagation(); if(!unlocked(b.dataset.v)){ const t=$('title').querySelector('div'), o=t.textContent; t.textContent='🔒 SI SBLOCCA CON LA STORIA · CAPITOLO '+['I','II','III','IV','V','VI','VII','VIII'][Math.min(7,UNL[b.dataset.v]-1)]+' COMPLETATO'; setTimeout(()=>{t.textContent=o;},2600); return; } pickV(b.dataset.v); }; });
   $('bCustom').onclick=()=>{ const p=sr.F&&sr.F.kind?fcust:$('cust'); p.classList.toggle('open'); tog('bCustom',p.classList.contains('open')); };
   $('cKit').onclick=()=>{ C.kit=(C.kit+1)%3; lbl(); }; $('cRim').onclick=()=>{ C.rim={A:'B',B:'C',C:'A'}[C.rim]; lbl(); };
   $('cRimC').onclick=()=>{ C.rimcol=colK[(colK.indexOf(C.rimcol)+1)%colK.length]; lbl(); }; $('cLiv').onclick=()=>{ C.livery=(C.livery+1)%3; lbl(); };
